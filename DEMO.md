@@ -217,3 +217,107 @@ chaintrace/
 ## 10. Priority if Time Runs Short
 
 Cut in this order (last items first): Network View → alerts → ML model (fallback to rule-based scoring) → live TRON trace. **Never cut:** graph, Nearest VASP card, freeze notice/report.
+
+---
+
+## 11. Team Split: Two People, Working Independently
+
+**Person A: Engine (heavy, rule-based, core).** Owns everything that produces the findings: tracing, attribution, risk/AI.
+**Person B: Product (lighter, visible).** Owns everything built *from* the findings: interface, reports, alerts, mock integrations, seed data, demo.
+
+The two parts connect only through a **shared JSON contract** (section 11.2). B builds against fixture files and never waits for A's engine.
+
+### 11.1 Ownership
+
+| Area | Person A: Engine | Person B: Product |
+|---|---|---|
+| Steps | 3, 4, 5, 6 | 1 (frontend part), 2 (data files), 7, 8, 9, 10 |
+| Code folders | `backend/chains/`, `tracing.py`, `attribution.py`, `risk.py` | `frontend/`, `reports.py`, `alerts.py`, `routers/integrations.py` |
+| Data files | `data/cache/` (real TRON wallets), model files | `data/labels.csv`, `data/vasp_contacts.csv`, `data/seed_cases.json`, `data/fixtures/` |
+| Difficulty | High: graph algorithms, heuristics, ML | Medium-low: UI, templates, glue |
+| Risk | Logic bugs, API limits | Time spent on visual polish |
+
+**Person A, in order of priority**
+1. Chain adapter with cache and address-format detection (Step 3).
+2. Tracing engine with pass-through detection and idle-fund check (Step 4).
+3. Attribution: label match, sweep heuristic, confidence score, Nearest VASP object (Step 5).
+4. Risk model and typology with SHAP reasons (Step 6). If time is short, ship a rule-based score first and add XGBoost after.
+5. Cached real TRON data for the 3 wallets plus the scripted **hero case**.
+
+**Person B, in order of priority**
+1. Frontend scaffold, routing, dark theme, color legend (Step 9).
+2. Case View: Cytoscape graph, Nearest VASP card, risk badge, recommendations panel.
+3. Seed data: `labels.csv` (with a source for every row), `vasp_contacts.csv`, `seed_cases.json` (8-10 complaints, some sharing a downstream wallet).
+4. Recommendation rules, freeze notice template, PDF report (Step 7).
+5. Mock NCRP/SAHYOG endpoints and the SSE alert stream (Step 8).
+6. Dashboard charts and Network View (connected components over seed cases).
+7. Demo Mode toggle, LIVE/SIMULATED badges, rehearsal, slides, backup recording (Step 10).
+
+### 11.2 The Contract (agree in the first hour, then don't change without telling each other)
+
+**`POST /api/trace`** request: `{ "complaint_id": "...", "wallet": "T...", "amount": 12000, "fraud_type": "investment" }`
+
+Response:
+```json
+{
+  "case_id": "C-001",
+  "graph": {
+    "nodes": [
+      { "id": "T...", "type": "scam_wallet", "label": null,
+        "risk": "Critical", "risk_score": 0.94,
+        "reasons": ["Forwards funds in 4 min", "89 unique senders"],
+        "typology": "investment_scam", "idle_balance": 0 }
+    ],
+    "edges": [
+      { "source": "T...", "target": "T...", "tx_hash": "...",
+        "amount": 11800, "token": "USDT", "timestamp": 1760000000 }
+    ]
+  },
+  "nearest_vasp": {
+    "vasp": "ExampleExchange", "deposit_address": "T...", "hops": 3,
+    "amount": 11500, "timestamp": 1760000900,
+    "confidence": 0.87, "method": "heuristic",
+    "evidence": ["14 deposit addresses swept to hot wallet T..."],
+    "contact": "compliance@example.com"
+  },
+  "source": "cached"
+}
+```
+
+- Node `type` is one of: `victim`, `scam_wallet`, `intermediary`, `bridge`, `mixer`, `exchange`, `unknown`.
+- `risk` is one of: `Low`, `Medium`, `High`, `Critical`.
+- `source` is `live`, `cached`, or `simulated`.
+
+**Other endpoints**
+- `GET /api/wallets/{addr}/risk` → `{ risk, risk_score, reasons[], typology }`
+- `GET /api/cases` → list of case summaries (B serves these from seed data; A's trace results are added to it)
+- `GET /api/cases/{id}/report` → PDF (B)
+- `GET /api/alerts/stream` → SSE events `{ type, case_id, message, timestamp }` (B)
+
+### 11.3 How to Work Independently
+
+1. **Hour 0 (together, 45 min):** agree the contract above, create the repo, and push empty folders. Decide the one hero case together.
+2. **A's first 30 minutes:** hand-write `data/fixtures/trace_hero.json` in the contract format with fake-but-plausible values, and push it. B can build the whole UI from this file.
+3. **B's mock server:** until A's engine works, B serves the fixture from the `/api/trace` route. Switching to the real engine later is a one-line change.
+4. **Git:** work on separate branches (`engine`, `product`), merge into `main` at each checkpoint. Use FastAPI `APIRouter` so each person edits their own route files, which avoids merge conflicts in `main.py`.
+5. **A tests with scripts and `pytest`, not the UI.** B tests with fixtures, not the engine.
+
+### 11.4 Timeline
+
+| When | Person A | Person B | Sync |
+|---|---|---|---|
+| Day 1, 0-1 hr | Contract, repo | Contract, repo | **Together** |
+| Day 1, 1-4 hr | Seed real wallets and cache, chain adapter | Scaffold, theme, Case View with fixture graph | |
+| Day 1, 4-9 hr | Tracing engine, pass-through | Seed data files, Nearest VASP card, dashboard layout | |
+| Day 1, 9-12 hr | Attribution engine | Recommendation rules, freeze notice template | **Checkpoint 1:** `/api/trace` returns the real hero case; B swaps fixture for real call |
+| Day 2, 0-4 hr | Risk model, typology, SHAP | PDF report, mock NCRP/SAHYOG endpoints, SSE alerts | |
+| Day 2, 4-8 hr | Fixes, edge cases, second cached case | Dashboard charts, Network View, animations | **Checkpoint 2:** full flow end to end |
+| Day 2, 8-12 hr | Help B with integration bugs, tests | Demo Mode, LIVE/SIMULATED badges, slides | |
+| Day 2, last 3 hr | **Both:** rehearse 3 times, record backup | | |
+
+### 11.5 Handoff Rules
+
+- A never changes the contract without telling B; B never asks A for fields not in the contract on Day 2.
+- If A falls behind, B keeps going on fixtures, and the demo can still run on `cached` data (that's why Demo Mode exists).
+- If A finishes early, A takes the Network View and the second cached case; if B finishes early, B writes unit-test fixtures and the slide deck.
+- Cut order from section 10 still applies, and each person decides their own cuts: A drops XGBoost before dropping the sweep heuristic; B drops animations before dropping the freeze notice.
