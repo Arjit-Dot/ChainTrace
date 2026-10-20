@@ -1,4 +1,7 @@
-Exchange,Nodal_Contact_Name,Designation,Email,Phone_Number
+vasp,nodal_officer,designation,email,phone
+Example Exchange A,Nodal Officer (fictional),Compliance Team,compliance@example-exchange-a.test,+91-0000000001
+Example Exchange B,Nodal Officer (fictional),Law Enforcement Response,lea-requests@example-exchange-b.test,+91-0000000002
+Example Exchange C,Nodal Officer (fictional),VASP Nodal Officer,nodal.officer@example-exchange-c.test,+91-0000000003
 Binance,Arun Kumar,Chief Compliance Officer,compliance-in@binance.mock,+91-9876543210
 Huobi,Priya Sharma,VASP Nodal Officer,nodal@huobi.mock,+91-9876543211
 OKX,David Lee,Head of AML,aml-reporting@okx.mock,+91-9876543212

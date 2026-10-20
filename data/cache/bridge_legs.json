@@ -1,0 +1,11 @@
+{
+  "14e3029bf6d6390bbd477cf0f696e3b82b6a417b0346104f15cb8065c34b0929": {
+    "bridge": "TXzK7i61kT3ck6kZ3VeGZjUnPVwDS46sKM",
+    "dest_chain": "ethereum",
+    "to": "0x0ddd7fbade53d7c56d375dc35123c2cc4906290b",
+    "tx_hash": "60587ef3c8fe03e0efa7f2dd8cd98588a753e3afbe28b99d8148666a1e5983e2",
+    "amount": 3720.0,
+    "timestamp": 1792400900,
+    "token": "USDT"
+  }
+}

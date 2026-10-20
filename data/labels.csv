@@ -1,9 +1,13 @@
-address,chain,entity,type,source
-TDqSquXBgUCLYvYC4XZgrprLK589dkhSCf,TRON,Binance,Hot Wallet,Tronscan / Dune Analytics
-TQrY8tryqsYVCYS3MFbtffiPp2ccyn4STm,TRON,Binance,Withdrawal Hot Wallet,Dune Analytics
-TK86Qm97uM848dMk8G7xNbJB7zG1uW3h1n,TRON,Huobi,Hot Wallet,Dune Analytics
-TSaRZDiBPD8Rd5vrvX8a4zgunHczM9mj8S,TRON,OKX,Hot Wallet,Dune Analytics
-TTd9qHyjqiUkfTxe3gotbuTMpjU8LEbpkN,TRON,Kraken,Hot Wallet,Dune Analytics
-TXFBqBbqJommqZf7BV8NNYzePh97UmJodJ,TRON,Bitfinex,Hot Wallet,Dune Analytics
-TLKyq7eJ4YKbs3TGEvoBJWkAXWYQKWo2Nn,TRON,SunSwap V2 (BTT-USDT),DEX / Bridge Pool,Dune Analytics
-0xd90e2f925da726b50c4ed8d0fb90ad053324f31b,Ethereum,Tornado Cash,Mixer Router,Etherscan
+address,chain,entity,type,source,note
+TJ4imTmNr3FZoqR2jsRBuXS2aNXNAsAXhK,tron,Example Exchange A,exchange,fixture (fictional),hot wallet; hero case C-001
+TRtcU89W2N6MTT7DXvpzZUAvWQ8qPTAQhS,tron,Example Exchange B,exchange,fixture (fictional),hot wallet
+TK2HrF4zDufshHLhF2cCgENoBZipWxHvJK,tron,Example Exchange B,exchange,fixture (fictional),deposit address from the exchange's published list (seed cases C-004/C-005)
+TQyp1x1VvbeSnvwt3bdCATtLTjm4wTE3SY,tron,Example Exchange C,exchange,fixture (fictional),hot wallet
+TXzK7i61kT3ck6kZ3VeGZjUnPVwDS46sKM,tron,Example Bridge,bridge,fixture (fictional),TRON to Ethereum
+TQciNjv81QDEkoFHAJikXtMKSpJiJCKjrC,tron,Example Bridge,bridge,fixture (fictional),TRON to BSC
+TLhZTYvV5asB99Wz26sSandSaN1kZfFWbs,tron,Example Mixer,mixer,fixture (fictional),mixing service
+TDqSquXBgUCLYvYC4XZgrprLK589dkhSCf,tron,Binance,exchange,Dune Analytics query by A (entity not independently verified),hot wallet; on-chain 2026-10-20: ~837M USDT balance and 200 transfers in 2 minutes
+TQrY8tryqsYVCYS3MFbtffiPp2ccyn4STm,tron,Binance,exchange,Dune Analytics query by A (entity not independently verified),withdrawal hot wallet; on-chain 2026-10-20: ~58.7M USDT balance and 200 transfers in 15 minutes
+TXFBqBbqJommqZf7BV8NNYzePh97UmJodJ,tron,Bitfinex,exchange,Dune Analytics query by A (entity not independently verified),hot wallet; on-chain 2026-10-20: ~186.6M USDT balance and 200 transfers in 12 hours
+TLKyq7eJ4YKbs3TGEvoBJWkAXWYQKWo2Nn,tron,SunSwap V2 (BTT-USDT),swap,Dune Analytics query by A (entity not independently verified),DEX liquidity pool; not a VASP
+0xd90e2f925da726b50c4ed8d0fb90ad053324f31b,ethereum,Tornado Cash,mixer,Etherscan public label (Tornado.Cash: Router),mixer router contract

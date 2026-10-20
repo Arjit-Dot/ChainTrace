@@ -85,7 +85,7 @@ chaintrace/
 │   ├── contract/schemas.py     # Shared: the contract as Pydantic models (frozen, DONE)
 │   ├── contract/__init__.py    # Shared (DONE)
 │   ├── engine.py               # A: the seam; stub returns the hero fixture until A4-A6 (stub DONE)
-│   ├── chains/tron.py          # A: TronGrid adapter + cache
+│   ├── chains/tron.py          # A: TronGrid adapter + cache (DONE)
 │   ├── tracing.py              # A: forward trace + pass-through
 │   ├── attribution.py          # A: labels, sweep heuristic, confidence
 │   ├── risk.py                 # A: features, model, SHAP
@@ -99,7 +99,7 @@ chaintrace/
 │   ├── make_seed_traces.py     # B: builds seed_traces.json
 │   └── test_product.py         # B
 ├── data/
-│   ├── cache/                  # A: saved TronGrid responses (3 wallets DONE) + scripted hero case
+│   ├── cache/                  # A: tron/ (3 flagged wallets + next hops + scripted hero, DONE), SOURCES.md
 │   ├── scripts/scamWallet.py   # A: helper used to build the cache (DONE)
 │   ├── labels.csv              # A: exchanges, mixers, bridges (DONE)
 │   ├── vasp_contacts.csv       # A: mock nodal contacts (DONE)
@@ -468,17 +468,17 @@ Contract rules live in `CONTRACT.md`. Endpoints are under `/api/...` and the con
 | Hero example + fixtures for every endpoint | DONE | `data/fixtures/` (`trace_hero.json` is the hero) |
 | Product routes (cases, freeze notice, report, dashboard, networks, alerts SSE, NCRP/SAHYOG mocks) | STUB DONE | `backend/main.py` (TODO(B): real implementations, B3-B8) |
 | Step 1: repo, structure, venv (`env/`, Python 3.12, all libraries installed), contract and `/api/health` route | DONE | `env/`, `requirements.txt`, `backend/` |
-| Step 1: TronGrid key in `.env` | NOT DONE | `.env` does not exist |
-| Step 1 / B1: frontend scaffold | BROKEN | `frontend/`: Vite, Tailwind, Cytoscape, Recharts and router are installed, but `src/main.jsx` imports `./App.jsx`, which does not exist, so `vite build` fails. No pages or API client yet. |
-| Step 2 / A3: `labels.csv` | PARTIAL | `data/labels.csv`: 6 exchange hot wallets (TRON checksums valid), 1 DEX pool, 1 Tornado Cash (Ethereum) address. Needs: real per-row sources instead of "Dune Analytics", a true TRON bridge or mixer, `chain` as `tron` and `type` aligned with the contract, hero hot wallet row |
-| Step 2 / A3: `vasp_contacts.csv` | DONE | `data/vasp_contacts.csv`: one mock contact for each of the 5 exchanges |
-| Step 2 / A1: 3 real scam wallets cached | NOT DONE | `data/cache/` holds 3 Tether `AddedBlackList` events (`0x…` addresses, all in one block, files named `…_UNKNOWN`), not transaction histories, so nothing can be traced. `SOURCES.md` is missing. Redo as USDT-TRC20 transfer histories for 3 TRON `T…` wallets. |
-| Step 2 / A3: hero case | NOT DONE | No hero data in TronGrid format in `data/cache/`; no hero hot wallet in `labels.csv` |
-| Step 2 / B3: `seed_cases.json` | PARTIAL | `data/seed_cases.json`: 8 synthetic cases (2 linked groups, 3 isolated), an exact copy of `data/fixtures/cases.json`. `seed_traces.json` (with mixer, bridge, idle-funds and no-exchange cases) still missing |
-| Step 3 / A2: chain adapter | NOT DONE | `backend/chains/tron.py` missing: no `Transfer` normalization, cache-first logic, address detection or test. `data/scripts/scamWallet.py` is a one-off event fetcher (writes to `../cache/`), not the adapter. |
+| Step 1: TronGrid key in `.env` | DONE (key to paste) | `.env.example` committed; local `.env` created (git-ignored). `TRONGRID_API_KEY` is still empty: paste a free key from trongrid.io. The adapter works without one, rate-limited |
+| Step 1 / B1: frontend scaffold | DONE (branch `product`) | `App.jsx`, 4 routes, dark theme, `lib/api.js`, `lib/colors.js`, badges, legend; `vite build` passes. B2 Case View is also done there |
+| Step 2 / A3: `labels.csv` | DONE | `data/labels.csv` (`address, chain, entity, type, source, note`): fictional hero/seed rows (Example Exchange A/B/C hot wallets, Example Bridge x2, Example Mixer), 3 real hot wallets with an on-chain activity check, 1 DEX pool (`swap`), Tornado Cash router. `chain`/`type` match the contract. 3 rows that did not behave like hot wallets were removed; see `data/LABELS.md`. Still no *real* labeled TRON bridge/mixer |
+| Step 2 / A3: `vasp_contacts.csv` | DONE | `data/vasp_contacts.csv` (`vasp, nodal_officer, designation, email, phone`): mock contacts for Example Exchange A/B/C (matching the fixtures) and the 5 real-named exchanges |
+| Step 2 / A1: 3 real scam wallets cached | DONE | `data/scripts/scamWallet.py` picks the most recent Tether-blacklisted (`AddedBlackList`) TRON wallets with a usable history and caches their USDT-TRC20 transfers plus their biggest next-hop recipients in `data/cache/tron/`. Raw events are in `data/cache/blacklist_events/`, provenance in `data/cache/SOURCES.md` |
+| Step 2 / A3: hero case | DONE | `data/scripts/make_hero_cache.py` writes C-001 in TronGrid format from `trace_hero.json` (same tx hashes, amounts, times). The deposit address has 14 unrelated senders, all swept to the labeled Example Exchange A hot wallet. Bridge exit leg in `data/cache/bridge_legs.json` |
+| Step 2 / B3: `seed_cases.json` + `seed_traces.json` | DONE (branch `product`) | `backend/make_seed_traces.py` writes one trace per seed case: NET-1/NET-2 share deposit addresses, plus mixer-terminal, bridge-terminal, idle-funds and no-exchange cases. Checked by `tests/test_product.py` |
+| Step 3 / A2: chain adapter | DONE | `backend/chains/tron.py`: `Transfer` normalization (seconds, token-unit floats), cache first then live then save, fingerprint paging, 429 retry, `TRONGRID_API_KEY` from `.env`, `detect_chain()` for tron/ethereum/bitcoin/solana, CLI to refill the cache. `tests/test_tron.py` (18 tests, offline) |
 | B3: `db.py`, `engine_client.py`, cases API, New Complaint | NOT STARTED | n/a |
-| A4-A8, B2, B4-B8 | NOT STARTED | n/a |
+| A4-A8, B4-B8 | NOT STARTED | n/a |
 
-**Audit of Steps 1-3 (last checked after the contract merge).** Steps 1-3 are only partly complete: the contract, routes and tests work; the data and adapter work is not finished. Next in order: (1) create `.env` with `TRONGRID_API_KEY`; (2) pick 3 real TRON scam wallets and write `data/cache/SOURCES.md`; (3) build `backend/chains/tron.py` and refill the cache; (4) script the hero case and add its hot wallet to `labels.csv`; (5) fix `labels.csv`; (6) build `seed_traces.json`; (7) add `frontend/src/App.jsx` so the scaffold builds.
+**Audit of Steps 1-3 (updated 2026-10-20).** Steps 1-3 are complete: the contract, routes and tests work, the cache holds 3 real flagged wallets (with next hops) and the scripted hero case, `labels.csv`/`vasp_contacts.csv` are aligned with the contract, and `backend/chains/tron.py` is the adapter. Open items: paste a TronGrid key into `.env`; find a real, verifiable TRON bridge or mixer label. Next: Step 4 (tracing) on top of `TronAdapter`, and merge `engine` + `product` into `main` at CP1.
 
 **Reconciliation notes.** The contract pack's layout won where it differed from section 5: the contract is a package (`contract/schemas.py`, not `contract.py`), the hero example is `data/fixtures/trace_hero.json`, the engine seam is `engine.py`, and `main.py` holds all routes as CONTRACT.md lists. The `routes_engine.py` / `routes_product.py` split was tried and dropped after merging `origin/main`; the API surface was identical. DEMO.md sections 6-11 were then aligned with CONTRACT.md: `/api` endpoint paths, epoch-second timestamps, the seven node types, `deterministic`/`heuristic` methods, the `live/cached/simulated` source badge, typology and alert enums, the contract change process, and `main.py` owned by B with `engine.py` as the A/B seam. Run: `pip install -r requirements.txt`, then `cd backend && uvicorn main:app --reload --port 8000`.

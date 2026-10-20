@@ -1,0 +1,17 @@
+{
+  "block_number": 87262015,
+  "block_timestamp": 1792459092000,
+  "caller_contract_address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+  "contract_address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+  "event_index": 1,
+  "event_name": "AddedBlackList",
+  "result": {
+    "0": "0x75bfdc53b18902c3ca06da533687064ed56a37e3",
+    "_user": "0x75bfdc53b18902c3ca06da533687064ed56a37e3"
+  },
+  "result_type": {
+    "_user": "address"
+  },
+  "event": "AddedBlackList(address indexed _user)",
+  "transaction_id": "7773112d0c2c87dc70ca0578386fada735481657b62e72fd0788524bfb776642"
+}
