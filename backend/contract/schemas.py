@@ -8,10 +8,11 @@ Conventions: timestamps = Unix epoch SECONDS (UTC); amounts = token units (e.g. 
 from typing import List, Literal, Optional
 from pydantic import BaseModel, Field
 
-CONTRACT_VERSION = "1.0.0"
+CONTRACT_VERSION = "1.1.0"
 
 NodeType = Literal["victim", "scam_wallet", "intermediary", "bridge", "mixer", "exchange", "unknown"]
 RiskLevel = Literal["Low", "Medium", "High", "Critical"]
+Urgency = Literal["act_now", "act_soon", "preserve"]   # set by B (recommendations.py); the engine returns None
 Source = Literal["live", "cached", "simulated"]
 Method = Literal["deterministic", "heuristic"]
 EdgeType = Literal["transfer", "bridge", "swap", "mixer_in"]
@@ -39,8 +40,8 @@ class Node(BaseModel):
     type: NodeType
     label: Optional[str] = None               # e.g. "Example Exchange A (hot wallet)"
     hop: int = 0                              # distance from the reported wallet
-    risk: RiskLevel = "Low"
-    risk_score: float = Field(0.0, ge=0, le=1)
+    risk: Optional[RiskLevel] = "Low"         # None for the reported wallet (hop 0, labeled "Reported"): risk is for downstream wallets
+    risk_score: Optional[float] = Field(0.0, ge=0, le=1)
     reasons: List[str] = []                   # top SHAP / rule reason codes
     typology: Typology = "unknown"
     idle_balance: float = 0.0                 # funds still sitting here (act now if > 0)
@@ -96,8 +97,10 @@ class TraceResponse(BaseModel):
     chain: Chain = "tron"
     fraud_type: Optional[str] = None
     amount_lost: Optional[float] = None
-    risk: RiskLevel
-    risk_score: float
+    risk: Optional[RiskLevel] = None          # mirrors the reported wallet, so None (see Node.risk)
+    risk_score: Optional[float] = None
+    urgency: Optional[Urgency] = None         # engine returns None; B sets it in recommendations.py
+    urgency_reasons: List[str] = []           # the triggers that fired
     typology: Typology = "unknown"
     graph: Graph
     nearest_vasp: Optional[NearestVASP] = None
@@ -124,7 +127,9 @@ class CaseSummary(BaseModel):
     amount_lost: float
     fraud_type: str
     state: str
-    risk: RiskLevel
+    risk: Optional[RiskLevel] = None          # None: mirrors the reported wallet
+    urgency: Optional[Urgency] = None
+    urgency_reasons: List[str] = []
     status: Literal["tracing", "attributed", "notice_drafted", "notice_sent", "unresolved"]
     vasp: Optional[str] = None
     time_to_attribution_sec: Optional[float] = None

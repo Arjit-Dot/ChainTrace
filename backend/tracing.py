@@ -78,7 +78,7 @@ def trace(wallet: str, adapter: TronAdapter, case_value: Optional[float] = None,
                                    token=t.token, timestamp=t.timestamp,
                                    edge_type=EDGE_TYPES.get(target_type, "transfer")))
 
-    nodes[wallet] = Node(id=wallet, type="scam_wallet", hop=0)
+    nodes[wallet] = Node(id=wallet, type="scam_wallet", hop=0, label="Reported", risk=None, risk_score=None)
     for t in root_hist:  # victims: who paid the reported wallet
         if t.to_addr == wallet and t.amount >= floor:
             nodes.setdefault(t.from_addr, Node(id=t.from_addr, type="victim", hop=-1))
@@ -133,13 +133,13 @@ def summarize(graph: Graph) -> TraceSummary:
 
 
 def build_response(req: TraceRequest, adapter: Optional[TronAdapter] = None) -> TraceResponse:
-    """Full contract response with placeholder risk fields (A6) and no attribution yet (A5)."""
+    """Full contract response: downstream risk is a placeholder until A6, the reported wallet and the case have no risk, urgency is B's."""
     adapter = adapter or TronAdapter()
     started = time.time()
     graph = trace(req.wallet, adapter, case_value=req.amount)
     return TraceResponse(
         case_id=f"CASE-{req.complaint_id}", complaint_id=req.complaint_id, wallet=req.wallet, chain="tron",
-        fraud_type=req.fraud_type, amount_lost=req.amount, risk="Low", risk_score=0.0,
+        fraud_type=req.fraud_type, amount_lost=req.amount, risk=None, risk_score=None,
         graph=graph, summary=summarize(graph), source="cached" if adapter.offline else "live",
         generated_at=int(started),
     )

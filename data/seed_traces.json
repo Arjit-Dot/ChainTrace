@@ -1,14 +1,16 @@
 {
   "C-001": {
-    "contract_version": "1.0.0",
+    "contract_version": "1.1.0",
     "case_id": "C-001",
     "complaint_id": "NCRP-2026-0001",
     "wallet": "TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo",
     "chain": "tron",
     "fraud_type": "investment",
     "amount_lost": 12000.0,
-    "risk": "Critical",
-    "risk_score": 0.96,
+    "risk": null,
+    "risk_score": null,
+    "urgency": null,
+    "urgency_reasons": [],
     "typology": "investment_scam",
     "graph": {
       "nodes": [
@@ -52,10 +54,10 @@
           "id": "TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo",
           "chain": "tron",
           "type": "scam_wallet",
-          "label": "Reported wallet",
+          "label": "Reported",
           "hop": 0,
-          "risk": "Critical",
-          "risk_score": 0.96,
+          "risk": null,
+          "risk_score": null,
           "reasons": [
             "89 unique senders in 5 days",
             "Forwards funds within 4 minutes",
@@ -309,15 +311,17 @@
     "notes": "FICTIONAL demo data. Names and addresses are placeholders."
   },
   "C-002": {
-    "contract_version": "1.0.0",
+    "contract_version": "1.1.0",
     "case_id": "C-002",
     "complaint_id": "NCRP-2026-0002",
     "wallet": "TWzZ2piQ5aRm6HphynRu8mBce25MoCaPa8",
     "chain": "tron",
     "fraud_type": "task",
     "amount_lost": 4500.0,
-    "risk": "High",
-    "risk_score": 0.83,
+    "risk": null,
+    "risk_score": null,
+    "urgency": null,
+    "urgency_reasons": [],
     "typology": "task_scam",
     "graph": {
       "nodes": [
@@ -325,10 +329,10 @@
           "id": "TWzZ2piQ5aRm6HphynRu8mBce25MoCaPa8",
           "chain": "tron",
           "type": "scam_wallet",
-          "label": "Reported wallet",
+          "label": "Reported",
           "hop": 0,
-          "risk": "High",
-          "risk_score": 0.83,
+          "risk": null,
+          "risk_score": null,
           "reasons": [
             "Small repeated deposits from many victims",
             "Forwards funds within minutes"
@@ -480,15 +484,17 @@
     "notes": "FICTIONAL seed trace. Names and addresses are placeholders."
   },
   "C-003": {
-    "contract_version": "1.0.0",
+    "contract_version": "1.1.0",
     "case_id": "C-003",
     "complaint_id": "NCRP-2026-0003",
     "wallet": "TEVhtEy1htd8G5M54VV9P39nRT9ydTeLgA",
     "chain": "tron",
     "fraud_type": "investment",
     "amount_lost": 9800.0,
-    "risk": "Critical",
-    "risk_score": 0.95,
+    "risk": null,
+    "risk_score": null,
+    "urgency": null,
+    "urgency_reasons": [],
     "typology": "investment_scam",
     "graph": {
       "nodes": [
@@ -496,10 +502,10 @@
           "id": "TEVhtEy1htd8G5M54VV9P39nRT9ydTeLgA",
           "chain": "tron",
           "type": "scam_wallet",
-          "label": "Reported wallet",
+          "label": "Reported",
           "hop": 0,
-          "risk": "Critical",
-          "risk_score": 0.95,
+          "risk": null,
+          "risk_score": null,
           "reasons": [
             "Many unrelated senders in a short window",
             "Forwards funds within minutes"
@@ -684,15 +690,17 @@
     "notes": "FICTIONAL seed trace. Names and addresses are placeholders."
   },
   "C-004": {
-    "contract_version": "1.0.0",
+    "contract_version": "1.1.0",
     "case_id": "C-004",
     "complaint_id": "NCRP-2026-0004",
     "wallet": "TR6UvFWLaT62EDbUCQuoghPuxhAsp344DJ",
     "chain": "tron",
     "fraud_type": "sextortion",
     "amount_lost": 2200.0,
-    "risk": "High",
-    "risk_score": 0.83,
+    "risk": null,
+    "risk_score": null,
+    "urgency": null,
+    "urgency_reasons": [],
     "typology": "sextortion",
     "graph": {
       "nodes": [
@@ -700,10 +708,10 @@
           "id": "TR6UvFWLaT62EDbUCQuoghPuxhAsp344DJ",
           "chain": "tron",
           "type": "scam_wallet",
-          "label": "Reported wallet",
+          "label": "Reported",
           "hop": 0,
-          "risk": "High",
-          "risk_score": 0.83,
+          "risk": null,
+          "risk_score": null,
           "reasons": [
             "Payments match extortion amounts",
             "New wallet, only inbound victim transfers"
@@ -809,15 +817,17 @@
     "notes": "FICTIONAL seed trace. Names and addresses are placeholders."
   },
   "C-005": {
-    "contract_version": "1.0.0",
+    "contract_version": "1.1.0",
     "case_id": "C-005",
     "complaint_id": "NCRP-2026-0005",
     "wallet": "TMo5n3YtkRHEWs9iaguxmmh4vtwCQneA7Z",
     "chain": "tron",
     "fraud_type": "sextortion",
     "amount_lost": 1800.0,
-    "risk": "High",
-    "risk_score": 0.83,
+    "risk": null,
+    "risk_score": null,
+    "urgency": null,
+    "urgency_reasons": [],
     "typology": "sextortion",
     "graph": {
       "nodes": [
@@ -825,10 +835,10 @@
           "id": "TMo5n3YtkRHEWs9iaguxmmh4vtwCQneA7Z",
           "chain": "tron",
           "type": "scam_wallet",
-          "label": "Reported wallet",
+          "label": "Reported",
           "hop": 0,
-          "risk": "High",
-          "risk_score": 0.83,
+          "risk": null,
+          "risk_score": null,
           "reasons": [
             "Payments match extortion amounts",
             "New wallet, only inbound victim transfers"
@@ -979,15 +989,17 @@
     "notes": "FICTIONAL seed trace. Names and addresses are placeholders."
   },
   "C-006": {
-    "contract_version": "1.0.0",
+    "contract_version": "1.1.0",
     "case_id": "C-006",
     "complaint_id": "NCRP-2026-0006",
     "wallet": "TTzCWpZ69PgvNqDmJy6SnvprJTLBuw9bt4",
     "chain": "tron",
     "fraud_type": "ransomware",
     "amount_lost": 15500.0,
-    "risk": "Critical",
-    "risk_score": 0.95,
+    "risk": null,
+    "risk_score": null,
+    "urgency": null,
+    "urgency_reasons": [],
     "typology": "ransomware",
     "graph": {
       "nodes": [
@@ -995,10 +1007,10 @@
           "id": "TTzCWpZ69PgvNqDmJy6SnvprJTLBuw9bt4",
           "chain": "tron",
           "type": "scam_wallet",
-          "label": "Reported wallet",
+          "label": "Reported",
           "hop": 0,
-          "risk": "Critical",
-          "risk_score": 0.95,
+          "risk": null,
+          "risk_score": null,
           "reasons": [
             "Single large inbound payment",
             "Funds split and sent to a mixer"
@@ -1125,15 +1137,17 @@
     "notes": "FICTIONAL seed trace. Funds entered a mixer; no exchange reached."
   },
   "C-007": {
-    "contract_version": "1.0.0",
+    "contract_version": "1.1.0",
     "case_id": "C-007",
     "complaint_id": "NCRP-2026-0007",
     "wallet": "TCwHhzfktEHUNzWZshprTrdqaP7XquhWvm",
     "chain": "tron",
     "fraud_type": "phishing",
     "amount_lost": 3100.0,
-    "risk": "Medium",
-    "risk_score": 0.58,
+    "risk": null,
+    "risk_score": null,
+    "urgency": null,
+    "urgency_reasons": [],
     "typology": "phishing",
     "graph": {
       "nodes": [
@@ -1141,10 +1155,10 @@
           "id": "TCwHhzfktEHUNzWZshprTrdqaP7XquhWvm",
           "chain": "tron",
           "type": "scam_wallet",
-          "label": "Reported wallet",
+          "label": "Reported",
           "hop": 0,
-          "risk": "Medium",
-          "risk_score": 0.58,
+          "risk": null,
+          "risk_score": null,
           "reasons": [
             "Received funds from drained victim wallet",
             "Wallet age under 2 days"
@@ -1250,15 +1264,17 @@
     "notes": "FICTIONAL seed trace. Names and addresses are placeholders."
   },
   "C-008": {
-    "contract_version": "1.0.0",
+    "contract_version": "1.1.0",
     "case_id": "C-008",
     "complaint_id": "NCRP-2026-0008",
     "wallet": "TPczvgGfrntR6ZxVXR8MoAV59D5k6HsUjL",
     "chain": "tron",
     "fraud_type": "task",
     "amount_lost": 6400.0,
-    "risk": "High",
-    "risk_score": 0.83,
+    "risk": null,
+    "risk_score": null,
+    "urgency": null,
+    "urgency_reasons": [],
     "typology": "task_scam",
     "graph": {
       "nodes": [
@@ -1266,10 +1282,10 @@
           "id": "TPczvgGfrntR6ZxVXR8MoAV59D5k6HsUjL",
           "chain": "tron",
           "type": "scam_wallet",
-          "label": "Reported wallet",
+          "label": "Reported",
           "hop": 0,
-          "risk": "High",
-          "risk_score": 0.83,
+          "risk": null,
+          "risk_score": null,
           "reasons": [
             "Small repeated deposits from many victims",
             "Forwards funds within minutes"

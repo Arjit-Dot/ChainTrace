@@ -1,7 +1,7 @@
 import { ArrowDownLeft, ArrowUpRight, X } from 'lucide-react'
 import { NODE_LABELS, nodeColor } from '../lib/colors'
 import { formatTime, formatUSDT, humanize, shortAddr } from '../lib/format'
-import { RiskBadge } from './Badges'
+import { ReportedBadge, RiskBadge } from './Badges'
 import CopyButton from './CopyButton'
 
 function TxRow({ tx, other, dir }) {
@@ -61,7 +61,7 @@ export default function NodePanel({ node, graph, onClose }) {
           <dd>{humanize(node.typology)}</dd>
           <dt className="text-muted">Risk</dt>
           <dd>
-            <RiskBadge risk={node.risk} score={node.risk_score} />
+            {node.risk ? <RiskBadge risk={node.risk} score={node.risk_score} /> : <ReportedBadge />}
           </dd>
         </dl>
 
@@ -74,7 +74,9 @@ export default function NodePanel({ node, graph, onClose }) {
 
         {node.reasons.length > 0 && (
           <div>
-            <h3 className="mb-1.5 text-xs font-semibold tracking-wide text-muted uppercase">Why this risk</h3>
+            <h3 className="mb-1.5 text-xs font-semibold tracking-wide text-muted uppercase">
+              {node.risk ? 'Why this risk' : 'Why it matters'}
+            </h3>
             <ul className="list-disc space-y-1 pl-4 text-xs">
               {node.reasons.map((r) => (
                 <li key={r}>{r}</li>

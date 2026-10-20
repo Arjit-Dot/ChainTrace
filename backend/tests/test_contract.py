@@ -20,7 +20,12 @@ def test_trace_shape():
     for e in r.graph.edges:                      # every edge points at a real node
         assert e.source in ids and e.target in ids
     assert r.summary.nodes == len(r.graph.nodes)
-    assert 0 <= r.risk_score <= 1
+    reported = next(n for n in r.graph.nodes if n.hop == 0)
+    assert reported.label == "Reported" and reported.risk is None and reported.risk_score is None
+    assert r.risk is None and r.risk_score is None and r.urgency is None  # engine leaves urgency to B
+    for n in r.graph.nodes:
+        if n.hop != 0:
+            assert n.risk is not None and 0 <= n.risk_score <= 1
 
 
 def test_nearest_vasp_is_in_graph():

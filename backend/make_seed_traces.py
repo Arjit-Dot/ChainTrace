@@ -42,7 +42,6 @@ def txh(seed: str) -> str:
 
 TYPOLOGY = {"investment": "investment_scam", "task": "task_scam", "sextortion": "sextortion",
             "ransomware": "ransomware", "phishing": "phishing"}
-SCORE = {"Low": 0.15, "Medium": 0.58, "High": 0.83, "Critical": 0.95}
 
 # Shared infrastructure (same addresses as the hero fixture where they overlap)
 D_A, H_A = tron("hero-deposit-A"), tron("example-exchange-A-hot")
@@ -66,7 +65,7 @@ class Builder:
         self.t0 = case.reported_at - 6 * 3600
         self.typ = TYPOLOGY.get(case.fraud_type, "unknown")
         self.nodes, self.edges = {}, []
-        self.node(case.wallet, "scam_wallet", 0, "Reported wallet", case.risk, SCORE[case.risk],
+        self.node(case.wallet, "scam_wallet", 0, "Reported", None, None,
                   self.scam_reasons(), self.typ)
 
     def scam_reasons(self):
@@ -101,8 +100,8 @@ class Builder:
         nodes = list(self.nodes.values())
         return TraceResponse(
             case_id=self.c.case_id, complaint_id=self.c.complaint_id, wallet=self.c.wallet, chain="tron",
-            fraud_type=self.c.fraud_type, amount_lost=self.c.amount_lost, risk=self.c.risk,
-            risk_score=SCORE[self.c.risk], typology=self.typ,
+            fraud_type=self.c.fraud_type, amount_lost=self.c.amount_lost, risk=None,
+            risk_score=None, typology=self.typ,
             graph={"nodes": nodes, "edges": self.edges},
             nearest_vasp=nearest_vasp,
             summary={

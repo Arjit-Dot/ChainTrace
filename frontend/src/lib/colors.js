@@ -29,6 +29,13 @@ export const RISK_CLASSES = {
   Critical: 'bg-red-500/15 text-red-300 ring-red-500/40',
 }
 
+// Case urgency: what an officer should do about the case, and how soon.
+export const URGENCY = {
+  act_now: { label: 'Act now', classes: 'bg-red-500/15 text-red-300 ring-red-500/40' },
+  act_soon: { label: 'Act soon', classes: 'bg-amber-500/15 text-amber-300 ring-amber-500/40' },
+  preserve: { label: 'Preserve', classes: 'bg-sky-500/15 text-sky-300 ring-sky-500/40' },
+}
+
 export const SOURCE_CLASSES = {
   live: 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/40',
   cached: 'bg-sky-500/15 text-sky-300 ring-sky-500/40',

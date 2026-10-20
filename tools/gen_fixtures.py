@@ -60,7 +60,7 @@ nodes = [
     N(id=V1, type="victim", hop=-1, label="Victim wallet"),
     N(id=V2, type="victim", hop=-1, label="Victim wallet"),
     N(id=V3, type="victim", hop=-1, label="Victim wallet"),
-    N(id=S, type="scam_wallet", hop=0, label="Reported wallet", risk="Critical", risk_score=0.96,
+    N(id=S, type="scam_wallet", hop=0, label="Reported", risk=None, risk_score=None,
       reasons=["89 unique senders in 5 days", "Forwards funds within 4 minutes", "98% of inflow leaves within 1 hour"],
       typology="investment_scam"),
     N(id=I1, type="intermediary", hop=1, label="Pass-through wallet", risk="High", risk_score=0.82,
@@ -101,8 +101,10 @@ trace = {
     "chain": "tron",
     "fraud_type": "investment",
     "amount_lost": 12000.0,
-    "risk": "Critical",
-    "risk_score": 0.96,
+    "risk": None,
+    "risk_score": None,
+    "urgency": None,
+    "urgency_reasons": [],
     "typology": "investment_scam",
     "graph": {"nodes": nodes, "edges": edges},
     "nearest_vasp": {
@@ -161,7 +163,7 @@ cases = []
 for i, (cid, amt, fr, st, rk, status, vasp, tta, net) in enumerate(rows, 1):
     cases.append(CaseSummary(
         case_id=cid, complaint_id=f"NCRP-2026-{i:04d}", wallet=tron(f"case-wallet-{cid}"),
-        amount_lost=float(amt), fraud_type=fr, state=st, risk=rk, status=status, vasp=vasp,
+        amount_lost=float(amt), fraud_type=fr, state=st, risk=None, status=status, vasp=vasp,
         time_to_attribution_sec=tta, network_id=net, reported_at=T0 - 86400 + i * 3600))
 cases[0].wallet = S  # C-001 uses the hero wallet
 dump("cases.json", [c.model_dump() for c in cases])

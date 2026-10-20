@@ -20,7 +20,8 @@ def test_every_seed_case_has_a_trace():
 @pytest.mark.parametrize("case", CASES, ids=lambda c: c.case_id)
 def test_trace_matches_case(case):
     t = TRACES[case.case_id]
-    assert (t.complaint_id, t.wallet, t.risk) == (case.complaint_id, case.wallet, case.risk)
+    assert (t.complaint_id, t.wallet) == (case.complaint_id, case.wallet)
+    assert t.risk is None and case.risk is None  # reported wallet is not scored
     assert (t.nearest_vasp.vasp if t.nearest_vasp else None) == case.vasp
     assert t.summary.time_to_attribution_sec == case.time_to_attribution_sec
 
@@ -102,8 +103,9 @@ def test_engine_failure_falls_back_to_fixture(client, monkeypatch):
 
 
 def test_wallet_risk_reads_seed_nodes(client):
-    r = client.get(f"/api/wallets/{TRACES['C-004'].wallet}/risk").json()
-    assert r["risk"] == TRACES["C-004"].risk
+    node = next(n for n in TRACES["C-004"].graph.nodes if n.hop == 1)
+    r = client.get(f"/api/wallets/{node.id}/risk").json()
+    assert r["risk"] == node.risk and r["risk_score"] == node.risk_score
 
 
 # ---------- B4: recommendations and freeze notice ----------

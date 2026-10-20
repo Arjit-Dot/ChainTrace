@@ -111,7 +111,7 @@ def fixture_risk(address: str) -> WalletRisk:
     """Risk of a wallet as it appears in a seed trace, else the hero wallet's risk."""
     for t in _seed_traces().values():
         for n in t["graph"]["nodes"]:
-            if n["id"] == address:
+            if n["id"] == address and n["risk"] is not None:  # the reported wallet is not scored in a trace
                 return WalletRisk(address=address, risk=n["risk"], risk_score=n["risk_score"],
                                   reasons=n["reasons"], typology=n["typology"])
     data = json.loads((DATA / "fixtures" / "wallet_risk_hero.json").read_text())

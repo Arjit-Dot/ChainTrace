@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { RiskBadge } from '../components/Badges'
+import { UrgencyBadge } from '../components/Badges'
 import PageHeader from '../components/PageHeader'
 import { Empty, ErrorState, Loading } from '../components/Status'
 import { useFetch } from '../hooks/useFetch'
@@ -25,7 +25,7 @@ export default function Dashboard() {
             <table className="w-full text-left text-sm whitespace-nowrap">
               <thead className="bg-panel-2 text-xs tracking-wide text-muted uppercase">
                 <tr>
-                  {['Case', 'Complaint', 'Wallet', 'Lost', 'Fraud type', 'State', 'Risk', 'VASP', 'Time to attribution', 'Status'].map(
+                  {['Case', 'Complaint', 'Wallet', 'Lost', 'Fraud type', 'State', 'Urgency', 'VASP', 'Time to attribution', 'Status'].map(
                     (h) => (
                       <th key={h} className="px-4 py-2.5 font-medium">
                         {h}
@@ -48,7 +48,7 @@ export default function Dashboard() {
                     <td className="px-4 py-2.5 capitalize">{c.fraud_type}</td>
                     <td className="px-4 py-2.5">{c.state}</td>
                     <td className="px-4 py-2.5">
-                      <RiskBadge risk={c.risk} />
+                      <UrgencyBadge urgency={c.urgency} reasons={c.urgency_reasons} />
                     </td>
                     <td className="px-4 py-2.5">{c.vasp ?? <span className="text-muted">—</span>}</td>
                     <td className="px-4 py-2.5">{formatDuration(c.time_to_attribution_sec)}</td>

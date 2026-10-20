@@ -25,10 +25,11 @@ In a **5-minute demo** the audience should see:
 1. A complaint arrives with a wallet address.
 2. The system traces the funds and draws a fund-flow graph.
 3. It names the receiving exchange with a confidence score and evidence.
-4. Wallets get a risk level, fraud type, and reason codes (AI).
-5. A freeze request and PDF evidence report are generated.
-6. A live alert fires when funds move.
-7. A dashboard shows cases and a linked criminal network.
+4. Downstream wallets get a risk level, fraud type, and reason codes (AI); the reported wallet is labeled `Reported`.
+5. The case gets an urgency level (Act now / Act soon / Preserve) with the reasons that triggered it.
+6. A freeze request and PDF evidence report are generated.
+7. A live alert fires when funds move.
+8. A dashboard shows cases and a linked criminal network.
 
 **Rule for the 2 days:** use **cached/seeded data as the backbone** so the demo never breaks, and add one **live TRON trace** as a bonus. Label clearly in the UI what is live and what is simulated.
 
@@ -62,7 +63,8 @@ In a **5-minute demo** the audience should see:
 | Clustering of exchange wallets | Deposit-address clustering via sweeps | **Real logic** |
 | Cross-chain movement | Bridge detection + link to destination chain | Seeded example |
 | Mixers / DeFi / bridges | Flagged as terminal nodes with warnings | Label-based |
-| Risk categorization | Low/Medium/High/Critical + SHAP reasons | **Real model**, trained on synthetic + seed data |
+| Risk categorization | Low/Medium/High/Critical on downstream wallets + SHAP reasons | **Real model**, trained on synthetic + seed data |
+| Case urgency | Act now / Act soon / Preserve from rules, with the triggers shown | **Real logic**, placeholder thresholds |
 | Fraud typology | Investment / sextortion / ransomware / phishing | Rule-assisted ML |
 | Automated alerts | Live alert via SSE | Simulated trigger |
 | SAHYOG / NCRP integration | Mock connectors + API spec | Simulated |
@@ -159,7 +161,7 @@ chaintrace/
 - Add each outgoing transfer as a graph edge. Stop expanding at: known exchange, mixer, bridge, depth 5, or flows under 1% of the case value.
 - **Pass-through detection:** tag a wallet `intermediary` if it forwards ≥90% of what it receives within ~1 hour.
 - Check balances of leaf nodes; a leaf still holding funds gets an "idle funds" flag.
-- Output the graph in the contract format (`Graph` in `schemas.py`): nodes (`id` = address, `chain`, `type`, `label`, `hop`, `risk`, `risk_score`, `reasons`, `typology`, `idle_balance`) and edges (`source`, `target`, `tx_hash`, `amount`, `token`, `timestamp`, `edge_type`). Node `type` is one of `victim, scam_wallet, intermediary, bridge, mixer, exchange, unknown`; `hop` is `-1` for victims, `0` for the reported wallet, increasing downstream; `summary.idle_funds` must equal the sum of node `idle_balance`.
+- Output the graph in the contract format (`Graph` in `schemas.py`): nodes (`id` = address, `chain`, `type`, `label`, `hop`, `risk`, `risk_score`, `reasons`, `typology`, `idle_balance`) and edges (`source`, `target`, `tx_hash`, `amount`, `token`, `timestamp`, `edge_type`). Node `type` is one of `victim, scam_wallet, intermediary, bridge, mixer, exchange, unknown`; `hop` is `-1` for victims, `0` for the reported wallet, increasing downstream; `summary.idle_funds` must equal the sum of node `idle_balance`. The reported wallet (hop 0) is labeled `Reported` and its `risk` and `risk_score` are `null`; risk is scored on downstream wallets only.
 
 ### Step 5. Attribution engine (3 hrs)
 **Owner:** A5
@@ -178,8 +180,9 @@ chaintrace/
 
 ### Step 6. AI risk and typology (2.5 hrs)
 **Owner:** A6
-**What:** Risk level, fraud type, reason codes.
+**What:** Risk level for downstream wallets, fraud type, reason codes.
 **How:**
+- **Scope:** the reported wallet is already suspected because a victim named it, so it is not scored (`risk: null`, labeled `Reported`). Risk is scored on downstream wallets, to show which hops to follow first.
 - **Features per wallet:** age, tx count, in/out ratio, median time-to-forward, unique senders, round-number ratio, fan-in degree.
 - **Training data:** generate a synthetic labeled set (scam collectors vs normal vs exchange-like) using realistic ranges, plus your seed wallets. Be upfront in the UI and slides that the model is trained on synthetic + seed data for the demo.
 - Train XGBoost; map probability to Low/Medium/High/Critical; compute SHAP top-3 reasons ("forwards funds in 4 minutes", "89 unique senders").
@@ -190,6 +193,11 @@ chaintrace/
 **Owner:** B4 (recommendations, freeze notice) + B5 (PDF report)
 **What:** Turn findings into actions.
 **How:**
+- **Case urgency** (output `urgency: act_now | act_soon | preserve` and `urgency_reasons[]` on the case; set by B in `recommendations.py` from the trace data, no ML). First match wins, top to bottom:
+  1. `act_now`: any of: idle funds in any wallet (`summary.idle_funds > 0`); funds reached a VASP deposit address and have not been swept out yet; the last outgoing transaction is recent (under 24 hours).
+  2. `act_soon`: any of: a VASP was identified at confidence 0.70 or higher (funds already swept to its hot wallet); amount lost is 10,000 or more; the case is linked to 2 or more complaints.
+  3. `preserve`: everything else (funds entered a mixer, no VASP found, or an old trail with no idle funds).
+  `urgency_reasons[]` lists the triggers that fired, so an officer can see why. The thresholds (24 hours, 0.70, 10,000, 2 complaints) are placeholders for the demo; real values should come from investigators. `act_now` means a freeze is possible in this window, not guaranteed. Recommendation `priority` only orders the recommendations panel; the UI shows the urgency badge, not a second scale.
 - **Recommendation rules** (output `recommendations[]` of `{priority: urgent|high|normal, action, detail}`): idle funds found → "act immediately"; VASP found ≥ threshold → "issue freeze/KYC request to X"; mixer reached → "preserve evidence, monitor exits"; bridge reached → "continue on destination chain".
 - **Freeze notice:** text template filled with complaint ID, tx hashes, addresses, amounts, times; request freeze **plus** preservation of KYC, bank, phone and IP data. Leave legal-section references as placeholders. Served by `GET /api/cases/{case_id}/freeze-notice` as a `FreezeNotice` (`case_id, to_vasp, to_email, subject, body, requested_actions, status: draft|approved|sent`).
 - **PDF evidence report (ReportLab):** summary, graph image, transaction table, attribution evidence, methodology and limitations, SHA-256 hash of the report. Served by `GET /api/cases/{case_id}/report` as a PDF.
@@ -207,7 +215,7 @@ chaintrace/
 **What:** The part judges see.
 **How:**
 - **Pages:** (1) Dashboard, (2) New Complaint, (3) Case View, (4) Network View.
-- **Case View:** Cytoscape graph with colors by node type (victim grey, scam wallet red, intermediary orange, bridge blue, mixer purple, exchange green, unknown white); edge thickness = amount; click a node for risk, reasons and transactions. Add a "Nearest VASP" card, a risk badge, a recommendations panel, and **Download Report / Freeze Notice** buttons.
+- **Case View:** Cytoscape graph with colors by node type (victim grey, scam wallet red, intermediary orange, bridge blue, mixer purple, exchange green, unknown white); edge thickness = amount; click a node for risk, reasons and transactions. Add a "Nearest VASP" card, an urgency badge (Act now / Act soon / Preserve) with its reasons, a recommendations panel, and **Download Report / Freeze Notice** buttons.
 - **Dashboard (Recharts):** KPI tiles from `GET /api/dashboard` (`total_cases`, `total_amount_traced`, `avg_time_to_attribution_sec`, `vasp_identified_pct`, `idle_funds_flagged`), `by_fraud_type`, `top_vasps`, `by_state`, and a live alert feed.
 - **Network View:** group seed complaints that share downstream wallets into one network graph (use `networkx.connected_components`), served by `GET /api/networks` as `Network[]`.
 - Use a dark theme, a consistent color legend, and a short animation as the trace builds hop by hop; it makes the speed visible.
@@ -232,7 +240,7 @@ chaintrace/
 | 0:30 | Submit a complaint (or trigger the mock NCRP feed) | "Starts from the complaint, no analyst needed." |
 | 1:00 | Watch the graph build hop by hop | "Real-time forward tracing." |
 | 2:00 | Open the Nearest VASP card | "Exchange, deposit address, confidence, evidence." |
-| 2:45 | Show risk badge, fraud type, SHAP reasons | "AI prioritizes; evidence stays explainable." |
+| 2:45 | Show urgency badge and reasons, then downstream risk, fraud type, SHAP reasons | "AI prioritizes; evidence stays explainable." |
 | 3:15 | Generate freeze notice + PDF report | "Ready to send in one click." |
 | 3:45 | Trigger a live alert | "If funds move, we know." |
 | 4:15 | Open the Network View | "These complaints, one organized network." |
@@ -340,7 +348,7 @@ A2 comes before A3 on purpose: the adapter defines the cache format, and the scr
 
 **A4. Tracing engine** (`backend/tracing.py`, Step 4 as written)
 - Best-first search, stop rules, pass-through detection, idle-funds check.
-- Output the graph in the contract format (`TraceResponse`, section 7 step 4 for field rules). Risk fields use fixed placeholder values until A6, so the output is already valid.
+- Output the graph in the contract format (`TraceResponse`, section 7 step 4 for field rules). Risk fields use fixed placeholder values until A6 (the reported wallet has `risk: null`), so the output is already valid.
 - *Done when:* running the tracer on the hero wallet prints a graph that matches the contract and stops at the exchange. **Optional early peek:** merge to `main` now and tell B; B can switch to `http` mode and see real graphs.
 
 **A5. Attribution and real trace endpoint** (`backend/attribution.py`, `backend/engine.py`, Step 5 as written)
@@ -350,10 +358,10 @@ A2 comes before A3 on purpose: the adapter defines the cache format, and the scr
 - *Done when:* the trace endpoint returns a valid response for the hero wallet with a Nearest VASP result (confidence about 0.8-0.9, `heuristic`). This is the end-of-Day-1 acceptance test.
 
 **A6. Risk and typology** (`backend/risk.py`)
-- **Rule-based first (about 1 hr):** Step 6 features turned into a score, mapped to Low/Medium/High/Critical, plus the typology signatures.
+- **Rule-based first (about 1 hr):** Step 6 features turned into a score, mapped to Low/Medium/High/Critical, plus the typology signatures. Score downstream wallets only; the reported wallet keeps `risk: null`.
 - **Then XGBoost (about 1.5 hrs):** train on synthetic + seed wallets behind the same scoring function (model saved to `data/risk_model.pkl`), and use SHAP top-3 as the reasons. If time is short, ship the rule-based version only.
 - Replace the placeholders from A4 and add the wallet-risk endpoint.
-- *Done when:* the hero scam wallet is High/Critical with at least 2 readable reasons, the exchange hot wallet is Low, and the contract check passes.
+- *Done when:* the hero's pass-through wallets are High/Critical with at least 2 readable reasons, the exchange hot wallet is Low, the reported wallet has `risk: null`, and the contract check passes.
 
 **A7. Hardening and second case**
 - One more end-to-end case from a real cached wallet (this exercises the direct label match).
@@ -389,7 +397,7 @@ Then: Checkpoint 2, buffer, and rehearsal (11.6).
 **B2. Case View on the fixture**
 - Cytoscape graph: color by node type, edge thickness by amount, click a node for a side panel (risk, reasons, typology, idle balance, transactions).
 - **Nearest VASP card:** exchange, deposit address, hops, amount, time, confidence, method tag, evidence list, contact. Include an empty state for "no exchange reached".
-- Risk badge, and a `LIVE` / `CACHED` / `SIMULATED` badge.
+- Urgency badge with its reasons (case level), and a `LIVE` / `CACHED` / `SIMULATED` badge.
 - *Done when:* Case View is complete against the hero example, and the empty state works on an edited copy.
 
 **B3. Seed cases, database, cases API, New Complaint** (`backend/`, `data/`)
@@ -402,8 +410,9 @@ Then: Checkpoint 2, buffer, and rehearsal (11.6).
 
 **B4. Recommendations and freeze notice** (`backend/recommendations.py`, `backend/reports.py`)
 - Rules, using only the trace data: idle funds → "act immediately"; VASP found at or above the confidence threshold → "issue freeze/KYC request to X"; mixer reached → "preserve evidence, monitor exits"; bridge reached → "continue on destination chain". Shown in a panel on Case View.
+- **Case urgency:** `act_now | act_soon | preserve` plus `urgency_reasons[]`, using the first-match-wins rules in Step 7 (placeholder thresholds). Shown as a badge on Case View and as a column in the case list.
 - **Freeze notice:** a template filled with complaint ID, the transaction path, addresses, amounts and times. It requests a freeze **plus** preservation of KYC, bank, phone and IP data. Legal-section references stay as placeholders. Add the endpoint and a Download button.
-- *Done when:* the hero case shows at least 2 recommendations and downloads a filled notice.
+- *Done when:* the hero case shows `act_now` with its reasons, at least 2 recommendations, and downloads a filled notice.
 
 **B5. PDF evidence report** (`backend/reports.py`)
 - ReportLab: summary, graph image (drawn from the trace with networkx + matplotlib), transaction table, attribution evidence, methodology and limitations, SHA-256 hash of the report.
@@ -479,8 +488,9 @@ Contract rules live in `CONTRACT.md`. Endpoints are under `/api/...` and the con
 | B3: `db.py`, `engine_client.py`, cases API, New Complaint | NOT STARTED | n/a |
 | Step 4 / A4: tracing engine | DONE | `backend/tracing.py`: best-first search, stops at labeled exchange/bridge/mixer, depth 5 and flows under 1%; pass-through (`intermediary`) at >=90% within 1 hour; idle balance for leaf nodes (computed from cached transfers); `build_response()` with placeholder risk and no `nearest_vasp`. Wired into `engine.trace_complaint` (`TRACING=fixture` restores the old stub). CLI: `cd backend && python -m tracing <wallet> [amount]`. `tests/test_tracing.py` (15 tests, offline). Hero trace reaches Example Exchange A at hop 3 |
 | Step 5 / A5: attribution + real trace endpoint | DONE | `backend/attribution.py`: sweep heuristic (>=5 senders, >=90% forwarded to a labeled hot wallet, `heuristic`, capped 0.89) and direct label match (`deterministic`, 0.95); weighted confidence; contact from `vasp_contacts.csv`; retypes the deposit node to `exchange`. `engine.trace_complaint` now returns graph + `nearest_vasp` + measured `time_to_attribution_sec`. `tests/test_attribution.py` (12 tests). Hero: Example Exchange A, deposit `TAD47A…`, hops 2, 7,850 USDT, confidence 0.87 |
-| A6-A8, B4-B8 | NOT STARTED | n/a |
+| Contract v1.1.0: reported wallet unscored, case urgency | DONE | `backend/contract/schemas.py` (`CONTRACT_VERSION` 1.1.0: nullable `risk`/`risk_score`, `urgency`, `urgency_reasons`), `tools/gen_fixtures.py`, `backend/make_seed_traces.py`, `data/fixtures/`, `data/seed_*.json` regenerated. `tracing.py` labels hop 0 `Reported` with `risk: null`. B4 urgency in `recommendations.build_urgency` (first match wins, placeholder thresholds), stored on the case by `store.py`; UI shows an urgency badge with reasons (Case View, case list) and a `Reported` badge in the node panel. `tests/test_urgency.py` (7 tests) |
+| A6-A8, B5-B8 | NOT STARTED | n/a |
 
-**Audit of Steps 1-3 (updated 2026-10-20).** Steps 1-3 are complete: the contract, routes and tests work, the cache holds 3 real flagged wallets (with next hops) and the scripted hero case, `labels.csv`/`vasp_contacts.csv` are aligned with the contract, and `backend/chains/tron.py` is the adapter. Open items: paste a TronGrid key into `.env`; find a real, verifiable TRON bridge or mixer label. `engine` + `product` are merged into `main`; Step 4 (tracing) is done. Step 5 (attribution) is done. Next: A6 risk and typology (`backend/risk.py`).
+**Audit of Steps 1-3 (updated 2026-10-20).** Steps 1-3 are complete: the contract, routes and tests work, the cache holds 3 real flagged wallets (with next hops) and the scripted hero case, `labels.csv`/`vasp_contacts.csv` are aligned with the contract, and `backend/chains/tron.py` is the adapter. Open items: paste a TronGrid key into `.env`; find a real, verifiable TRON bridge or mixer label. `engine` + `product` are merged into `main`; Step 4 (tracing) is done. Step 5 (attribution) and contract v1.1.0 (reported wallet unscored, case urgency) are done. Next: A6 risk and typology (`backend/risk.py`).
 
 **Reconciliation notes.** The contract pack's layout won where it differed from section 5: the contract is a package (`contract/schemas.py`, not `contract.py`), the hero example is `data/fixtures/trace_hero.json`, the engine seam is `engine.py`, and `main.py` holds all routes as CONTRACT.md lists. The `routes_engine.py` / `routes_product.py` split was tried and dropped after merging `origin/main`; the API surface was identical. DEMO.md sections 6-11 were then aligned with CONTRACT.md: `/api` endpoint paths, epoch-second timestamps, the seven node types, `deterministic`/`heuristic` methods, the `live/cached/simulated` source badge, typology and alert enums, the contract change process, and `main.py` owned by B with `engine.py` as the A/B seam. Run: `pip install -r requirements.txt`, then `cd backend && uvicorn main:app --reload --port 8000`.

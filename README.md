@@ -9,8 +9,9 @@ A blockchain tracer for cybercrime investigators (i4c). Given a wallet reported 
 | API contract and all `/api` routes | done (`backend/contract/schemas.py`, `backend/main.py`) |
 | TRON chain adapter (TronGrid, cache first) | done (`backend/chains/tron.py`) |
 | Tracing engine (best-first, stop rules, pass-through, idle funds) | done (`backend/tracing.py`) |
-| Case store, dashboard, networks, freeze notice, React frontend | done |
-| Attribution (nearest exchange), risk and typology | not built; placeholders |
+| Case store, recommendations, case urgency (act now / act soon / preserve), dashboard, networks, freeze notice, React frontend | done |
+| Attribution (nearest exchange) | done (`backend/attribution.py`) |
+| Downstream wallet risk and typology (the reported wallet is not scored) | not built; placeholders |
 
 The demo data is partly fictional: the hero case (`TUNoHG…`), "Example Exchange A/B/C" and the seed cases are scripted. The cache also holds three real wallets that Tether blacklisted. See `data/cache/SOURCES.md` and `data/LABELS.md`.
 

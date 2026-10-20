@@ -1,13 +1,15 @@
 {
-  "contract_version": "1.0.0",
+  "contract_version": "1.1.0",
   "case_id": "C-001",
   "complaint_id": "NCRP-2026-0001",
   "wallet": "TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo",
   "chain": "tron",
   "fraud_type": "investment",
   "amount_lost": 12000.0,
-  "risk": "Critical",
-  "risk_score": 0.96,
+  "risk": null,
+  "risk_score": null,
+  "urgency": null,
+  "urgency_reasons": [],
   "typology": "investment_scam",
   "graph": {
     "nodes": [
@@ -51,10 +53,10 @@
         "id": "TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo",
         "chain": "tron",
         "type": "scam_wallet",
-        "label": "Reported wallet",
+        "label": "Reported",
         "hop": 0,
-        "risk": "Critical",
-        "risk_score": 0.96,
+        "risk": null,
+        "risk_score": null,
         "reasons": [
           "89 unique senders in 5 days",
           "Forwards funds within 4 minutes",
