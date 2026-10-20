@@ -282,7 +282,7 @@ Tasks are numbered **A1-A8** and **B1-B8**, in the order each person does them. 
 | | Person A: Engine | Person B: Product |
 |---|---|---|
 | Build steps | 1 (backend), 2 (cache, labels, contacts, hero case), 3, 4, 5, 6, 10 (slides) | 1 (frontend), 2 (seed cases), 7, 8, 9, 10 (demo mode) |
-| Backend files | `engine.py` (the seam; A edits only this and the modules it imports), `chains/tron.py, `tracing.py`, `attribution.py`, `risk.py`, `tests/test_contract.py`, `test_engine.py` | `main.py` (routes), `db.py`, `engine_client.py`, `recommendations.py`, `reports.py`, `alerts.py`, `make_seed_traces.py`, `test_product.py` |
+| Backend files | `engine.py` (the seam; A edits only this and the modules it imports), `chains/tron.py`, `tracing.py`, `attribution.py`, `risk.py`, `tests/test_contract.py`, `test_engine.py` | `main.py` (routes), `db.py`, `engine_client.py`, `recommendations.py`, `reports.py`, `alerts.py`, `make_seed_traces.py`, `test_product.py` |
 | Frontend and other | `slides.pptx` | `frontend/` |
 | Data | `data/cache/`, `data/scripts/`, `data/labels.csv`, `data/vasp_contacts.csv`, `data/risk_model.pkl` | `data/seed_cases.json`, `data/seed_traces.json` |
 | Endpoints | trace, wallet risk | cases, complaints, reports, freeze notice, alerts, mock NCRP / SAHYOG |
