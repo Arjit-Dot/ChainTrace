@@ -299,7 +299,7 @@ The only shared work.
 
 - Create the repo with the structure from section 5. Create branches `engine` and `product`.
 - Add your existing contract file to `backend/`, and write `data/fixtures/trace_hero.json`: one hand-written example response (about 8 nodes: victim → scam wallet → 2 intermediaries → deposit address → exchange) that matches the contract.
-- Write `backend/main.py` once: a `/health` route, and it mounts `routes_engine.py` and `routes_product.py`. Create both as stubs. The engine stub returns the hero example. **After this, nobody edits `main.py`.**
+- Write `backend/main.py` once: the `/api/health` route and every contract route on fixtures (already done in the contract pack). The engine stub in `engine.py` returns the hero example. **After this, nobody edits `main.py`.**
 - Start `requirements.txt` with the base libraries (`fastapi uvicorn httpx networkx pandas`). After that, each person adds lines only in their own block.
 - Agree the constants: hero wallet address, hero complaint ID, backend port 8000, frontend port 5173.
 - **Done when:** the server starts, `/docs` loads, and the hero example matches the contract.
@@ -343,10 +343,10 @@ A2 comes before A3 on purpose: the adapter defines the cache format, and the scr
 - Output the graph in your contract format. Risk fields use fixed placeholder values until A6, so the output is already valid.
 - *Done when:* running the tracer on the hero wallet prints a graph that matches the contract and stops at the exchange. **Optional early peek:** merge to `main` now and tell B; B can switch to `http` mode and see real graphs.
 
-**A5. Attribution and real trace endpoint** (`backend/attribution.py`, `backend/routes_engine.py`, Step 5 as written)
+**A5. Attribution and real trace endpoint** (`backend/attribution.py`, `backend/engine.py`, Step 5 as written)
 - Direct match, sweep heuristic, confidence score. Heuristic-only results stay below 90% and are tagged `heuristic`.
 - Build the Nearest VASP result, including the transaction path and the nodal contact. Return an empty result when no exchange is found.
-- Replace the stub in `routes_engine.py` with the real trace endpoint, including the errors and cache-only behaviour your contract defines.
+- Replace the stub in `engine.py` (`trace_complaint`) with the real trace endpoint, including the errors and cache-only behaviour your contract defines.
 - *Done when:* the trace endpoint returns a valid response for the hero wallet with a Nearest VASP result (confidence about 0.8-0.9, `heuristic`). This is the end-of-Day-1 acceptance test.
 
 **A6. Risk and typology** (`backend/risk.py`)
@@ -410,7 +410,7 @@ Then: Checkpoint 2, buffer, and rehearsal (11.6).
 - Add the endpoint and a Download Report button.
 - *Done when:* the PDF opens correctly for the hero case and one seeded case, and the hash is printed.
 
-**B6. Alerts and mock integrations** (`backend/alerts.py`, `backend/routes_product.py`)
+**B6. Alerts and mock integrations** (`backend/alerts.py`, `backend/main.py`)
 - SSE alert stream. A "Simulate fund movement" button on Case View pushes a scripted `FUNDS_MOVED` or `REACHED_VASP` event for the open case. This is simulated and does not need the engine.
 - Mock NCRP endpoint: maps an NCRP-style payload to an engine request, runs it through `engine_client`, stores the case. Mock SAHYOG endpoint: accepts the freeze notice and returns an acknowledgment.
 - Export the OpenAPI spec as the integration document.
