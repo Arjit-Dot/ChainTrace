@@ -1,0 +1,113 @@
+[
+  {
+    "network_id": "NET-1",
+    "complaint_ids": [
+      "C-001",
+      "C-002",
+      "C-003"
+    ],
+    "victim_count": 3,
+    "total_amount": 26300.0,
+    "states": [
+      "Delhi",
+      "Karnataka",
+      "Maharashtra"
+    ],
+    "vasp": "Example Exchange A",
+    "nodes": [
+      {
+        "id": "TSAkS8NUeN9wHPC3BAWRncfroWcxjGAdH7",
+        "type": "wallet",
+        "label": "Shared deposit address"
+      },
+      {
+        "id": "vasp-NET-1",
+        "type": "exchange",
+        "label": "Example Exchange A"
+      },
+      {
+        "id": "C-001",
+        "type": "complaint",
+        "label": "NCRP-2026-0001 (Karnataka)"
+      },
+      {
+        "id": "C-002",
+        "type": "complaint",
+        "label": "NCRP-2026-0002 (Maharashtra)"
+      },
+      {
+        "id": "C-003",
+        "type": "complaint",
+        "label": "NCRP-2026-0003 (Delhi)"
+      }
+    ],
+    "edges": [
+      {
+        "source": "TSAkS8NUeN9wHPC3BAWRncfroWcxjGAdH7",
+        "target": "vasp-NET-1"
+      },
+      {
+        "source": "C-001",
+        "target": "TSAkS8NUeN9wHPC3BAWRncfroWcxjGAdH7"
+      },
+      {
+        "source": "C-002",
+        "target": "TSAkS8NUeN9wHPC3BAWRncfroWcxjGAdH7"
+      },
+      {
+        "source": "C-003",
+        "target": "TSAkS8NUeN9wHPC3BAWRncfroWcxjGAdH7"
+      }
+    ]
+  },
+  {
+    "network_id": "NET-2",
+    "complaint_ids": [
+      "C-004",
+      "C-005"
+    ],
+    "victim_count": 2,
+    "total_amount": 4000.0,
+    "states": [
+      "Tamil Nadu",
+      "Telangana"
+    ],
+    "vasp": "Example Exchange B",
+    "nodes": [
+      {
+        "id": "TK2HrF4zDufshHLhF2cCgENoBZipWxHvJK",
+        "type": "wallet",
+        "label": "Shared deposit address"
+      },
+      {
+        "id": "vasp-NET-2",
+        "type": "exchange",
+        "label": "Example Exchange B"
+      },
+      {
+        "id": "C-004",
+        "type": "complaint",
+        "label": "NCRP-2026-0004 (Telangana)"
+      },
+      {
+        "id": "C-005",
+        "type": "complaint",
+        "label": "NCRP-2026-0005 (Tamil Nadu)"
+      }
+    ],
+    "edges": [
+      {
+        "source": "TK2HrF4zDufshHLhF2cCgENoBZipWxHvJK",
+        "target": "vasp-NET-2"
+      },
+      {
+        "source": "C-004",
+        "target": "TK2HrF4zDufshHLhF2cCgENoBZipWxHvJK"
+      },
+      {
+        "source": "C-005",
+        "target": "TK2HrF4zDufshHLhF2cCgENoBZipWxHvJK"
+      }
+    ]
+  }
+]

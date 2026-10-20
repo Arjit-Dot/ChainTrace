@@ -1,0 +1,13 @@
+{
+  "case_id": "C-001",
+  "to_vasp": "Example Exchange A",
+  "to_email": "compliance@example-exchange-a.test",
+  "subject": "Request to freeze funds and preserve records, Complaint NCRP-2026-0001",
+  "body": "To the Compliance / Law Enforcement Liaison Team,\n\nA cyber-fraud complaint (NCRP-2026-0001) reports the loss of 12,000 USDT. Blockchain analysis indicates that 7,850 USDT was received at deposit address TAD47AKhQdrF4P8xpbVBx3GAr6Q56BFZJ3 (transaction e828262918d57d2cd7eed5839a5ecaf50c3ec8bfd06ebc65826455b7a55f8b97) and later swept to hot wallet TJ4imTmNr3FZoqR2jsRBuXS2aNXNAsAXhK.\n\nWe request that you (1) place a hold on the above funds and any related balances, and (2) preserve and share the KYC details, linked bank/UPI accounts, registered phone numbers, email addresses and login IP logs associated with this deposit address.\n\nAttribution confidence: 87% (heuristic). Evidence is attached. Legal provision references: [TO BE FILLED BY OFFICER].\n\n[Officer name / designation / contact]",
+  "requested_actions": [
+    "Freeze funds",
+    "Preserve KYC records",
+    "Share linked bank/UPI/phone/IP data"
+  ],
+  "status": "draft"
+}

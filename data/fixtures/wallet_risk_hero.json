@@ -1,0 +1,11 @@
+{
+  "address": "TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo",
+  "risk": "Critical",
+  "risk_score": 0.96,
+  "reasons": [
+    "89 unique senders in 5 days",
+    "Forwards funds within 4 minutes",
+    "98% of inflow leaves within 1 hour"
+  ],
+  "typology": "investment_scam"
+}

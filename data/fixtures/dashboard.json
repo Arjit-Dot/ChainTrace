@@ -1,0 +1,94 @@
+{
+  "total_cases": 8,
+  "total_amount_lost": 55300.0,
+  "total_amount_traced": 27388.0,
+  "vasp_identified_pct": 75.0,
+  "avg_time_to_attribution_sec": 50.2,
+  "idle_funds_flagged": 3720.0,
+  "by_fraud_type": [
+    {
+      "name": "investment",
+      "count": 2,
+      "amount": 21800.0
+    },
+    {
+      "name": "task",
+      "count": 2,
+      "amount": 10900.0
+    },
+    {
+      "name": "sextortion",
+      "count": 2,
+      "amount": 4000.0
+    },
+    {
+      "name": "ransomware",
+      "count": 1,
+      "amount": 15500.0
+    },
+    {
+      "name": "phishing",
+      "count": 1,
+      "amount": 3100.0
+    }
+  ],
+  "top_vasps": [
+    {
+      "name": "Example Exchange A",
+      "count": 3,
+      "amount": 26300.0
+    },
+    {
+      "name": "Example Exchange B",
+      "count": 2,
+      "amount": 4000.0
+    },
+    {
+      "name": "Example Exchange C",
+      "count": 1,
+      "amount": 3100.0
+    }
+  ],
+  "by_state": [
+    {
+      "name": "Karnataka",
+      "count": 1,
+      "amount": 12000.0
+    },
+    {
+      "name": "Maharashtra",
+      "count": 1,
+      "amount": 4500.0
+    },
+    {
+      "name": "Delhi",
+      "count": 1,
+      "amount": 9800.0
+    },
+    {
+      "name": "Telangana",
+      "count": 1,
+      "amount": 2200.0
+    },
+    {
+      "name": "Tamil Nadu",
+      "count": 1,
+      "amount": 1800.0
+    },
+    {
+      "name": "Uttar Pradesh",
+      "count": 1,
+      "amount": 15500.0
+    },
+    {
+      "name": "Gujarat",
+      "count": 1,
+      "amount": 3100.0
+    },
+    {
+      "name": "West Bengal",
+      "count": 1,
+      "amount": 6400.0
+    }
+  ]
+}
