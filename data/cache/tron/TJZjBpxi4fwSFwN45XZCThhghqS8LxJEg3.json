@@ -1,0 +1,22 @@
+{
+ "address": "TJZjBpxi4fwSFwN45XZCThhghqS8LxJEg3",
+ "chain": "tron",
+ "origin": "scripted-scenario",
+ "fetched_at": 1792521350,
+ "data": [
+  {
+   "transaction_id": "c4716a90df6f60f80da3e9e1989c580962b62102abc3be393b7d2a2a4c579582",
+   "token_info": {
+    "symbol": "USDT",
+    "address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+    "decimals": 6,
+    "name": "Tether USD"
+   },
+   "block_timestamp": 1792900300000,
+   "from": "TJZjBpxi4fwSFwN45XZCThhghqS8LxJEg3",
+   "to": "TW3eo8zmzLF7HhZdSh4cjjT1fmQSBMA5Eh",
+   "type": "Transfer",
+   "value": "10000000000"
+  }
+ ]
+}

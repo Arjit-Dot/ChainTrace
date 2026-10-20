@@ -1,0 +1,36 @@
+{
+ "address": "TGeG3R1aa61CB9o2DzGPu1hDGYHnzoieJj",
+ "chain": "tron",
+ "origin": "scripted-scenario",
+ "fetched_at": 1792521350,
+ "data": [
+  {
+   "transaction_id": "8c3c1f56f87e2d068ada51534b21f38acf3d1a9e02399c3d108c9f060beeba2e",
+   "token_info": {
+    "symbol": "USDT",
+    "address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+    "decimals": 6,
+    "name": "Tether USD"
+   },
+   "block_timestamp": 1792901500000,
+   "from": "TGeG3R1aa61CB9o2DzGPu1hDGYHnzoieJj",
+   "to": "TK1KbuPZPKz1pT2jJKdBgBR2MNFJFZgDSK",
+   "type": "Transfer",
+   "value": "4950000000"
+  },
+  {
+   "transaction_id": "1f8af575255c54d8f36408125a7cd4dcc1ecbd69a1f115606f1240fdf39631b9",
+   "token_info": {
+    "symbol": "USDT",
+    "address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+    "decimals": 6,
+    "name": "Tether USD"
+   },
+   "block_timestamp": 1792900600000,
+   "from": "TW3eo8zmzLF7HhZdSh4cjjT1fmQSBMA5Eh",
+   "to": "TGeG3R1aa61CB9o2DzGPu1hDGYHnzoieJj",
+   "type": "Transfer",
+   "value": "5000000000"
+  }
+ ]
+}

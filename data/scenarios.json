@@ -1,0 +1,92 @@
+[
+  {
+    "key": "direct",
+    "title": "Direct match: scam -> intermediary -> Example Exchange C hot wallet",
+    "wallet": "TXCFXFx5tuZ1ky3HgTEHZpoLxXmJ32XLvj",
+    "amount": 8000.0,
+    "expect": {
+      "vasp": "Example Exchange C",
+      "method": "deterministic",
+      "deposit_address": "TQyp1x1VvbeSnvwt3bdCATtLTjm4wTE3SY",
+      "hops": 2
+    }
+  },
+  {
+    "key": "sweep",
+    "title": "Sweep heuristic: deposit address with 9 senders sweeps to Example Exchange B",
+    "wallet": "TDongf8XirZvCUFazHwM2FG7cukpnF9h9D",
+    "amount": 5000.0,
+    "expect": {
+      "vasp": "Example Exchange B",
+      "method": "heuristic",
+      "hops": 2,
+      "conf_min": 0.6,
+      "conf_max": 0.89,
+      "deposit_address": "TW6WFmfMNjLtRZVuXh4wvCL9s9WuKwe2Fw"
+    }
+  },
+  {
+    "key": "decoy",
+    "title": "Decoy: 9-sender address forwards only ~50% to Example Exchange A, rest to an unknown wallet",
+    "wallet": "TACSDHnUKqW1AcEe133zDv5gwQ1TxR14Gf",
+    "amount": 5000.0,
+    "expect": {
+      "vasp": "Example Exchange A",
+      "method": "deterministic",
+      "deposit_address": "TJ4imTmNr3FZoqR2jsRBuXS2aNXNAsAXhK"
+    }
+  },
+  {
+    "key": "quiet",
+    "title": "Quiet address: only 2 senders, so no sweep pattern; matches the hot wallet directly",
+    "wallet": "TYNoNxm3jwPcb6Thpax2LkZTdEfQD1ymbU",
+    "amount": 3000.0,
+    "expect": {
+      "vasp": "Example Exchange B",
+      "method": "deterministic",
+      "deposit_address": "TRtcU89W2N6MTT7DXvpzZUAvWQ8qPTAQhS"
+    }
+  },
+  {
+    "key": "two-exchanges",
+    "title": "Two exchanges: split money, the nearer one (Example Exchange C, 2 hops) is named",
+    "wallet": "TW3eo8zmzLF7HhZdSh4cjjT1fmQSBMA5Eh",
+    "amount": 10000.0,
+    "expect": {
+      "vasp": "Example Exchange C",
+      "method": "deterministic",
+      "deposit_address": "TQyp1x1VvbeSnvwt3bdCATtLTjm4wTE3SY",
+      "hops": 2
+    }
+  },
+  {
+    "key": "idle",
+    "title": "No exchange: funds still idle in the last wallet (act now)",
+    "wallet": "TJgNArE5dkoiDgHUjimdizwNaTZZwLh1Lg",
+    "amount": 6000.0,
+    "expect": {
+      "vasp": null,
+      "idle": 5900.0
+    }
+  },
+  {
+    "key": "mixer",
+    "title": "Mixer terminal: trace ends at a mixer, no exchange",
+    "wallet": "TPA2pH1ZJWxMFeyMDEup4JQg51kkcVUMKe",
+    "amount": 4000.0,
+    "expect": {
+      "vasp": null,
+      "terminal": "TLhZTYvV5asB99Wz26sSandSaN1kZfFWbs"
+    }
+  },
+  {
+    "key": "bridge",
+    "title": "Bridge terminal: trace ends at a cross-chain bridge, no exchange",
+    "wallet": "TMmiNnkHcoyUuNbK7TPwwTfr8ofi82Kohz",
+    "amount": 4000.0,
+    "expect": {
+      "vasp": null,
+      "terminal": "TXzK7i61kT3ck6kZ3VeGZjUnPVwDS46sKM"
+    }
+  }
+]

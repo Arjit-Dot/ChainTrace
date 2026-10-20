@@ -17,3 +17,7 @@ Picked by `data/scripts/scamWallet.py` on 2026-10-20: the most recent blackliste
 ## Scripted hero case (fictional)
 
 Files with `"origin": "scripted-hero"` are written by `data/scripts/make_hero_cache.py`. They are fictional (addresses derived from seed strings, the same as `data/fixtures/trace_hero.json`) and describe the agreed hero case C-001 in TronGrid format.
+
+## Attribution scenarios (fictional)
+
+Files with `"origin": "scripted-scenario"` are written by `data/scripts/make_attribution_scenarios.py` (expected results in `data/scenarios.json`, checked by `backend/tests/test_scenarios.py`). They use the fictional exchange, bridge and mixer labels from `labels.csv`.
