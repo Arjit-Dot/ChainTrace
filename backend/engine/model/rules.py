@@ -69,7 +69,7 @@ def level_for(score: float) -> str:
 
 def _sentence(key: str, f: WalletFeatures) -> str:
     if key == "speed":
-        return f"Forwards funds within {_duration(f.median_forward_sec)} (median)"
+        return f"Forwards funds within {duration_text(f.median_forward_sec)} (median)"
     if key == "passthrough":
         return f"Forwards {f.in_out_ratio:.0%} of what it receives"
     if key == "youth":
@@ -84,7 +84,7 @@ def _sentence(key: str, f: WalletFeatures) -> str:
     return f"{f.round_number_ratio:.0%} of transfers are round amounts"
 
 
-def _duration(sec: float) -> str:
+def duration_text(sec: float) -> str:
     if sec < 3600:
         return f"{max(1, round(sec / 60))} minutes"
     if sec < 2 * 86400:
