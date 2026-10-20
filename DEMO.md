@@ -81,18 +81,16 @@ Same structure as the original: `backend/`, `data/`, `frontend/`. Every file has
 ```
 chaintrace/
 ├── backend/
-│   ├── main.py                 # Shared: /health, mounts the two route files (frozen)
+│   ├── main.py                 # Shared: all /api routes on fixtures, per CONTRACT.md (B owns routes, frozen layout)
 │   ├── contract/schemas.py     # Shared: the contract as Pydantic models (frozen, DONE)
 │   ├── contract/__init__.py    # Shared (DONE)
 │   ├── engine.py               # A: the seam; stub returns the hero fixture until A4-A6 (stub DONE)
-│   ├── routes_engine.py        # A: trace + wallet-risk endpoints (DONE, calls engine.py)
 │   ├── chains/tron.py          # A: TronGrid adapter + cache
 │   ├── tracing.py              # A: forward trace + pass-through
 │   ├── attribution.py          # A: labels, sweep heuristic, confidence
 │   ├── risk.py                 # A: features, model, SHAP
 │   ├── tests/test_contract.py  # A: engine output matches the contract (DONE)
 │   ├── test_engine.py          # A
-│   ├── routes_product.py       # B: cases, reports, alerts, mock integrations (fixture-backed stubs DONE)
 │   ├── engine_client.py        # B: calls the engine, or returns a pre-built trace
 │   ├── db.py                   # B: SQLite
 │   ├── recommendations.py      # B: rule-based action list
@@ -284,7 +282,7 @@ Tasks are numbered **A1-A8** and **B1-B8**, in the order each person does them. 
 | | Person A: Engine | Person B: Product |
 |---|---|---|
 | Build steps | 1 (backend), 2 (cache, labels, contacts, hero case), 3, 4, 5, 6, 10 (slides) | 1 (frontend), 2 (seed cases), 7, 8, 9, 10 (demo mode) |
-| Backend files | `engine.py`, `chains/tron.py`, `tracing.py`, `attribution.py`, `risk.py`, `routes_engine.py`, `tests/test_contract.py`, `test_engine.py` | `db.py`, `engine_client.py`, `recommendations.py`, `reports.py`, `alerts.py`, `routes_product.py`, `make_seed_traces.py`, `test_product.py` |
+| Backend files | `engine.py`, `chains/tron.py`, `tracing.py`, `attribution.py`, `risk.py`, `tests/test_contract.py`, `test_engine.py` | `db.py`, `engine_client.py`, `recommendations.py`, `reports.py`, `alerts.py`, `make_seed_traces.py`, `test_product.py` |
 | Frontend and other | `slides.pptx` | `frontend/` |
 | Data | `data/cache/`, `data/scripts/`, `data/labels.csv`, `data/vasp_contacts.csv`, `data/risk_model.pkl` | `data/seed_cases.json`, `data/seed_traces.json` |
 | Endpoints | trace, wallet risk | cases, complaints, reports, freeze notice, alerts, mock NCRP / SAHYOG |
@@ -465,14 +463,14 @@ Contract rules live in `CONTRACT.md`. Endpoints are under `/api/...` and the con
 
 | Item | Status | Location |
 |---|---|---|
-| Kickoff: contract models, `/api/health`, route mounting, engine stub returning the hero example | DONE | `backend/contract/`, `backend/main.py`, `backend/routes_engine.py`, `backend/engine.py` |
+| Kickoff: contract models, all `/api` routes (fixture-backed), engine stub returning the hero example | DONE | `backend/contract/`, `backend/main.py`, `backend/engine.py` |
 | Contract tests (4 passing: graph shape, Nearest VASP in graph, idle funds, wallet risk) | DONE | `backend/tests/test_contract.py` |
 | Hero example + fixtures for every endpoint | DONE | `data/fixtures/` (`trace_hero.json` is the hero) |
-| Fixture-backed product routes (cases, freeze notice, report, dashboard, networks, alerts SSE, NCRP/SAHYOG mocks) | STUB DONE | `backend/routes_product.py` (TODO(B): real implementations, B3-B8) |
+| Product routes (cases, freeze notice, report, dashboard, networks, alerts SSE, NCRP/SAHYOG mocks) | STUB DONE | `backend/main.py` (TODO(B): real implementations, B3-B8) |
 | A1 wallet shortlist and A2 cache of 3 real wallets | PARTIAL | `data/cache/` (adapter `chains/tron.py` and `SOURCES.md` still missing) |
 | A3 `labels.csv`, `vasp_contacts.csv` | DONE | `data/` (scripted hero cache data still to do) |
 | B3 `seed_cases.json` | DONE (data only) | `data/seed_cases.json` (`seed_traces.json`, `db.py`, `engine_client.py` still to do) |
 | Frontend scaffold (B1) | PARTIAL | `frontend/` (Vite scaffold only; Tailwind, Cytoscape, Recharts, routes not yet) |
 | A4-A8, B2, B4-B8 | NOT STARTED | n/a |
 
-**Reconciliation notes.** The contract pack's layout won where it differed from section 5: the contract is a package (`contract/schemas.py`, not `contract.py`), the hero example is `data/fixtures/trace_hero.json`, and the engine seam is `engine.py`. The pack's single `main.py` was split into the frozen `main.py` plus `routes_engine.py` (A) and `routes_product.py` (B), as sections 5 and 11.3 require. Run: `pip install -r requirements.txt`, then `cd backend && uvicorn main:app --reload --port 8000`.
+**Reconciliation notes.** The contract pack's layout won where it differed from section 5: the contract is a package (`contract/schemas.py`, not `contract.py`), the hero example is `data/fixtures/trace_hero.json`, the engine seam is `engine.py`, and `main.py` holds all routes as CONTRACT.md lists. The `routes_engine.py` / `routes_product.py` split was tried and dropped after merging `origin/main`; the API surface was identical. Run: `pip install -r requirements.txt`, then `cd backend && uvicorn main:app --reload --port 8000`.
