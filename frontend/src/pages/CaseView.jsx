@@ -1,15 +1,15 @@
 import { FileDown, FileWarning, Info, Play } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import FreezeNoticeModal from "../components/FreezeNoticeModal";
-import Legend from "../components/Legend";
-import NearestVaspCard from "../components/NearestVaspCard";
-import NodePanel from "../components/NodePanel";
-import PageHeader from "../components/PageHeader";
-import RecommendationsPanel from "../components/RecommendationsPanel";
-import { ErrorState, Loading } from "../components/Status";
-import SummaryStrip from "../components/SummaryStrip";
-import TraceGraph from "../components/TraceGraph";
+import FreezeNoticeModal from "../components/case/FreezeNoticeModal";
+import Legend from "../components/case/Legend";
+import NearestVaspCard from "../components/case/NearestVaspCard";
+import NodePanel from "../components/case/NodePanel";
+import PageHeader from "../components/common/PageHeader";
+import RecommendationsPanel from "../components/case/RecommendationsPanel";
+import { ErrorState, Loading } from "../components/common/Status";
+import SummaryStrip from "../components/case/SummaryStrip";
+import TraceGraph from "../components/case/TraceGraph";
 import { useFetch } from "../hooks/useFetch";
 import {
   alertStreamUrl,

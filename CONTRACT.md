@@ -1,6 +1,6 @@
 # ChainTrace Contract Pack
 
-This pack fixes the interface between **Person A (engine)** and **Person B (product)** so you can work independently. The API already runs end to end on fictional fixture data. Engineering (the real tracing, attribution and ML) is yours to build; you replace the stub in `backend/engine.py` and the rest keeps working.
+This pack fixes the interface between **Person A (engine)** and **Person B (product)** so you can work independently. The API already runs end to end on fictional fixture data. Engineering (the real tracing, attribution and ML) is yours to build; you replace the stub in `backend/engine/__init__.py` and the rest keeps working.
 
 > All fixture data is **fictional**: addresses are checksum-valid TRON addresses derived from seed strings, and entities are named "Example Exchange A/B/C", "Example Bridge", "Example Mixer". No real wallet or exchange is represented.
 
@@ -9,15 +9,16 @@ This pack fixes the interface between **Person A (engine)** and **Person B (prod
 ## 1. What's in the pack
 
 ```
-chaintrace-contract/
+chaintrace/
 ├── CONTRACT.md
 ├── backend/
-│   ├── contract/schemas.py      # the contract as Pydantic models (single source of truth)
-│   ├── engine.py                # THE SEAM: Person A replaces the bodies
-│   ├── main.py                  # all API routes, working on fixtures (Person B owns)
-│   └── tests/test_contract.py   # keeps the engine honest to the contract
-├── data/fixtures/               # JSON for every endpoint + sample PDF
-└── tools/gen_fixtures.py        # regenerates and validates the fixtures
+│   ├── contract/schemas.py            # the contract as Pydantic models (single source of truth)
+│   ├── engine/__init__.py             # THE SEAM: Person A owns (the rest of engine/ is A's too)
+│   ├── main.py                        # all API routes (Person B owns); B's code is in backend/product/
+│   ├── paths.py                       # where every data file lives
+│   └── tests/contract/test_contract.py   # keeps the engine honest to the contract
+├── data/fixtures/                     # JSON for every endpoint + sample PDF
+└── data/scripts/gen_fixtures.py       # regenerates and validates the fixtures
 ```
 
 ## 2. Run it (this is the "deployment" step)
@@ -32,9 +33,9 @@ uvicorn main:app --reload --port 8000
 
 Frontend: your Vite config already proxies `/api` to `http://localhost:8000`, so the UI can call `/api/...` immediately.
 
-Check the contract at any time: `cd backend && pytest`.
+Check the contract at any time: `pytest` from the repo root (or from `backend/`).
 
-Regenerate fixtures after a contract change: `python tools/gen_fixtures.py` (it validates every file against the models).
+Regenerate fixtures after a contract change: `python data/scripts/gen_fixtures.py` (it validates every file against the models).
 
 ---
 
@@ -72,7 +73,7 @@ Full request and response shapes are in `backend/contract/schemas.py` and in the
 - **`idle_balance`:** funds still sitting in a leaf wallet. `summary.idle_funds` must equal the sum over nodes (tested).
 - **Every `nearest_vasp` has `evidence[]`** and its `deposit_address` must exist in the graph (tested).
 
-> **Contract v1.1.0 (applied):** `urgency` (`act_now | act_soon | preserve`, nullable) and `urgency_reasons[]` are on `TraceResponse` and `CaseSummary`; the reported wallet's `risk` / `risk_score` are nullable on `Node`, `TraceResponse` and `CaseSummary`. Live monitoring adds `urgency_as_of` and `monitoring` (`Monitoring`) to the same two models and alert type `URGENCY_CHANGED`. `schemas.py`, `tools/gen_fixtures.py`, the fixtures and the seed traces are regenerated, and the tests cover it. "Linked to 2 or more complaints" counts the *other* complaints in the case's network.
+> **Contract v1.1.0 (applied):** `urgency` (`act_now | act_soon | preserve`, nullable) and `urgency_reasons[]` are on `TraceResponse` and `CaseSummary`; the reported wallet's `risk` / `risk_score` are nullable on `Node`, `TraceResponse` and `CaseSummary`. Live monitoring adds `urgency_as_of` and `monitoring` (`Monitoring`) to the same two models and alert type `URGENCY_CHANGED`. `schemas.py`, `data/scripts/gen_fixtures.py`, the fixtures and the seed traces are regenerated, and the tests cover it. "Linked to 2 or more complaints" counts the *other* complaints in the case's network.
 
 **Live monitoring (v1.1.0).** B's watcher (`alerts.py`) polls the leaf and idle wallets of every case (placeholder: every 30 seconds) and re-evaluates urgency on each poll.
 - `urgency_as_of` (epoch seconds): the time of the last successful chain check, not of the last change, so a quiet case still shows a fresh time.
@@ -102,7 +103,7 @@ Other fixtures: 8 cases (two networks, one unresolved ransomware case, one still
 ## 6. Who changes what
 
 **Person A (engine)**
-- Edit **only** `backend/engine.py` (and new modules it imports, e.g. `chains/`, `tracing.py`, `attribution.py`, `risk.py`).
+- Edit **only** `backend/engine/__init__.py` (the `backend/engine/` package: `chains/`, `trace/`, `model/`).
 - Return `TraceResponse` and `WalletRisk` exactly as defined. Keep `pytest` green.
 - When the real engine works, `/api/trace` switches from fixture to real automatically. Nothing else changes.
 
@@ -114,7 +115,7 @@ Other fixtures: 8 cases (two networks, one unresolved ransomware case, one still
 **Changing the contract**
 1. Tell the other person first.
 2. Edit `schemas.py`, bump `CONTRACT_VERSION`.
-3. Update `tools/gen_fixtures.py`, run it, run `pytest`.
+3. Update `data/scripts/gen_fixtures.py`, run it, run `pytest`.
 4. Merge together.
 
 ---

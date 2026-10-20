@@ -1,5 +1,5 @@
 import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
-import Layout from './components/Layout'
+import Layout from './components/common/Layout'
 import CaseView from './pages/CaseView'
 import Dashboard from './pages/Dashboard'
 import NetworkView from './pages/NetworkView'

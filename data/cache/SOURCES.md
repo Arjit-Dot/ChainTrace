@@ -20,4 +20,4 @@ Files with `"origin": "scripted-hero"` are written by `data/scripts/make_hero_ca
 
 ## Attribution scenarios (fictional)
 
-Files with `"origin": "scripted-scenario"` are written by `data/scripts/make_attribution_scenarios.py` (expected results in `data/scenarios.json`, checked by `backend/tests/test_scenarios.py`). They use the fictional exchange, bridge and mixer labels from `labels.csv`.
+Files with `"origin": "scripted-scenario"` are written by `data/scripts/make_attribution_scenarios.py` (expected results in `data/scenarios/scenarios.json`, checked by `backend/tests/test_scenarios.py`). They use the fictional exchange, bridge and mixer labels from `labels.csv`.

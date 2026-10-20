@@ -22,7 +22,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "backend"))
-from chains.tron import USDT_TRC20, TronAdapter, hex_to_tron  # noqa: E402
+from engine.chains.tron import USDT_TRC20, TronAdapter, hex_to_tron  # noqa: E402
 
 CACHE = ROOT / "data" / "cache"
 EVENTS_DIR = CACHE / "blacklist_events"

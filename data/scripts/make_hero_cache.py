@@ -19,7 +19,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "backend"))
-from chains.tron import USDT_TRC20, TronAdapter  # noqa: E402
+from engine.chains.tron import USDT_TRC20, TronAdapter  # noqa: E402
 
 FIXTURE = ROOT / "data" / "fixtures" / "trace_hero.json"
 CACHE = ROOT / "data" / "cache"
@@ -27,7 +27,7 @@ TOKEN = {"symbol": "USDT", "address": USDT_TRC20, "decimals": 6, "name": "Tether
 OTHER_DEPOSITORS = 13
 
 
-def tron(seed: str) -> str:  # same scheme as tools/gen_fixtures.py
+def tron(seed: str) -> str:  # same scheme as data/scripts/gen_fixtures.py
     import base58
     raw = hashlib.sha256(seed.encode()).digest()[:20]
     return base58.b58encode_check(b"\x41" + raw).decode()

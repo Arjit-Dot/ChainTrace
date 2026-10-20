@@ -1,7 +1,7 @@
 import { Loader2, Search, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import PageHeader from '../components/PageHeader'
+import PageHeader from '../components/common/PageHeader'
 import { trace } from '../lib/api'
 import { humanize } from '../lib/format'
 

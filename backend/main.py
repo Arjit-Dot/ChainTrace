@@ -1,5 +1,5 @@
 """
-ChainTrace API (Person B owns the routes; Person A owns engine.py).
+ChainTrace API (Person B owns the routes; Person A owns the engine package).
 
 Run:  uvicorn main:app --reload --port 8000     (from the backend/ folder)
 Docs: http://localhost:8000/docs
@@ -9,7 +9,6 @@ import asyncio
 import json
 import time
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import List
 
 from fastapi import FastAPI, HTTPException
@@ -17,16 +16,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from sse_starlette.sse import EventSourceResponse
 
-import alerts
-import engine_client
-import store
-from notices import build_freeze_notice
+from paths import FIXTURES
+from product import alerts, engine_client, store
+from product.notices import build_freeze_notice
 from contract.schemas import (
     Alert, CaseSummary, DashboardStats, FreezeNotice, IntegrationAck, Network,
     SahyogNoticeRequest, TraceRequest, TraceResponse, WalletRisk, CONTRACT_VERSION,
 )
 
-FIXTURES = Path(__file__).resolve().parents[1] / "data" / "fixtures"
 
 
 def load(name: str):

@@ -2,7 +2,7 @@
 Step 5 test scenarios: scripted (FICTIONAL) cases in raw TronGrid format, one per attribution outcome.
 
 Writes the transfers to data/cache/tron/ (origin "scripted-scenario") and the wallet, amount and
-expected result of each scenario to data/scenarios.json. Paste a scenario's wallet into New Complaint
+expected result of each scenario to data/scenarios/scenarios.json. Paste a scenario's wallet into New Complaint
 in the UI to see it, or run `pytest backend/tests/test_scenarios.py`.
 
 Run from the repo root:   python data/scripts/make_attribution_scenarios.py
@@ -15,7 +15,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "backend"))
 sys.path.insert(0, str(ROOT / "data" / "scripts"))
-from chains.tron import TronAdapter  # noqa: E402
+from engine.chains.tron import TronAdapter  # noqa: E402
+from paths import REPLAY_JSON, SCENARIOS_JSON  # noqa: E402
 from make_hero_cache import raw_transfer, tron, txh  # noqa: E402
 
 BASE = 1_791_000_000   # in the past, so live monitoring never mistakes cached scenario transfers for new ones
@@ -133,10 +134,10 @@ def main():
         adapter.write_cache(addr, items, origin="scripted-scenario")
     out = [{"key": sc.key, "title": sc.title, "wallet": sc.wallet, "amount": float(sc.amount), "expect": sc.expect}
            for sc in SCENARIOS]
-    (ROOT / "data" / "scenarios.json").write_text(json.dumps(out, indent=2) + "\n")
-    (ROOT / "data" / "replay").mkdir(exist_ok=True)
-    (ROOT / "data" / "replay" / "movements.json").write_text(json.dumps(REPLAY, indent=2) + "\n")
-    print(f"wrote {len(by_addr)} cache files, data/scenarios.json and data/replay/movements.json")
+    SCENARIOS_JSON.parent.mkdir(exist_ok=True)
+    SCENARIOS_JSON.write_text(json.dumps(out, indent=2) + "\n")
+    REPLAY_JSON.write_text(json.dumps(REPLAY, indent=2) + "\n")
+    print(f"wrote {len(by_addr)} cache files, {SCENARIOS_JSON.relative_to(ROOT)} and {REPLAY_JSON.relative_to(ROOT)}")
     for o in out:
         print(f"{o['key']:<14} {o['wallet']}  {o['amount']:>8.0f}  {o['title']}")
 

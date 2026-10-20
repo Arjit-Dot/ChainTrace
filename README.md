@@ -7,23 +7,38 @@ A blockchain tracer for cybercrime investigators (i4c). Given a wallet reported 
 | Piece | State |
 |---|---|
 | API contract and all `/api` routes | done (`backend/contract/schemas.py`, `backend/main.py`) |
-| TRON chain adapter (TronGrid, cache first) | done (`backend/chains/tron.py`) |
-| Tracing engine (best-first, stop rules, pass-through, idle funds) | done (`backend/tracing.py`) |
+| TRON chain adapter (TronGrid, cache first) | done (`backend/engine/chains/tron.py`) |
+| Tracing engine (best-first, stop rules, pass-through, idle funds) | done (`backend/engine/trace/tracing.py`) |
 | Case store, recommendations, case urgency (act now / act soon / preserve), dashboard, networks, freeze notice, React frontend | done |
-| Attribution (nearest exchange) | done (`backend/attribution.py`) |
-| Live monitoring: watcher, urgency "as of", alerts (demo feed is a recorded replay) | done (`backend/alerts.py`, `engine.new_transfers`) |
+| Attribution (nearest exchange) | done (`backend/engine/trace/attribution.py`) |
+| Live monitoring: watcher, urgency "as of", alerts (demo feed is a recorded replay) | done (`backend/product/alerts.py`, `engine.new_transfers`) |
 | Downstream wallet risk and typology (the reported wallet is not scored) | not built; placeholders |
 
-The demo data is partly fictional: the hero case (`TUNoHG…`), "Example Exchange A/B/C" and the seed cases are scripted. The cache also holds three real wallets that Tether blacklisted. See `data/cache/SOURCES.md` and `data/LABELS.md`.
+The demo data is partly fictional: the hero case (`TUNoHG…`), "Example Exchange A/B/C" and the seed cases are scripted. The cache also holds three real wallets that Tether blacklisted. See `data/cache/SOURCES.md` and `data/reference/LABELS.md`.
 
 ## Layout
 
 ```
-backend/      FastAPI app (main.py), engine seam (engine.py), tracer (tracing.py), chains/tron.py, tests/
-frontend/     React + Vite + Tailwind + Cytoscape UI
-data/         labels.csv, vasp_contacts.csv, seed cases, fixtures, cache/ (TronGrid responses)
-CONTRACT.md   the API contract and change process
-DEMO.md       the build plan and progress log
+backend/
+  main.py        API routes (run: cd backend && uvicorn main:app)
+  paths.py       where every data file lives
+  contract/      the API contract as Pydantic models
+  engine/        Person A: finds things. __init__.py is the seam (trace_complaint, wallet_risk, new_transfers);
+                 chains/ = TRON adapter, trace/ = tracer + attribution, model/ = risk model (Step 6, not built yet)
+  product/       Person B: builds from the findings. case store, recommendations and urgency, live-monitoring
+                 watcher and alerts, freeze notice, engine client
+  tests/         contract/, engine/, product/ (run pytest from the repo root or backend/)
+frontend/src/    components/common (layout, badges), components/case (graph, panels), pages, hooks, lib
+data/
+  reference/     labels.csv, vasp_contacts.csv, LABELS.md
+  cache/         raw TronGrid responses (real flagged wallets + scripted hero and scenarios)
+  scenarios/     attribution test scenarios + the live-monitoring replay
+  seed/          the 8 seeded demo cases and their traces
+  fixtures/      one example response per endpoint
+  scripts/       builders for the files above (fixtures, seed traces, cache, scenarios)
+docs/archive/    the original contract pack
+CONTRACT.md      the API contract and change process
+DEMO.md          the build plan and progress log
 ```
 
 ## Set up locally
@@ -64,7 +79,7 @@ Open http://localhost:5173, go to **New Complaint**, and submit wallet `TUNoHG2D
 `ENGINE_MODE` picks where traces come from:
 
 - `fixture` (default): prebuilt traces; no engine needed.
-- `engine`: the real tracer in `backend/engine.py`. With no `TRONGRID_API_KEY` it reads only `data/cache/`, so wallets outside the cache show a single node. Set `TRACING=fixture` to use the old fixture inside engine mode.
+- `engine`: the real tracer in `backend/engine/__init__.py`. With no `TRONGRID_API_KEY` it reads only `data/cache/`, so wallets outside the cache show a single node. Set `TRACING=fixture` to use the old fixture inside engine mode.
 - `http`: a separate engine at `ENGINE_URL`.
 
 If the engine fails, the API falls back to the fixture and says so in the trace `notes`.
@@ -77,10 +92,10 @@ With `ENGINE_MODE=engine`, submit wallet `TJgNArE5dkoiDgHUjimdizwNaTZZwLh1Lg` (a
 
 ```bash
 cd backend
-python -m tracing TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo 12000
+python -m engine.trace.tracing TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo 12000
 ```
 
-Refill or extend the cache for a wallet: `python -m chains.tron --help`.
+Refill or extend the cache for a wallet: `python -m engine.chains.tron --help`.
 
 ## Tests
 

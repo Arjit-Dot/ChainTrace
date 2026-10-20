@@ -1,4 +1,4 @@
-import PageHeader from '../components/PageHeader'
+import PageHeader from '../components/common/PageHeader'
 
 // B1 stub: linked-complaint networks arrive in B7.
 export default function NetworkView() {
