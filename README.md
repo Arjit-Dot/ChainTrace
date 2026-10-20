@@ -70,7 +70,7 @@ complaint ──► 1. Trace ──► 2. Attribute ──► 3. Score risk ─�
 |---|---|---|---|
 | **1. Trace** | Best-first search forward from the reported wallet. Stops at known exchanges, bridges and mixers, at depth 5, and for flows under 1% of the case value. Tags a wallet `intermediary` if it forwards 90% or more of what it receives within about an hour. Flags leaf wallets still holding money as **idle funds**. | `backend/engine/trace/tracing.py` | Done |
 | **2. Attribute** | Names the exchange. A **direct match** means the trace reached an address in the label list (`deterministic`, confidence 0.95). The **sweep heuristic** treats a wallet with many different senders that forwards its balance to a labeled hot wallet as a customer deposit address (`heuristic`, confidence capped below 0.90). | `backend/engine/trace/attribution.py` | Done |
-| **3. Score risk** | Risk level (Low to Critical), reasons and fraud type for each downstream wallet. The reported wallet is not scored: a victim already named it. | `backend/engine/model/` | In progress (features done; see [section 7](#7-the-risk-model-features-selection-training)) |
+| **3. Score risk** | Risk level (Low to Critical), reasons and fraud type for each downstream wallet. The reported wallet is not scored: a victim already named it. | `backend/engine/model/` | Done in traces (the standalone risk endpoint is Step 6.7); see [section 7](#7-the-risk-model-features-selection-training) |
 | **4. Rank urgency** | Case-level rule set, first match wins (see [section 8](#82-urgency-the-badge-that-matters-most)). | `backend/product/recommendations.py` | Done |
 | **5. Act** | Recommendations panel and a freeze-notice draft built from a template. The PDF evidence report is a sample file for now. | `backend/product/` | Notice done; PDF report not built |
 | **6. Monitor** | A watcher polls the leaf and idle wallets every 30 seconds. When one moves it re-traces, re-runs attribution and urgency, updates the "as of" time and pushes an alert. | `backend/product/alerts.py` | Done (demo feed is a recorded replay) |
@@ -182,7 +182,7 @@ backend/
     __init__.py      the seam: trace_complaint, wallet_risk, new_transfers, replay helpers
     chains/tron.py   TronGrid adapter: normalises transfers, cache first, then live, then save
     trace/           tracing.py (forward trace), attribution.py (which exchange)
-    model/           features.py (done); risk scoring, typology (in progress)
+    model/           features, rules, trained model, scoring, typology, and risk.py (puts scores on the graph)
   product/         BUILDS from the findings
     engine_client.py how the product reaches the engine (fixture / engine / http)
     store.py         SQLite case store; seeds the 8 demo cases at startup
@@ -280,7 +280,7 @@ Not built yet: the dashboard charts and KPI tiles, the Networks page (a placehol
 
 ## 7. The risk model: features, selection, training
 
-> **Status: in progress (Step 6).** Features, rules, the trained model, SHAP reasons, typology and the scenario batteries are built and tested. The wiring into traces is not built yet, so every downstream wallet on the website still shows the default Low risk with no reasons.
+> **Status: Step 6 is wired into traces** (`engine/model/risk.py`); the standalone `GET /api/wallets/{address}/risk` endpoint still returns a fixture (Step 6.7). Every traced downstream wallet now carries a risk level, score and reasons, and the case carries a fraud type. The model is trained on synthetic data and its reasons are our assumptions; see the limits below.
 
 ### 7.1 What it answers
 
@@ -447,7 +447,7 @@ To check the frontend compiles: `cd frontend && npm run build`.
 | 4: tracing engine | Done |
 | 5: attribution | Done |
 | Live monitoring, urgency, contract v1.1.0 | Done |
-| 6: risk model and typology | In progress: features, rules, model, reasons, typology done; wiring to do |
+| 6: risk model and typology | In progress: scoring is wired into traces; the standalone risk endpoint and final checks are left |
 | 7: PDF report | Not built (freeze notice and recommendations are done) |
 | 8 and 9: dashboard charts, Networks page, Demo Mode | Not built |
 

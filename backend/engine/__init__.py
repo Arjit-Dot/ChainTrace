@@ -51,15 +51,17 @@ def trace_complaint(req: TraceRequest) -> TraceResponse:
     """Trace a reported wallet and return the full case.
 
     Step 4 is live: the graph comes from trace/tracing.py (cache only unless TRONGRID_API_KEY is set).
-    Step 5 attribution fills nearest_vasp; risk (A6) is still a placeholder.
+    Step 5 attribution fills nearest_vasp; Step 6 scores the downstream wallets and sets the case typology.
     """
     if os.getenv("TRACING", "real") == "real":
+        from engine.model.risk import score_graph
         from engine.trace.attribution import attribute
         from engine.trace.tracing import build_response, load_labels
         started = time.time()
         adapter = _adapter()
         resp = build_response(req, adapter)
         resp.nearest_vasp, resp.graph = attribute(resp.graph, adapter, load_labels())
+        resp.graph, resp.typology = score_graph(resp.graph, adapter, resp.wallet)
         if resp.nearest_vasp:
             resp.summary.time_to_attribution_sec = round(time.time() - started, 2)
         else:
