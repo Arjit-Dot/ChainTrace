@@ -6,6 +6,7 @@ Replace the bodies with the real implementation (chain adapter -> tracing -> att
 Keep the signatures and return types exactly as they are; the API and UI depend on them.
 """
 import json
+import os
 import time
 from pathlib import Path
 
@@ -19,7 +20,15 @@ def _load(name: str):
 
 
 def trace_complaint(req: TraceRequest) -> TraceResponse:
-    """Trace a reported wallet and return the full case. TODO(A): replace the stub."""
+    """Trace a reported wallet and return the full case.
+
+    Step 4 is live: the graph comes from tracing.py (cache only unless TRONGRID_API_KEY is set).
+    Attribution (A5) and risk (A6) are still placeholders, so nearest_vasp is empty.
+    """
+    if os.getenv("TRACING", "real") == "real":
+        from chains.tron import TronAdapter
+        from tracing import build_response
+        return build_response(req, TronAdapter(offline=not os.getenv("TRONGRID_API_KEY")))
     data = _load("trace_hero.json")
     data["complaint_id"] = req.complaint_id
     data["wallet"] = req.wallet
