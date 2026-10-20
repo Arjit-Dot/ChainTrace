@@ -280,7 +280,7 @@ Not built yet: the dashboard charts and KPI tiles, the Networks page (a placehol
 
 ## 7. The risk model: features, selection, training
 
-> **Status: in progress (Step 6).** Features, rules, the trained model, SHAP reasons and the scenario batteries are built and tested. Typology and the wiring into traces are not built yet, so every downstream wallet on the website still shows the default Low risk with no reasons.
+> **Status: in progress (Step 6).** Features, rules, the trained model, SHAP reasons, typology and the scenario batteries are built and tested. The wiring into traces is not built yet, so every downstream wallet on the website still shows the default Low risk with no reasons.
 
 ### 7.1 What it answers
 
@@ -322,7 +322,7 @@ There is no automatic feature selection and no learned feature search: with seve
 - **Reasons** (`engine/model/scoring.py`): the three features that pushed a wallet's score up most (SHAP), as sentences with the real values. A Low wallet says "No strong fraud signals". A wallet with a single transfer, or a few that only came in, is capped at Medium with "Too little transaction history to judge".
 - **Partly fetched histories:** TronGrid returns at most 200 transfers per page, so a busy wallet's age and transfer count can be wrong (a years-old exchange wallet looked 18 days old). The adapter now records whether a history was truncated (`TronAdapter.history_truncated`), and a truncated wallet is capped at Medium, with a reason saying so and never quoting its age or transfer count.
 - **Scenario batteries** (`engine/model/battery.py`): simulated transfer histories for 19 DEV and 13 HOLDOUT scenarios (mules, collectors, splitters, normal users, bots, OTC desks, salary accounts, charities and more), run through the real feature extraction and scorer. The DEV set guided the fixes; the HOLDOUT set uses different ranges and new scenario types and was run once. Run them with `python data/scripts/eval_risk_battery.py [--holdout]`.
-- **Typology:** a rule-assisted classifier for the fraud type is the next step and is not built yet.
+- **Typology** (`engine/model/typology.py`): a rule-assisted classifier for the fraud type, from how a reported wallet's money came in and left. Signatures, checked in order: ransomware (a few large payments and much of the money to a mixer), sextortion (many different payers each paying a small amount once), task scam (many payers repeating small payments, consolidated within a day), phishing (a brand-new wallet receiving a few non-round payments and forwarding within the hour), investment scam (several payers, mid to large amounts, consolidated fast). A wallet over 120 days old, or with no match, is `unknown`; `darknet` has no signature and is never returned. It is checked on its own scenario batteries (`python data/scripts/eval_typology_battery.py [--holdout]`): 99% on the DEV set and 94% on the holdout, where the cut-offs for "a few", "large" and "fast" bite at the edges. The signatures and thresholds are our assumptions.
 
 Results (our own scenarios and labels): the scorer passes 98% of the DEV scenarios and 99% of the HOLDOUT ones; the first model passed 60% and 48%. On the held-out synthetic data the model reaches an AUC of 0.96 against 0.87 for the rules.
 
@@ -447,7 +447,7 @@ To check the frontend compiles: `cd frontend && npm run build`.
 | 4: tracing engine | Done |
 | 5: attribution | Done |
 | Live monitoring, urgency, contract v1.1.0 | Done |
-| 6: risk model and typology | In progress: features, rules, model, reasons done; typology and wiring to do |
+| 6: risk model and typology | In progress: features, rules, model, reasons, typology done; wiring to do |
 | 7: PDF report | Not built (freeze notice and recommendations are done) |
 | 8 and 9: dashboard charts, Networks page, Demo Mode | Not built |
 
