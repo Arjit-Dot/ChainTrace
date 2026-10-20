@@ -59,14 +59,10 @@ def list_cases():
 
 @app.get("/api/cases/{case_id}", response_model=TraceResponse)
 def get_case(case_id: str):
-    cases = {c["case_id"]: c for c in load("cases.json")}
-    if case_id not in cases:
+    traces = json.loads((FIXTURES.parent / "seed_traces.json").read_text())
+    if case_id not in traces:
         raise HTTPException(404, "Case not found")
-    c = cases[case_id]
-    data = load("trace_hero.json")          # TODO: serve the stored trace for this case
-    data.update(case_id=c["case_id"], complaint_id=c["complaint_id"], wallet=c["wallet"],
-                amount_lost=c["amount_lost"], fraud_type=c["fraud_type"])
-    return data
+    return traces[case_id]                  # TODO(B3): serve from store.py, incl. traces from /api/trace
 
 
 @app.get("/api/cases/{case_id}/freeze-notice", response_model=FreezeNotice)

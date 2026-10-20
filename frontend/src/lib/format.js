@@ -6,6 +6,9 @@ export const formatAmount = (n) => (n == null ? '—' : numberFmt.format(n))
 
 export const formatUSDT = (n, token = 'USDT') => (n == null ? '—' : `${formatAmount(n)} ${token}`)
 
+// "investment_scam" -> "Investment scam"
+export const humanize = (s) => (!s ? '—' : (s.charAt(0).toUpperCase() + s.slice(1)).replaceAll('_', ' '))
+
 export const formatPct = (x) => (x == null ? '—' : `${Math.round(x * 100)}%`)
 
 export const shortAddr = (addr, n = 6) =>
