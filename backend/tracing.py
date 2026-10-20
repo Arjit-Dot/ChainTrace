@@ -59,7 +59,7 @@ def trace(wallet: str, adapter: TronAdapter, case_value: Optional[float] = None,
     def history(addr: str) -> List[Transfer]:
         try:
             return adapter.transfers(addr)[0]
-        except LookupError:  # not cached and offline: treat as unknown, do not crash the trace
+        except (LookupError, ValueError):  # uncached offline or not a TRON address: no history, do not crash
             return []
 
     root_hist = history(wallet)

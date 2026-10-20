@@ -23,12 +23,21 @@ def trace_complaint(req: TraceRequest) -> TraceResponse:
     """Trace a reported wallet and return the full case.
 
     Step 4 is live: the graph comes from tracing.py (cache only unless TRONGRID_API_KEY is set).
-    Attribution (A5) and risk (A6) are still placeholders, so nearest_vasp is empty.
+    Step 5 attribution fills nearest_vasp; risk (A6) is still a placeholder.
     """
     if os.getenv("TRACING", "real") == "real":
         from chains.tron import TronAdapter
-        from tracing import build_response
-        return build_response(req, TronAdapter(offline=not os.getenv("TRONGRID_API_KEY")))
+        from attribution import attribute
+        from tracing import build_response, load_labels
+        started = time.time()
+        adapter = TronAdapter(offline=not os.getenv("TRONGRID_API_KEY"))
+        resp = build_response(req, adapter)
+        resp.nearest_vasp, resp.graph = attribute(resp.graph, adapter, load_labels())
+        if resp.nearest_vasp:
+            resp.summary.time_to_attribution_sec = round(time.time() - started, 2)
+        else:
+            resp.notes = "No exchange found in the traced flow."
+        return resp
     data = _load("trace_hero.json")
     data["complaint_id"] = req.complaint_id
     data["wallet"] = req.wallet

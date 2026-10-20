@@ -143,3 +143,8 @@ def test_hero_build_response_is_contract_valid():
     assert r.summary.hops == 3 and r.summary.total_traced == 11800.0
     assert r.summary.idle_funds == sum(n.idle_balance for n in r.graph.nodes)
     assert r.nearest_vasp is None and r.source == "cached"
+
+
+def test_invalid_address_gives_single_node_not_a_crash():
+    g = trace("TXyz", TronAdapter(offline=True), case_value=1000)
+    assert [n.id for n in g.nodes] == ["TXyz"] and not g.edges
