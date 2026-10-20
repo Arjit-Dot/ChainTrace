@@ -8,6 +8,7 @@ Every route works today on fixtures, so the frontend can be built immediately.
 import asyncio
 import json
 import time
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import List
 
@@ -16,7 +17,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from sse_starlette.sse import EventSourceResponse
 
-import engine
+import engine_client
+import store
+from notices import build_freeze_notice
 from contract.schemas import (
     Alert, CaseSummary, DashboardStats, FreezeNotice, IntegrationAck, Network,
     SahyogNoticeRequest, TraceRequest, TraceResponse, WalletRisk, CONTRACT_VERSION,
@@ -29,7 +32,13 @@ def load(name: str):
     return json.loads((FIXTURES / name).read_text())
 
 
-app = FastAPI(title="ChainTrace API", version=CONTRACT_VERSION)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    store.init()                            # seed cases + seed traces into the case store
+    yield
+
+
+app = FastAPI(title="ChainTrace API", version=CONTRACT_VERSION, lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 _alert_queues: List[asyncio.Queue] = []
@@ -37,43 +46,45 @@ _alert_queues: List[asyncio.Queue] = []
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "contract_version": CONTRACT_VERSION}
+    return {"status": "ok", "contract_version": CONTRACT_VERSION, "engine_mode": engine_client.mode()}
 
 
 # ---- Core ----
 @app.post("/api/trace", response_model=TraceResponse)
 def trace(req: TraceRequest):
-    return engine.trace_complaint(req)
+    """Submit a complaint: run the engine, store the result as a new case, return it."""
+    return store.add_case(req, engine_client.trace(req))  # store adds B's recommendations
 
 
 @app.get("/api/wallets/{address}/risk", response_model=WalletRisk)
 def risk(address: str):
-    return engine.wallet_risk(address)
+    return engine_client.risk(address)
 
 
 # ---- Cases ----
 @app.get("/api/cases", response_model=List[CaseSummary])
 def list_cases():
-    return load("cases.json")
+    return store.list_cases()
 
 
 @app.get("/api/cases/{case_id}", response_model=TraceResponse)
 def get_case(case_id: str):
-    cases = {c["case_id"]: c for c in load("cases.json")}
-    if case_id not in cases:
+    trace = store.get_trace(case_id)
+    if trace is None:
         raise HTTPException(404, "Case not found")
-    c = cases[case_id]
-    data = load("trace_hero.json")          # TODO: serve the stored trace for this case
-    data.update(case_id=c["case_id"], complaint_id=c["complaint_id"], wallet=c["wallet"],
-                amount_lost=c["amount_lost"], fraud_type=c["fraud_type"])
-    return data
+    return trace
 
 
 @app.get("/api/cases/{case_id}/freeze-notice", response_model=FreezeNotice)
 def freeze_notice(case_id: str):
-    data = load("freeze_notice_hero.json")  # TODO(B): generate from the real case
-    data["case_id"] = case_id
-    return data
+    """Draft the freeze notice from the stored trace. 404 when there is no exchange to freeze."""
+    trace = store.get_trace(case_id)
+    if trace is None:
+        raise HTTPException(404, "Case not found")
+    if trace.nearest_vasp is None:
+        raise HTTPException(404, "No exchange identified for this case: nothing to freeze.")
+    case = store.set_status(case_id, "notice_drafted", only_from={"attributed"})
+    return build_freeze_notice(trace, case)
 
 
 @app.get("/api/cases/{case_id}/report")
@@ -129,7 +140,7 @@ async def simulate_alert():
 # ---- Mock integrations ----
 @app.post("/api/integrations/ncrp/complaints", response_model=IntegrationAck)
 def ncrp_complaint(req: TraceRequest):
-    result = engine.trace_complaint(req)    # real flow: queue a trace and return an ack
+    result = store.add_case(req, engine_client.trace(req))  # TODO(B6): publish alerts
     ack = load("ncrp_ack.json")
     ack.update(case_id=result.case_id, received_at=int(time.time()))
     return ack

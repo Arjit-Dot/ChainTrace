@@ -1,0 +1,46 @@
+To the Compliance / Law Enforcement Liaison Team, {{ vasp.vasp }}
+
+Ref: Complaint {{ complaint_id }} | Case {{ case_id }} | Date {{ today }}
+
+1. BACKGROUND
+A cyber-fraud complaint ({{ complaint_id }}{{ ", " ~ state if state else "" }}) reports the loss of {{ lost }} USDT{{ " in a suspected %s fraud" % fraud_type if fraud_type else "" }}. Blockchain analysis traced the funds from the reported wallet {{ wallet }} ({{ chain }}) to a deposit address on your platform.
+
+2. ACCOUNT TO ACT ON
+   Deposit address : {{ vasp.deposit_address }}
+   Amount received : {{ amount(vasp.amount) }} USDT
+   Received at     : {{ ist(vasp.timestamp) }} ({{ utc(vasp.timestamp) }})
+   Hops from wallet: {{ vasp.hops }}
+   Attribution     : {{ "%.0f" | format(vasp.confidence * 100) }}% confidence ({{ vasp.method }})
+
+3. TRANSACTION TRAIL
+{% for tx in trail %}
+   [{{ loop.index }}] {{ ist(tx.edge.timestamp) }} ({{ utc(tx.edge.timestamp) }})
+       Tx hash : {{ tx.edge.tx_hash }}
+       From    : {{ tx.edge.source }}{{ " [%s]" % tx.from_label if tx.from_label else "" }}
+       To      : {{ tx.edge.target }}{{ " [%s]" % tx.to_label if tx.to_label else "" }}
+       Amount  : {{ amount(tx.edge.amount) }} {{ tx.edge.token }}
+{% endfor %}
+
+4. ATTRIBUTION EVIDENCE
+{% for e in vasp.evidence %}
+   - {{ e }}
+{% endfor %}
+
+5. REQUESTED ACTIONS
+We request that you, at the earliest:
+   (a) FREEZE the funds held at the above deposit address and any related account balances;
+   (b) PRESERVE and share the KYC records of the account holder(s);
+   (c) share linked bank accounts and UPI IDs used for deposits and withdrawals;
+   (d) share registered phone numbers and email addresses;
+   (e) share login IP addresses and device logs;
+   (f) share the full transaction history of the account(s) linked to this deposit address.
+
+6. LEGAL BASIS
+This request is made under [LEGAL SECTION] and [LEGAL SECTION]. Please treat it as confidential and do not alert the account holder. Kindly acknowledge receipt and confirm the action taken.
+
+[Officer name]
+[Designation, Police Station / Cyber Crime Cell]
+[Phone | Email]
+
+---
+Drafted with ChainTrace from {{ source | upper }} data{{ " (demo: names and addresses are fictional)" if source == "simulated" else "" }}. Attribution is investigative intelligence and should be confirmed with the platform's own records.
