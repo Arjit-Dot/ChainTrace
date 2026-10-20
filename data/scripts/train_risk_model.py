@@ -29,7 +29,7 @@ def main():
     MODEL_PKL.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump({"model": model, "features": report["features"], "report": report}, MODEL_PKL)
 
-    print(json.dumps({k: report[k] for k in ("rows", "positive_share_train", "model", "rules_baseline")}, indent=2))
+    print(json.dumps({k: report[k] for k in ("rows", "positive_share_train", "model", "rules_baseline", "dev_battery")}, indent=2))
     print(f"saved {MODEL_PKL.relative_to(ROOT)}")
 
 

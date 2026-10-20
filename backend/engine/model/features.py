@@ -6,7 +6,7 @@ Time is measured at the moment funds arrived (`arrival_ts`), not "now", because 
 """
 import statistics
 from dataclasses import astuple, dataclass, asdict
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from engine.chains.tron import Transfer
 
@@ -21,7 +21,7 @@ class WalletFeatures:
     age_days: float            # days from the wallet's first transfer to when funds arrived
     tx_count: int              # transfers touching the wallet
     in_out_ratio: float        # amount sent / amount received, capped at 1 (0 when nothing was received)
-    median_forward_sec: float  # median seconds from money arriving to the next outgoing transfer
+    median_forward_sec: float  # amount-weighted median seconds from money arriving to the next outgoing transfer
     unique_senders: int        # distinct wallets that paid it
     round_number_ratio: float  # share of its transfers with round amounts
     fan_in_degree: float       # unique senders / unique recipients (consolidation)
@@ -36,6 +36,20 @@ class WalletFeatures:
 def _is_round(amount: float) -> bool:
     q = amount / ROUND_STEP
     return abs(q - round(q)) < 1e-9
+
+
+def _weighted_median(waits: List[Tuple[float, float]]) -> float:
+    """Median wait where each deposit counts in proportion to its amount, so one old dust deposit cannot
+    outweigh the large deposit that was forwarded in minutes. Equal amounts give the usual lower median."""
+    total = sum(w for _, w in waits)
+    if total <= 0:
+        return float(statistics.median(t for t, _ in waits))
+    acc = 0.0
+    for t, w in sorted(waits):
+        acc += w
+        if acc >= total / 2:
+            return float(t)
+    return float(waits[-1][0])
 
 
 def extract_features(addr: str, transfers: List[Transfer], arrival_ts: Optional[int] = None) -> WalletFeatures:
@@ -55,12 +69,12 @@ def extract_features(addr: str, transfers: List[Transfer], arrival_ts: Optional[
     sent = sum(t.amount for t in outgoing)
     in_out = min(sent / received, 1.0) if received > 0 else 0.0
 
-    waits = []
+    waits = []   # (seconds until the next outgoing transfer, size of the deposit)
     for t in incoming:
         nxt = next((o.timestamp for o in outgoing if o.timestamp >= t.timestamp), None)
         if nxt is not None:
-            waits.append(nxt - t.timestamp)
-    median_forward = float(statistics.median(waits)) if waits else float(NEVER_FORWARDED_SEC)
+            waits.append((nxt - t.timestamp, t.amount))
+    median_forward = _weighted_median(waits) if waits else float(NEVER_FORWARDED_SEC)
 
     senders = {t.from_addr for t in incoming}
     recipients = {t.to_addr for t in outgoing}

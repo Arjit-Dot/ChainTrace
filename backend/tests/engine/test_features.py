@@ -42,8 +42,16 @@ def test_in_out_ratio():
 def test_median_forward_time():
     ts = [tx("A", W, 100, T0), tx("B", W, 100, T0 + 1000),
           tx(W, "C", 100, T0 + 300), tx(W, "D", 100, T0 + 1600)]
-    # first deposit waits 300 s, second waits 600 s -> median 450
-    assert extract_features(W, ts).median_forward_sec == 450.0
+    # first deposit waits 300 s, second waits 600 s, equal sizes -> the lower median, 300
+    assert extract_features(W, ts).median_forward_sec == 300.0
+
+
+def test_median_forward_is_weighted_by_deposit_size_so_dust_cannot_dominate():
+    ts = [tx("D", W, 5, T0), tx("A", W, 10000, T0 + 3 * 86400), tx(W, "C", 9990, T0 + 3 * 86400 + 240)]
+    # the 5 USDT dust deposit waited 3 days, the 10,000 USDT deposit was forwarded in 4 minutes
+    assert extract_features(W, ts).median_forward_sec == 240.0
+    only_dust = [tx("D", W, 5, T0), tx(W, "C", 4, T0 + 86400)]
+    assert extract_features(W, only_dust).median_forward_sec == 86400.0
 
 
 def test_median_forward_ignores_deposits_never_followed_and_defaults_when_idle():

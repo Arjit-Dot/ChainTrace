@@ -7,7 +7,9 @@ PLACEHOLDER chosen from how fraud flows usually look, to be tuned by investigato
 Two archetypes, because fraud wallets look different depending on their job:
   mule       a fresh wallet that takes money in and passes it on at once (fast, ~all forwarded, young, few txs)
   collector  a wallet many victims pay, which consolidates it (many senders, many-to-few, fast, round amounts)
-The score is the stronger of the two, halved for an old, busy wallet (that looks like normal use).
+Each archetype is gated so it cannot score high on one trait alone: a mule must be young OR fast (an old, slow wallet
+that forwards most of its money is an OTC desk or a business), and a collector must consolidate quickly (a charity that
+pays out monthly is not laundering). The score is the stronger of the two, halved for an old, busy wallet.
 """
 import math
 from typing import Dict, List, Tuple
@@ -27,6 +29,8 @@ FAN_IN = (1.0, 10.0)                     # senders per recipient: 1 = 0, 10 and 
 ROUND_SHARE = (0.10, 0.50)               # share of round amounts: 10% = 0, 50% and above = 1
 ESTABLISHED = {"min_tx": 200, "min_age_days": 90}   # old and busy: damp the score
 ESTABLISHED_DAMP = 0.5
+MULE_GATE_FLOOR = 0.5                    # a mule keeps this share of its score even if neither young nor fast
+COLLECTOR_GATE_FLOOR = 0.6               # a collector keeps this share of its score even if it consolidates slowly
 REASON_MIN = 0.5                         # a signal must reach this to be quoted as a reason
 NO_SIGNAL_REASON = "No strong fraud signals"
 
@@ -56,7 +60,9 @@ def _weighted(weights: Dict[str, float], s: Dict[str, float]) -> float:
 def rule_score(f: WalletFeatures) -> float:
     """0-1 risk score: the stronger archetype, damped for an established wallet."""
     s = signals(f)
-    score = max(_weighted(MULE_WEIGHTS, s), _weighted(COLLECTOR_WEIGHTS, s))
+    mule = _weighted(MULE_WEIGHTS, s) * (MULE_GATE_FLOOR + (1 - MULE_GATE_FLOOR) * max(s["youth"], s["speed"]))
+    collector = _weighted(COLLECTOR_WEIGHTS, s) * (COLLECTOR_GATE_FLOOR + (1 - COLLECTOR_GATE_FLOOR) * s["speed"])
+    score = max(mule, collector)
     if f.tx_count >= ESTABLISHED["min_tx"] and f.age_days >= ESTABLISHED["min_age_days"]:
         score *= ESTABLISHED_DAMP
     return round(score, 4)

@@ -16,6 +16,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix, precision_score, r
 from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier
 
+from engine.model.battery import DEV, run_battery, summarize
 from engine.model.features import FEATURE_NAMES, WalletFeatures
 from engine.model.rules import rule_score
 from engine.model.synthetic import make_synthetic, seed_rows
@@ -23,8 +24,12 @@ from engine.model.synthetic import make_synthetic, seed_rows
 SEED = 42
 TEST_SHARE = 0.25
 THRESHOLD = 0.5   # for the accuracy / precision / recall / confusion numbers only; the app uses the probability
+# Direction the score may move as a feature grows (0 = free): younger, more forwarded and faster-forwarded wallets are
+# never LESS risky. This keeps explanations sensible and stops the trees from inventing odd shortcuts.
+MONOTONE = {"age_days": -1, "in_out_ratio": 1, "median_forward_sec": -1}
 PARAMS = dict(n_estimators=200, max_depth=4, learning_rate=0.1, subsample=0.8, colsample_bytree=0.8,
-              eval_metric="logloss", random_state=SEED, n_jobs=1)   # n_jobs=1 keeps training repeatable
+              eval_metric="logloss", random_state=SEED, n_jobs=1,   # n_jobs=1 keeps training repeatable
+              monotone_constraints=tuple(MONOTONE.get(n, 0) for n in FEATURE_NAMES))
 
 
 def split(n: int = 6000, seed: int = SEED, with_seeds: bool = True) -> Tuple[pd.DataFrame, pd.DataFrame]:
@@ -50,6 +55,13 @@ def evaluate(proba: np.ndarray, test: pd.DataFrame) -> Dict[str, Any]:
     }
 
 
+def _battery(scorer, n: int = 40) -> Dict[str, Any]:
+    """Pass rates on the DEV scenario battery (the one we iterate on; the HOLDOUT battery is run separately, once)."""
+    rep = run_battery(scorer, DEV, n=n, seed=0)
+    return {**summarize(rep), "scenarios": {k: v["pass_rate"] for k, v in rep.items() if v["pass_rate"] is not None},
+            "ambiguous_mean_score": {k: v["mean_score"] for k, v in rep.items() if v["pass_rate"] is None}}
+
+
 def train(n: int = 6000, seed: int = SEED, with_seeds: bool = True) -> Tuple[XGBClassifier, Dict[str, Any]]:
     """Fit the model and return (model, report). The report is also what gets saved next to the model."""
     train_df, test_df = split(n, seed, with_seeds)
@@ -67,6 +79,8 @@ def train(n: int = 6000, seed: int = SEED, with_seeds: bool = True) -> Tuple[XGB
         "positive_share_train": round(float(train_df["label"].mean()), 4),
         "model": evaluate(proba, test_df),
         "rules_baseline": evaluate(rules, test_df),
+        "dev_battery": {"model": _battery(lambda f: float(model.predict_proba(np.array([f.as_list()]))[0, 1])),
+                        "rules": _battery(rule_score)},
         "data_note": "Synthetic wallets from assumed ranges plus a few seed rows; the score measures how well the model "
                      "learned those assumptions, not real-world fraud detection.",
     }

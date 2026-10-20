@@ -280,7 +280,7 @@ Not built yet: the dashboard charts and KPI tiles, the Networks page (a placehol
 
 ## 7. The risk model: features, selection, training
 
-> **Status: in progress (Step 6).** The seven features are built and tested. Scoring, the trained model, typology and the wiring into traces are not built yet. Until then every downstream wallet shows the default Low risk with no reasons. This section describes what is being built.
+> **Status: in progress (Step 6).** Features, rules, the trained model, SHAP reasons and the scenario batteries are built and tested. Typology and the wiring into traces are not built yet, so every downstream wallet on the website still shows the default Low risk with no reasons.
 
 ### 7.1 What it answers
 
@@ -297,7 +297,7 @@ All computed from a wallet's USDT transfers in `backend/engine/model/features.py
 | `age_days` | Days from the wallet's first transfer to when the traced funds arrived | Very young | Mule wallets are often created just before use |
 | `tx_count` | Transfers touching the wallet | Very few | A wallet with a short history has little legitimate use |
 | `in_out_ratio` | Amount sent divided by amount received (capped at 1) | Close to 1 | Pass-through wallets keep nothing |
-| `median_forward_sec` | Typical time from money arriving to being sent on | Minutes | Fast forwarding is the signature of laundering |
+| `median_forward_sec` | Typical time from money arriving to being sent on (weighted by deposit size, so dust cannot hide a big fast forward) | Minutes | Fast forwarding is the signature of laundering |
 | `unique_senders` | Distinct wallets that paid it | Many (for a collector) | Collectors receive from many victims |
 | `round_number_ratio` | Share of transfers with round amounts (multiples of 50 USDT) | High | Scam payments are often fixed round sums |
 | `fan_in_degree` | Unique senders divided by unique recipients | High | Many in, few out means consolidation |
@@ -314,18 +314,22 @@ They come from the build plan (DEMO.md Step 6) and were chosen on three rules:
 
 There is no automatic feature selection and no learned feature search: with seven hand-picked, interpretable inputs that was unnecessary.
 
-### 7.4 The plan for scoring and training
+### 7.4 Scoring and training
 
-- **Rules first.** A hand-written formula turns the features into a 0 to 1 score and a level (Low below 0.25, Medium below 0.50, High below 0.75, Critical above; placeholders). It is the fallback if the trained model is missing.
-- **XGBoost second.** A gradient-boosted tree classifier trained on about 6,000 synthetic wallets across four profiles (scam collector, pass-through mule, normal user, exchange-like) with overlapping ranges and a little label noise. A fixed random seed makes the training repeatable. The model is saved to `data/models/risk_model.pkl`.
-- **Reasons from SHAP.** For each scored wallet the three features that pushed the score up the most are turned into a sentence with the real value.
-- **Held-out evaluation.** About 20 to 25% of the synthetic data is kept aside and never trained on; the training script prints AUC, precision, recall and a confusion matrix. The three real flagged wallets are also held out as a separate sanity check.
-- **Typology.** A rule-assisted classifier labels the fraud type (`investment_scam`, `task_scam`, `sextortion`, `ransomware`, `phishing`, `darknet`, `unknown`) from patterns such as many small deposits plus fast consolidation, many tiny unique senders, or few large payments plus a mixer.
+- **Rules** (`engine/model/rules.py`): a hand-written 0 to 1 formula, used as a baseline and as the fallback if the trained model is missing. Two profiles, mule and collector, each gated so one trait cannot score high alone. Levels: below 0.25 Low, below 0.50 Medium, below 0.75 High, else Critical (placeholders).
+- **Training data** (`engine/model/synthetic.py`): about 6,000 synthetic wallets from 11 profiles (fast and slow mules, collectors, splitters on the fraud side; normal and new users, exchange hubs, bots, OTC desks, savers, charities and merchants on the other), 40% fraud-labeled, with wide overlapping ranges and 3% flipped labels. The first version made round amounts and wallet age near-perfect separators, so the model leaned on them (40% and 32% of its importance) and ignored forwarding speed. The ranges were widened until no single feature separates the classes (the best alone reaches an AUC of 0.83) and the model no longer relies on any one feature.
+- **Model** (`engine/model/train.py`): XGBoost, fixed random seed, with direction constraints (younger, faster-forwarding and more-forwarding wallets are never less risky). 13 seed rows from our scripted cases are added to training; 25% of the synthetic data is held out. Saved to `data/models/risk_model.pkl` by `python data/scripts/train_risk_model.py`.
+- **Reasons** (`engine/model/scoring.py`): the three features that pushed a wallet's score up most (SHAP), as sentences with the real values. A Low wallet says "No strong fraud signals". A wallet with a single transfer, or a few that only came in, is capped at Medium with "Too little transaction history to judge".
+- **Scenario batteries** (`engine/model/battery.py`): simulated transfer histories for 19 DEV and 13 HOLDOUT scenarios (mules, collectors, splitters, normal users, bots, OTC desks, salary accounts, charities and more), run through the real feature extraction and scorer. The DEV set guided the fixes; the HOLDOUT set uses different ranges and new scenario types and was run once. Run them with `python data/scripts/eval_risk_battery.py [--holdout]`.
+- **Typology:** a rule-assisted classifier for the fraud type is the next step and is not built yet.
+
+Results (our own scenarios and labels): the scorer passes 98% of the DEV scenarios and 99% of the HOLDOUT ones; the first model passed 60% and 48%. On the held-out synthetic data the model reaches an AUC of 0.96 against 0.87 for the rules.
 
 ### 7.5 Limits to know
 
 - **The model learns our assumptions.** Synthetic data comes from ranges we chose, so the model's score reflects those assumptions, not measured fraud behaviour. The held-out synthetic score will look good for that reason and proves little.
-- **Real wallets differ.** One real flagged wallet in the cache is old and forwards slowly (a median of about a day), unlike the fast mules we simulated. Real labeled data, such as confirmed complaint wallets, would be needed for a trustworthy model.
+- **Real wallets differ.** The three real Tether-flagged wallets in the cache score Low (0.04 to 0.21): they are old and forward slowly, which is not the pattern we simulated. We did not tune to them. Real labeled data, such as confirmed complaint wallets, would be needed for a trustworthy model.
+- **The test scenarios are ours too.** The batteries show the scorer is robust across many variations of what we believe fraud looks like, not that those beliefs are right.
 - **"Flagged" is not "convicted".** The real wallets are Tether-frozen addresses. Tether does not publish why.
 - The interface and the slides must say the model is trained on synthetic and seed data.
 
@@ -427,7 +431,7 @@ pytest -q
 | Folder | Covers |
 |---|---|
 | `backend/tests/contract/` | Engine output matches the contract (graph shape, exchange in graph, idle funds add up) |
-| `backend/tests/engine/` | TRON adapter, tracing rules, attribution, the 8 attribution scenarios end to end, the seven model features |
+| `backend/tests/engine/` | TRON adapter, tracing rules, attribution, the 8 attribution scenarios end to end, the model features, rules, training, scoring, and the scenario batteries |
 | `backend/tests/product/` | Seed cases and traces, the case store and API, urgency rules, live monitoring, alerts and replay |
 
 To check the frontend compiles: `cd frontend && npm run build`.
@@ -442,7 +446,7 @@ To check the frontend compiles: `cd frontend && npm run build`.
 | 4: tracing engine | Done |
 | 5: attribution | Done |
 | Live monitoring, urgency, contract v1.1.0 | Done |
-| 6: risk model and typology | In progress: features done |
+| 6: risk model and typology | In progress: features, rules, model, reasons done; typology and wiring to do |
 | 7: PDF report | Not built (freeze notice and recommendations are done) |
 | 8 and 9: dashboard charts, Networks page, Demo Mode | Not built |
 

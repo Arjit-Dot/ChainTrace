@@ -23,6 +23,9 @@ log = logging.getLogger(__name__)
 MAX_REASONS = 3
 MIN_SHAP = 0.15        # a feature must push the score up by at least this (log-odds) to be quoted
 STRONG_LEVELS = {"High", "Critical"}
+THIN_CAP = 0.45                      # a wallet with too little history is never scored above Medium
+THIN_REASON = "Too little transaction history to judge"
+NO_HISTORY_REASON = "No transaction history found"
 
 
 @dataclass(frozen=True)
@@ -85,8 +88,23 @@ def shap_reasons(explainer, f: WalletFeatures, level: str, k: int = MAX_REASONS)
     return [sentence(n, f) for n in picked] or [NO_SIGNAL_REASON]
 
 
+def thin_history(f: WalletFeatures) -> bool:
+    """Too little behaviour to judge: a single transfer, or a few that only ever came IN (nothing was forwarded)."""
+    return f.tx_count < 2 or (f.in_out_ratio == 0 and f.tx_count <= 3)
+
+
 def score_wallet(f: WalletFeatures, model_path: Optional[Path] = None) -> RiskScore:
     """Risk level, 0-1 score and reasons for one wallet's features."""
+    if f.tx_count == 0:
+        return RiskScore("Low", 0.0, [NO_HISTORY_REASON], "none")
+    if thin_history(f):                                   # cannot show pass-through behaviour yet: cap, do not guess
+        inner = _score(f, model_path)
+        score = min(inner.score, THIN_CAP)
+        return RiskScore(level_for(score), score, [THIN_REASON], inner.method)
+    return _score(f, model_path)
+
+
+def _score(f: WalletFeatures, model_path: Optional[Path]) -> RiskScore:
     loaded = load_model(model_path)
     if loaded is None:
         level, score, reasons = score_with_rules(f)
