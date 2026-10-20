@@ -1,0 +1,309 @@
+{
+  "contract_version": "1.0.0",
+  "case_id": "C-001",
+  "complaint_id": "NCRP-2026-0001",
+  "wallet": "TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo",
+  "chain": "tron",
+  "fraud_type": "investment",
+  "amount_lost": 12000.0,
+  "risk": "Critical",
+  "risk_score": 0.96,
+  "typology": "investment_scam",
+  "graph": {
+    "nodes": [
+      {
+        "id": "TCbJ4nTTn621QMr9w8cHdeAueFFYWczLeu",
+        "chain": "tron",
+        "type": "victim",
+        "label": "Victim wallet",
+        "hop": -1,
+        "risk": "Low",
+        "risk_score": 0.0,
+        "reasons": [],
+        "typology": "unknown",
+        "idle_balance": 0.0
+      },
+      {
+        "id": "THCVMpR2qfkHdewe6mfC8ohj6nBfyUeZdg",
+        "chain": "tron",
+        "type": "victim",
+        "label": "Victim wallet",
+        "hop": -1,
+        "risk": "Low",
+        "risk_score": 0.0,
+        "reasons": [],
+        "typology": "unknown",
+        "idle_balance": 0.0
+      },
+      {
+        "id": "TEuFr69CpzZnWFdFWWUABYmhLdAPmphi8Z",
+        "chain": "tron",
+        "type": "victim",
+        "label": "Victim wallet",
+        "hop": -1,
+        "risk": "Low",
+        "risk_score": 0.0,
+        "reasons": [],
+        "typology": "unknown",
+        "idle_balance": 0.0
+      },
+      {
+        "id": "TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo",
+        "chain": "tron",
+        "type": "scam_wallet",
+        "label": "Reported wallet",
+        "hop": 0,
+        "risk": "Critical",
+        "risk_score": 0.96,
+        "reasons": [
+          "89 unique senders in 5 days",
+          "Forwards funds within 4 minutes",
+          "98% of inflow leaves within 1 hour"
+        ],
+        "typology": "investment_scam",
+        "idle_balance": 0.0
+      },
+      {
+        "id": "TMhTyFX8dfbnrswVFDYwoM6bXz1LjZ3ZXt",
+        "chain": "tron",
+        "type": "intermediary",
+        "label": "Pass-through wallet",
+        "hop": 1,
+        "risk": "High",
+        "risk_score": 0.82,
+        "reasons": [
+          "Forwards 99% of received funds",
+          "Wallet age 3 days",
+          "Only 4 lifetime transactions"
+        ],
+        "typology": "investment_scam",
+        "idle_balance": 0.0
+      },
+      {
+        "id": "TCLZhujbkc1gBh7ZRv9BQG8M2SDVdKNscT",
+        "chain": "tron",
+        "type": "intermediary",
+        "label": "Pass-through wallet",
+        "hop": 1,
+        "risk": "High",
+        "risk_score": 0.78,
+        "reasons": [
+          "Forwards 99% of received funds",
+          "Funded by reported wallet only"
+        ],
+        "typology": "investment_scam",
+        "idle_balance": 0.0
+      },
+      {
+        "id": "TAD47AKhQdrF4P8xpbVBx3GAr6Q56BFZJ3",
+        "chain": "tron",
+        "type": "exchange",
+        "label": "Example Exchange A (deposit address)",
+        "hop": 2,
+        "risk": "Low",
+        "risk_score": 0.12,
+        "reasons": [
+          "Behaves like an exchange deposit address"
+        ],
+        "typology": "unknown",
+        "idle_balance": 0.0
+      },
+      {
+        "id": "TXzK7i61kT3ck6kZ3VeGZjUnPVwDS46sKM",
+        "chain": "tron",
+        "type": "bridge",
+        "label": "Example Bridge (TRON to Ethereum)",
+        "hop": 2,
+        "risk": "Medium",
+        "risk_score": 0.45,
+        "reasons": [
+          "Cross-chain bridge contract"
+        ],
+        "typology": "unknown",
+        "idle_balance": 0.0
+      },
+      {
+        "id": "TLhZTYvV5asB99Wz26sSandSaN1kZfFWbs",
+        "chain": "tron",
+        "type": "mixer",
+        "label": "Example Mixer",
+        "hop": 2,
+        "risk": "Critical",
+        "risk_score": 0.91,
+        "reasons": [
+          "Known mixing service"
+        ],
+        "typology": "unknown",
+        "idle_balance": 0.0
+      },
+      {
+        "id": "TJ4imTmNr3FZoqR2jsRBuXS2aNXNAsAXhK",
+        "chain": "tron",
+        "type": "exchange",
+        "label": "Example Exchange A (hot wallet)",
+        "hop": 3,
+        "risk": "Low",
+        "risk_score": 0.05,
+        "reasons": [
+          "Labeled exchange hot wallet"
+        ],
+        "typology": "unknown",
+        "idle_balance": 0.0
+      },
+      {
+        "id": "0x0ddd7fbade53d7c56d375dc35123c2cc4906290b",
+        "chain": "ethereum",
+        "type": "intermediary",
+        "label": "Ethereum-side wallet (funds still here)",
+        "hop": 3,
+        "risk": "High",
+        "risk_score": 0.74,
+        "reasons": [
+          "Received bridged funds",
+          "No outflow yet"
+        ],
+        "typology": "investment_scam",
+        "idle_balance": 3720.0
+      }
+    ],
+    "edges": [
+      {
+        "source": "TCbJ4nTTn621QMr9w8cHdeAueFFYWczLeu",
+        "target": "TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo",
+        "tx_hash": "a1c8122e234c54956ae4a5d543e7506ca7b92f7ba6eb99794062aa90a4a35f83",
+        "amount": 5000.0,
+        "token": "USDT",
+        "timestamp": 1792396000,
+        "edge_type": "transfer"
+      },
+      {
+        "source": "THCVMpR2qfkHdewe6mfC8ohj6nBfyUeZdg",
+        "target": "TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo",
+        "tx_hash": "f2a97159e8b066eb60ac47e426e84f37f76be04d8f13b483ef957d277db799f0",
+        "amount": 4000.0,
+        "token": "USDT",
+        "timestamp": 1792396500,
+        "edge_type": "transfer"
+      },
+      {
+        "source": "TEuFr69CpzZnWFdFWWUABYmhLdAPmphi8Z",
+        "target": "TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo",
+        "tx_hash": "b29870de0ee32bee27af87b55dacf4a471539d2885bca0258e123d6584dd9076",
+        "amount": 3000.0,
+        "token": "USDT",
+        "timestamp": 1792397000,
+        "edge_type": "transfer"
+      },
+      {
+        "source": "TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo",
+        "target": "TMhTyFX8dfbnrswVFDYwoM6bXz1LjZ3ZXt",
+        "tx_hash": "a2d03f870911aacccb5c23d3abc96c41d83851fac018198854899c0dd6d1fa72",
+        "amount": 8000.0,
+        "token": "USDT",
+        "timestamp": 1792400000,
+        "edge_type": "transfer"
+      },
+      {
+        "source": "TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo",
+        "target": "TCLZhujbkc1gBh7ZRv9BQG8M2SDVdKNscT",
+        "tx_hash": "4adfe3aec7a7e1ede7b79a650609ce0ba0f5ac652dcb232a17a5654e6eab1f01",
+        "amount": 3800.0,
+        "token": "USDT",
+        "timestamp": 1792400060,
+        "edge_type": "transfer"
+      },
+      {
+        "source": "TMhTyFX8dfbnrswVFDYwoM6bXz1LjZ3ZXt",
+        "target": "TAD47AKhQdrF4P8xpbVBx3GAr6Q56BFZJ3",
+        "tx_hash": "e828262918d57d2cd7eed5839a5ecaf50c3ec8bfd06ebc65826455b7a55f8b97",
+        "amount": 7850.0,
+        "token": "USDT",
+        "timestamp": 1792400420,
+        "edge_type": "transfer"
+      },
+      {
+        "source": "TMhTyFX8dfbnrswVFDYwoM6bXz1LjZ3ZXt",
+        "target": "TLhZTYvV5asB99Wz26sSandSaN1kZfFWbs",
+        "tx_hash": "e3290a60cfc7404634357d6c3eb9f0183ab208af500703c56d6f2a48ff751975",
+        "amount": 50.0,
+        "token": "USDT",
+        "timestamp": 1792400430,
+        "edge_type": "mixer_in"
+      },
+      {
+        "source": "TCLZhujbkc1gBh7ZRv9BQG8M2SDVdKNscT",
+        "target": "TXzK7i61kT3ck6kZ3VeGZjUnPVwDS46sKM",
+        "tx_hash": "14e3029bf6d6390bbd477cf0f696e3b82b6a417b0346104f15cb8065c34b0929",
+        "amount": 3750.0,
+        "token": "USDT",
+        "timestamp": 1792400600,
+        "edge_type": "transfer"
+      },
+      {
+        "source": "TAD47AKhQdrF4P8xpbVBx3GAr6Q56BFZJ3",
+        "target": "TJ4imTmNr3FZoqR2jsRBuXS2aNXNAsAXhK",
+        "tx_hash": "783369545d0b8d3a7b938a1e66ef8ada8f95eee97c868df48b943d75f4e86130",
+        "amount": 7840.0,
+        "token": "USDT",
+        "timestamp": 1792401500,
+        "edge_type": "transfer"
+      },
+      {
+        "source": "TXzK7i61kT3ck6kZ3VeGZjUnPVwDS46sKM",
+        "target": "0x0ddd7fbade53d7c56d375dc35123c2cc4906290b",
+        "tx_hash": "60587ef3c8fe03e0efa7f2dd8cd98588a753e3afbe28b99d8148666a1e5983e2",
+        "amount": 3720.0,
+        "token": "USDT",
+        "timestamp": 1792400900,
+        "edge_type": "bridge"
+      }
+    ]
+  },
+  "nearest_vasp": {
+    "vasp": "Example Exchange A",
+    "deposit_address": "TAD47AKhQdrF4P8xpbVBx3GAr6Q56BFZJ3",
+    "hops": 2,
+    "amount": 7850.0,
+    "timestamp": 1792400420,
+    "confidence": 0.87,
+    "method": "heuristic",
+    "evidence": [
+      "Deposit address received funds from 14 unrelated wallets within 72 hours",
+      "It forwarded 99% of its balance to a labeled hot wallet in a single transfer",
+      "Hot wallet TJ4imTmN... is labeled Example Exchange A (source: demo label set)"
+    ],
+    "contact": "compliance@example-exchange-a.test"
+  },
+  "summary": {
+    "hops": 3,
+    "nodes": 11,
+    "total_traced": 11800.0,
+    "idle_funds": 3720.0,
+    "time_to_attribution_sec": 38.0
+  },
+  "recommendations": [
+    {
+      "priority": "urgent",
+      "action": "Act on idle funds",
+      "detail": "3,720 USDT is sitting in the Ethereum-side wallet. Request a hold from the stablecoin issuer or the next VASP before it moves."
+    },
+    {
+      "priority": "high",
+      "action": "Issue freeze and KYC request to Example Exchange A",
+      "detail": "Deposit address received 7,850 USDT. Request freeze plus preservation of KYC, linked bank/UPI, phone and IP data."
+    },
+    {
+      "priority": "high",
+      "action": "Continue trace on Ethereum",
+      "detail": "Funds crossed a bridge. Follow the Ethereum-side wallet for onward movement."
+    },
+    {
+      "priority": "normal",
+      "action": "Preserve mixer evidence",
+      "detail": "50 USDT entered a mixer. Exit cannot be traced reliably; record the transaction and monitor."
+    }
+  ],
+  "source": "simulated",
+  "generated_at": 1792401600,
+  "notes": "FICTIONAL demo data. Names and addresses are placeholders."
+}

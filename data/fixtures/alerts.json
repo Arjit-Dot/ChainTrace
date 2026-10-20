@@ -1,0 +1,34 @@
+[
+  {
+    "id": "A-1",
+    "type": "FUNDS_MOVED",
+    "severity": "critical",
+    "case_id": "C-001",
+    "message": "3,720 USDT moved out of the Ethereum-side wallet",
+    "timestamp": 1792402000
+  },
+  {
+    "id": "A-2",
+    "type": "REACHED_VASP",
+    "severity": "warning",
+    "case_id": "C-002",
+    "message": "Funds reached Example Exchange A deposit address",
+    "timestamp": 1792402100
+  },
+  {
+    "id": "A-3",
+    "type": "NEW_COMPLAINT_LINKED",
+    "severity": "info",
+    "case_id": "C-003",
+    "message": "New complaint linked to NET-1 (shared deposit address)",
+    "timestamp": 1792402200
+  },
+  {
+    "id": "A-4",
+    "type": "ENTERED_MIXER",
+    "severity": "critical",
+    "case_id": "C-006",
+    "message": "Funds entered a known mixer; trace-through is low confidence",
+    "timestamp": 1792402300
+  }
+]
