@@ -11,6 +11,12 @@
     "risk_score": null,
     "urgency": null,
     "urgency_reasons": [],
+    "urgency_as_of": 1792401600,
+    "monitoring": {
+      "status": "live",
+      "last_checked_at": 1792401600,
+      "poll_interval_sec": 30.0
+    },
     "typology": "investment_scam",
     "graph": {
       "nodes": [
@@ -322,6 +328,8 @@
     "risk_score": null,
     "urgency": null,
     "urgency_reasons": [],
+    "urgency_as_of": null,
+    "monitoring": null,
     "typology": "task_scam",
     "graph": {
       "nodes": [
@@ -495,6 +503,8 @@
     "risk_score": null,
     "urgency": null,
     "urgency_reasons": [],
+    "urgency_as_of": null,
+    "monitoring": null,
     "typology": "investment_scam",
     "graph": {
       "nodes": [
@@ -701,6 +711,8 @@
     "risk_score": null,
     "urgency": null,
     "urgency_reasons": [],
+    "urgency_as_of": null,
+    "monitoring": null,
     "typology": "sextortion",
     "graph": {
       "nodes": [
@@ -828,6 +840,8 @@
     "risk_score": null,
     "urgency": null,
     "urgency_reasons": [],
+    "urgency_as_of": null,
+    "monitoring": null,
     "typology": "sextortion",
     "graph": {
       "nodes": [
@@ -1000,6 +1014,8 @@
     "risk_score": null,
     "urgency": null,
     "urgency_reasons": [],
+    "urgency_as_of": null,
+    "monitoring": null,
     "typology": "ransomware",
     "graph": {
       "nodes": [
@@ -1148,6 +1164,8 @@
     "risk_score": null,
     "urgency": null,
     "urgency_reasons": [],
+    "urgency_as_of": null,
+    "monitoring": null,
     "typology": "phishing",
     "graph": {
       "nodes": [
@@ -1275,6 +1293,8 @@
     "risk_score": null,
     "urgency": null,
     "urgency_reasons": [],
+    "urgency_as_of": null,
+    "monitoring": null,
     "typology": "task_scam",
     "graph": {
       "nodes": [

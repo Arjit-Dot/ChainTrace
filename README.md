@@ -11,6 +11,7 @@ A blockchain tracer for cybercrime investigators (i4c). Given a wallet reported 
 | Tracing engine (best-first, stop rules, pass-through, idle funds) | done (`backend/tracing.py`) |
 | Case store, recommendations, case urgency (act now / act soon / preserve), dashboard, networks, freeze notice, React frontend | done |
 | Attribution (nearest exchange) | done (`backend/attribution.py`) |
+| Live monitoring: watcher, urgency "as of", alerts (demo feed is a recorded replay) | done (`backend/alerts.py`, `engine.new_transfers`) |
 | Downstream wallet risk and typology (the reported wallet is not scored) | not built; placeholders |
 
 The demo data is partly fictional: the hero case (`TUNoHG…`), "Example Exchange A/B/C" and the seed cases are scripted. The cache also holds three real wallets that Tether blacklisted. See `data/cache/SOURCES.md` and `data/LABELS.md`.
@@ -67,6 +68,10 @@ Open http://localhost:5173, go to **New Complaint**, and submit wallet `TUNoHG2D
 - `http`: a separate engine at `ENGINE_URL`.
 
 If the engine fails, the API falls back to the fixture and says so in the trace `notes`.
+
+## Try live monitoring
+
+With `ENGINE_MODE=engine`, submit wallet `TJgNArE5dkoiDgHUjimdizwNaTZZwLh1Lg` (amount `6000`). The case shows **Act now** (5,900 USDT idle). Click **Simulate fund movement**: a recorded transfer (SIMULATED) moves the funds to Example Exchange B, the alerts appear, and the badge drops to **Act soon**. The urgency card shows an "as of" time and a live/stale indicator; the backend polls every 30 seconds (`CHAINTRACE_POLL_SEC`, and `CHAINTRACE_MONITOR=0` turns the watcher off).
 
 ## Try the tracer on its own
 

@@ -18,7 +18,7 @@ sys.path.insert(0, str(ROOT / "data" / "scripts"))
 from chains.tron import TronAdapter  # noqa: E402
 from make_hero_cache import raw_transfer, tron, txh  # noqa: E402
 
-BASE = 1_792_500_000
+BASE = 1_791_000_000   # in the past, so live monitoring never mistakes cached scenario transfers for new ones
 EXCHANGE_A = "TJ4imTmNr3FZoqR2jsRBuXS2aNXNAsAXhK"   # labels.csv, all fictional
 EXCHANGE_B = "TRtcU89W2N6MTT7DXvpzZUAvWQ8qPTAQhS"
 EXCHANGE_C = "TQyp1x1VvbeSnvwt3bdCATtLTjm4wTE3SY"
@@ -100,10 +100,13 @@ s.send(p2, EXCHANGE_C, 4950); s.send(p1, d, 4950); s.customers(d, 8, EXCHANGE_B)
 add(s)
 
 # 6. nothing found, money still sitting in a wallet
-s = Scenario("idle", "No exchange: funds still idle in the last wallet (act now)", 6000, {"vasp": None, "idle": 5900.0})
+s = Scenario("idle", "No exchange: funds still idle in the last wallet (act now). Live-monitoring demo: the replay moves them to Example Exchange B", 6000, {"vasp": None, "idle": 5900.0})
 p1, p2 = s.w("p1"), s.w("p2")
 s.send(s.w("victim"), s.wallet, 6000); s.send(s.wallet, p1, 6000); s.send(p1, p2, 5900)
 add(s)
+
+REPLAY = {}   # recorded movements for the live-monitoring demo (SIMULATED), keyed by sender
+REPLAY[p2] = [raw_transfer(txh("replay-idle"), p2, EXCHANGE_B, 5880.0, s.t + 600)]  # the idle funds finally move
 
 # 7. mixer terminal
 s = Scenario("mixer", "Mixer terminal: trace ends at a mixer, no exchange", 4000, {"vasp": None, "terminal": MIXER})
@@ -131,7 +134,9 @@ def main():
     out = [{"key": sc.key, "title": sc.title, "wallet": sc.wallet, "amount": float(sc.amount), "expect": sc.expect}
            for sc in SCENARIOS]
     (ROOT / "data" / "scenarios.json").write_text(json.dumps(out, indent=2) + "\n")
-    print(f"wrote {len(by_addr)} cache files and data/scenarios.json")
+    (ROOT / "data" / "replay").mkdir(exist_ok=True)
+    (ROOT / "data" / "replay" / "movements.json").write_text(json.dumps(REPLAY, indent=2) + "\n")
+    print(f"wrote {len(by_addr)} cache files, data/scenarios.json and data/replay/movements.json")
     for o in out:
         print(f"{o['key']:<14} {o['wallet']}  {o['amount']:>8.0f}  {o['title']}")
 

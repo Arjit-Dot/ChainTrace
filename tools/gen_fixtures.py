@@ -105,6 +105,8 @@ trace = {
     "risk_score": None,
     "urgency": None,
     "urgency_reasons": [],
+    "urgency_as_of": T0 + 1600,
+    "monitoring": {"status": "live", "last_checked_at": T0 + 1600, "poll_interval_sec": 30},
     "typology": "investment_scam",
     "graph": {"nodes": nodes, "edges": edges},
     "nearest_vasp": {
@@ -164,7 +166,8 @@ for i, (cid, amt, fr, st, rk, status, vasp, tta, net) in enumerate(rows, 1):
     cases.append(CaseSummary(
         case_id=cid, complaint_id=f"NCRP-2026-{i:04d}", wallet=tron(f"case-wallet-{cid}"),
         amount_lost=float(amt), fraud_type=fr, state=st, risk=None, status=status, vasp=vasp,
-        time_to_attribution_sec=tta, network_id=net, reported_at=T0 - 86400 + i * 3600))
+        time_to_attribution_sec=tta, network_id=net, reported_at=T0 - 86400 + i * 3600,
+        urgency_as_of=T0 + 1600, monitoring={"status": "live", "last_checked_at": T0 + 1600, "poll_interval_sec": 30}))
 cases[0].wallet = S  # C-001 uses the hero wallet
 dump("cases.json", [c.model_dump() for c in cases])
 
@@ -226,6 +229,9 @@ alerts = [
           message="New complaint linked to NET-1 (shared deposit address)", timestamp=T0 + 2200),
     Alert(id="A-4", type="ENTERED_MIXER", severity="critical", case_id="C-006",
           message="Funds entered a known mixer; trace-through is low confidence", timestamp=T0 + 2300),
+    Alert(id="A-5", type="URGENCY_CHANGED", severity="warning", case_id="C-001",
+          message="Urgency changed from Act now to Act soon: the idle 3,720 USDT moved out and was traced to Example Exchange A",
+          timestamp=T0 + 2400),
 ]
 dump("alerts.json", [a.model_dump() for a in alerts])
 

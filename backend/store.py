@@ -15,12 +15,35 @@ import time
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from contract.schemas import CaseSummary, TraceRequest, TraceResponse
+from contract.schemas import CaseSummary, Monitoring, TraceRequest, TraceResponse
 from linking import case_groups
 from recommendations import with_recommendations
 
+POLL_INTERVAL_SEC = float(os.getenv("CHAINTRACE_POLL_SEC", "30"))   # placeholder, to be tuned by investigators
+STALE_AFTER = 2                                                   # stale = last check older than 2 poll intervals
 DATA = Path(__file__).resolve().parents[1] / "data"
 _lock = threading.Lock()
+
+
+def monitoring_on() -> bool:
+    return os.getenv("CHAINTRACE_MONITOR", "1") != "0"
+
+
+def _monitoring(now: float) -> Monitoring:
+    """The monitoring block stamped on a case that was just checked (status 'off' when the watcher is disabled)."""
+    return Monitoring(status="live" if monitoring_on() else "off", last_checked_at=int(now),
+                      poll_interval_sec=POLL_INTERVAL_SEC)
+
+
+def _aged(obj, now: Optional[float] = None):
+    """Stale is derived at read time: a live case whose last check is older than 2 poll intervals."""
+    m = obj.monitoring
+    if m is None or m.status != "live" or m.last_checked_at is None:
+        return obj
+    now = time.time() if now is None else now
+    if now - m.last_checked_at > STALE_AFTER * m.poll_interval_sec:
+        return obj.model_copy(update={"monitoring": m.model_copy(update={"status": "stale"})})
+    return obj
 
 
 def _path() -> Path:
@@ -53,8 +76,11 @@ def init(reset: bool = False) -> None:
         for c in cases:
             summary = CaseSummary(**c)
             linked = networks.count(summary.network_id) - 1 if summary.network_id else 0
-            trace = with_recommendations(TraceResponse(**traces[summary.case_id]), linked)
-            summary = summary.model_copy(update={"urgency": trace.urgency, "urgency_reasons": trace.urgency_reasons})
+            now = time.time()
+            trace = with_recommendations(TraceResponse(**traces[summary.case_id]), linked, now)
+            trace = trace.model_copy(update={"urgency_as_of": int(now), "monitoring": _monitoring(now)})
+            summary = summary.model_copy(update={"urgency": trace.urgency, "urgency_reasons": trace.urgency_reasons,
+                                                 "urgency_as_of": trace.urgency_as_of, "monitoring": trace.monitoring})
             con.execute("INSERT OR REPLACE INTO cases VALUES (?, ?, ?, ?)",
                         (summary.case_id, _seq(summary.case_id),
                          summary.model_dump_json(), trace.model_dump_json()))
@@ -65,26 +91,26 @@ def list_cases() -> List[CaseSummary]:
     """Newest first, so a just-submitted complaint sits at the top of the dashboard."""
     with _connect() as con:
         rows = con.execute("SELECT summary FROM cases").fetchall()
-    cases = [CaseSummary.model_validate_json(r[0]) for r in rows]
+    cases = [_aged(CaseSummary.model_validate_json(r[0])) for r in rows]
     return sorted(cases, key=lambda c: (c.reported_at, _seq(c.case_id)), reverse=True)
 
 
 def get_trace(case_id: str) -> Optional[TraceResponse]:
     with _connect() as con:
         row = con.execute("SELECT trace FROM cases WHERE case_id = ?", (case_id,)).fetchone()
-    return TraceResponse.model_validate_json(row[0]) if row else None
+    return _aged(TraceResponse.model_validate_json(row[0])) if row else None
 
 
 def get_case(case_id: str) -> Optional[CaseSummary]:
     with _connect() as con:
         row = con.execute("SELECT summary FROM cases WHERE case_id = ?", (case_id,)).fetchone()
-    return CaseSummary.model_validate_json(row[0]) if row else None
+    return _aged(CaseSummary.model_validate_json(row[0])) if row else None
 
 
 def all_traces() -> dict:
     with _connect() as con:
         rows = con.execute("SELECT case_id, trace FROM cases").fetchall()
-    return {cid: TraceResponse.model_validate_json(t) for cid, t in rows}
+    return {cid: _aged(TraceResponse.model_validate_json(t)) for cid, t in rows}
 
 
 # ---------- writes ----------
@@ -95,7 +121,9 @@ def add_case(req: TraceRequest, trace: TraceResponse) -> TraceResponse:
         case_id = f"C-{seq:03d}"
         trace = trace.model_copy(update={"case_id": case_id})
         network_id, linked = _network_for(con, case_id, trace)
-        trace = with_recommendations(trace, linked)
+        now = time.time()
+        trace = with_recommendations(trace, linked, now)
+        trace = trace.model_copy(update={"urgency_as_of": int(now), "monitoring": _monitoring(now)})
         summary = CaseSummary(
             case_id=case_id,
             complaint_id=req.complaint_id,
@@ -106,6 +134,8 @@ def add_case(req: TraceRequest, trace: TraceResponse) -> TraceResponse:
             risk=trace.risk,
             urgency=trace.urgency,
             urgency_reasons=trace.urgency_reasons,
+            urgency_as_of=trace.urgency_as_of,
+            monitoring=trace.monitoring,
             status="attributed" if trace.nearest_vasp else "unresolved",
             vasp=trace.nearest_vasp.vasp if trace.nearest_vasp else None,
             time_to_attribution_sec=trace.summary.time_to_attribution_sec,
@@ -128,6 +158,41 @@ def set_status(case_id: str, status: str, only_from: Optional[set] = None) -> Op
             summary = summary.model_copy(update={"status": status})
             con.execute("UPDATE cases SET summary = ? WHERE case_id = ?", (summary.model_dump_json(), case_id))
     return summary
+
+
+def watched_cases() -> List[str]:
+    """Case ids the watcher should poll (those with monitoring on)."""
+    return [c.case_id for c in list_cases() if c.monitoring and c.monitoring.status != "off"]
+
+
+def reevaluate(case_id: str, now: Optional[float] = None,
+               new_trace: Optional[TraceResponse] = None) -> Optional[Tuple[TraceResponse, TraceResponse]]:
+    """One successful chain check: store the (optionally re-traced) case with fresh recommendations, urgency and
+    'as of' time. Urgency can go down as well as up. Returns (old, new) traces, or None for an unknown case."""
+    now = time.time() if now is None else now
+    with _lock, _connect() as con:
+        row = con.execute("SELECT summary, trace FROM cases WHERE case_id = ?", (case_id,)).fetchone()
+        if row is None:
+            return None
+        summary, old = CaseSummary.model_validate_json(row[0]), TraceResponse.model_validate_json(row[1])
+        base = old if new_trace is None else new_trace.model_copy(update={
+            "case_id": case_id, "complaint_id": old.complaint_id, "fraud_type": old.fraud_type or new_trace.fraud_type})
+        rows = con.execute("SELECT summary FROM cases").fetchall()
+        nets = [json.loads(r[0]).get("network_id") for r in rows]
+        linked = nets.count(summary.network_id) - 1 if summary.network_id else 0
+        new = with_recommendations(base, linked, now)
+        new = new.model_copy(update={"urgency_as_of": int(now), "monitoring": _monitoring(now)})
+        status = summary.status
+        if new.nearest_vasp and status in ("tracing", "unresolved"):
+            status = "attributed"
+        summary = summary.model_copy(update={
+            "risk": new.risk, "urgency": new.urgency, "urgency_reasons": new.urgency_reasons,
+            "urgency_as_of": new.urgency_as_of, "monitoring": new.monitoring, "status": status,
+            "vasp": new.nearest_vasp.vasp if new.nearest_vasp else None,
+            "time_to_attribution_sec": new.summary.time_to_attribution_sec or summary.time_to_attribution_sec})
+        con.execute("UPDATE cases SET summary = ?, trace = ? WHERE case_id = ?",
+                    (summary.model_dump_json(), new.model_dump_json(), case_id))
+    return old, new
 
 
 def _network_for(con: sqlite3.Connection, case_id: str, trace: TraceResponse) -> Tuple[Optional[str], int]:

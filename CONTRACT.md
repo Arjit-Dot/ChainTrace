@@ -53,6 +53,7 @@ Regenerate fixtures after a contract change: `python tools/gen_fixtures.py` (it 
 | GET | `/api/alerts` | `Alert[]` (history) | B |
 | GET | `/api/alerts/stream` | SSE, event name `alert`, data = `Alert` JSON | B |
 | POST | `/api/alerts/simulate` | pushes a demo alert to open streams | B |
+| POST | `/api/cases/{case_id}/simulate-movement` | `Alert[]`: replays a recorded movement of the case's idle funds (SIMULATED), re-checks the case now; 404 if there is none | B |
 | POST | `/api/integrations/ncrp/complaints` | `IntegrationAck` (mock NCRP feed) | B |
 | POST | `/api/integrations/sahyog/notice` | `IntegrationAck` (mock SAHYOG) | B |
 
@@ -64,14 +65,22 @@ Full request and response shapes are in `backend/contract/schemas.py` and in the
 - **Amounts:** token units as floats (`7850.0` = 7,850 USDT), never raw integers with decimals.
 - **Node types:** `victim`, `scam_wallet`, `intermediary`, `bridge`, `mixer`, `exchange`, `unknown`.
 - **Risk levels:** `Low`, `Medium`, `High`, `Critical`. `risk_score` is 0 to 1. Risk is scored on downstream wallets only: the reported wallet (hop 0) is labeled `Reported` and has `risk: null` and `risk_score: null`, and so do the case-level `risk` fields that mirror it.
-- **Case urgency:** `act_now`, `act_soon`, `preserve`, plus `urgency_reasons[]` (the triggers that fired). Set by B in `recommendations.py` from the engine's output (the engine returns `urgency: null`). First match wins: `act_now` = idle funds, funds at a VASP deposit address not yet swept, or last outgoing transaction under 24 hours ago; `act_soon` = VASP identified at confidence 0.70 or higher, amount lost 10,000 or more, or 2 or more linked complaints; `preserve` = everything else. The thresholds are demo placeholders. Recommendation `priority` only orders the panel; the UI shows the urgency badge, not a second scale.
+- **Case urgency:** `act_now`, `act_soon`, `preserve`, plus `urgency_reasons[]` (the triggers that fired). Set by B in `recommendations.py` from the engine's output (the engine returns `urgency: null`). First match wins: `act_now` = idle funds at the last check, funds at a VASP deposit address not yet swept, or a fresh outgoing transfer was observed from a case wallet in the last 15 minutes; `act_soon` = VASP identified at confidence 0.70 or higher, amount lost 10,000 or more, or 2 or more linked complaints; `preserve` = everything else. The thresholds are demo placeholders. Recommendation `priority` only orders the panel; the UI shows the urgency badge, not a second scale.
 - **Attribution method:** `deterministic` (direct label match) or `heuristic` (sweep/gas inference). Heuristic confidence must stay below 0.90.
 - **`source`:** `live`, `cached`, or `simulated`. The UI shows it as a badge.
 - **Hop:** `-1` for victims, `0` for the reported wallet, increasing downstream.
 - **`idle_balance`:** funds still sitting in a leaf wallet. `summary.idle_funds` must equal the sum over nodes (tested).
 - **Every `nearest_vasp` has `evidence[]`** and its `deposit_address` must exist in the graph (tested).
 
-> **Contract v1.1.0 (applied):** `urgency` (`act_now | act_soon | preserve`, nullable) and `urgency_reasons[]` are on `TraceResponse` and `CaseSummary`; the reported wallet's `risk` / `risk_score` are nullable on `Node`, `TraceResponse` and `CaseSummary`. `schemas.py`, `tools/gen_fixtures.py`, the fixtures and the seed traces are regenerated, and the tests cover it. "Linked to 2 or more complaints" counts the *other* complaints in the case's network.
+> **Contract v1.1.0 (applied):** `urgency` (`act_now | act_soon | preserve`, nullable) and `urgency_reasons[]` are on `TraceResponse` and `CaseSummary`; the reported wallet's `risk` / `risk_score` are nullable on `Node`, `TraceResponse` and `CaseSummary`. Live monitoring adds `urgency_as_of` and `monitoring` (`Monitoring`) to the same two models and alert type `URGENCY_CHANGED`. `schemas.py`, `tools/gen_fixtures.py`, the fixtures and the seed traces are regenerated, and the tests cover it. "Linked to 2 or more complaints" counts the *other* complaints in the case's network.
+
+**Live monitoring (v1.1.0).** B's watcher (`alerts.py`) polls the leaf and idle wallets of every case (placeholder: every 30 seconds) and re-evaluates urgency on each poll.
+- `urgency_as_of` (epoch seconds): the time of the last successful chain check, not of the last change, so a quiet case still shows a fresh time.
+- `monitoring`: `{status: live | stale | off, last_checked_at, poll_interval_sec}`. `stale` means the last check is older than about twice the poll interval, so the badge cannot claim freshness it does not have. B derives it when a case is read; the engine returns `monitoring: null`.
+- Third `act_now` trigger: a fresh outgoing transfer observed from a case wallet in the last 15 minutes (placeholder).
+- Alert type `URGENCY_CHANGED`: the message carries the old and new level. Urgency can go down as well as up.
+- Seam function, next to `trace_complaint`: `new_transfers(addresses, since_ts) -> list[Transfer]`. It lets the watcher poll a few wallets without a full re-trace; a full re-trace runs only when a wallet actually moved. The seam is otherwise fixed, so this addition went through the change process in section 6.
+- Limits: "live" means polling (a delay of up to one poll interval plus block confirmation time); only leaf and idle wallets are watched because of API rate limits; monitoring improves how current the reading is, it cannot make `act_now` mean a freeze will succeed.
 
 Suggested UI colors per node type: victim grey, scam_wallet red, intermediary orange, bridge blue, mixer purple, exchange green, unknown white.
 
@@ -119,4 +128,4 @@ Other fixtures: 8 cases (two networks, one unresolved ransomware case, one still
 | `/api/cases/{id}` returns the hero trace | `main.get_case` | Stored trace per case |
 | Freeze notice and PDF are samples | `main.freeze_notice`, `main.report` | Template fill + ReportLab |
 | Dashboard and networks are static | `main.dashboard`, `main.networks` | Computed from stored cases |
-| Alerts replay fixtures | `main.simulate_alert` | Wallet watcher |
+| Live monitoring feed is a recorded replay (SIMULATED) | `engine.release_replay`, `main.simulate_movement` | `engine.new_transfers` against TronGrid with a key (the watcher in `alerts.py` is already real) |

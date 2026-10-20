@@ -1,0 +1,115 @@
+PROPOSED CHANGES: LIVE MONITORING AND "AS OF" FOR CASE URGENCY
+(Proposal only. DEMO.md and CONTRACT.md have not been edited for this yet.)
+
+------------------------------------------------------------
+1. RULE CHANGES
+------------------------------------------------------------
+
+No provisional stage.
+Urgency is computed once the trace finishes, then kept current by monitoring.
+
+Replace the 24-hour trigger.
+With live monitoring we no longer need a timestamp comparison as a stand-in for
+"still moving". We observe it. The third act_now trigger becomes: a fresh
+outgoing transfer was observed from a case wallet in the last 15 minutes.
+Fifteen minutes is a placeholder for investigators to tune.
+
+Urgency levels (first match wins, top to bottom):
+
+  act_now
+    - Idle funds at the last check
+    - Funds at a VASP deposit address, not yet swept
+    - Fresh outgoing transfer in the last 15 minutes
+
+  act_soon
+    - VASP identified at confidence 0.70 or higher
+    - Amount lost 10,000 or more
+    - 2 or more linked complaints
+
+  preserve
+    - Everything else
+
+Live monitoring on each case.
+Once a case is traced, its leaf and idle wallets go on a watchlist and are
+polled for new transfers (placeholder: every 30 seconds). When a new transfer
+appears, the system re-runs the pipeline:
+
+  1. Extend the graph from the new transfer.
+  2. Re-run attribution and urgency.
+  3. Update the "as of" time.
+  4. Push an alert.
+
+Urgency can go down as well as up. If idle funds move, act_now may drop to
+act_soon or preserve, and the reasons show why.
+
+------------------------------------------------------------
+2. CONTRACT CHANGES (target v1.1.0, combined with the pending urgency change)
+------------------------------------------------------------
+
+- urgency_as_of (epoch seconds) on TraceResponse and CaseSummary.
+  It is the time of the last successful chain check, not the last change, so a
+  quiet case still shows a fresh time.
+
+- monitoring on TraceResponse and CaseSummary:
+    status             live | stale | off
+    last_checked_at    epoch seconds
+    poll_interval_sec  number
+  "stale" means the last check is older than about twice the poll interval, so
+  the badge cannot claim freshness it does not have.
+
+- New alert type URGENCY_CHANGED, added to Alert.type. The message carries the
+  old and new level.
+
+- A light seam function next to trace_complaint:
+    new_transfers(addresses, since_ts) -> list[Transfer]
+  This avoids re-running a full trace on every poll. The alternative is to call
+  trace_complaint repeatedly, which is simpler but heavier and hits API rate
+  limits sooner. Recommended: add the new function. It must go through the
+  contract change process, since the seam signatures are otherwise fixed.
+
+- Fixtures: the hero case gets urgency_as_of, monitoring: live, and a sample
+  URGENCY_CHANGED alert.
+
+------------------------------------------------------------
+3. DEMO.md CHANGES
+------------------------------------------------------------
+
+- Step 7 (case urgency): swap the 24-hour trigger for the 15-minute
+  fresh-transfer one, and add the as-of and re-evaluation rules.
+
+- Step 8 (alerts): replace the simulate-only wording with a real watcher. It
+  polls the watchlist, calls new_transfers, re-evaluates, and pushes alerts.
+  In demo mode, a recorded transaction replay stands in for live data and is
+  labeled SIMULATED.
+
+- Step 9 (Case View): the urgency badge shows "as of 14:32:10" and a
+  live/stale indicator. A stale case gets a visible warning.
+
+- Section 11 (team split): assign the watcher to B (alerts.py), the
+  new_transfers function to A, and update the engine's "stateless" wording to
+  allow this one extra function.
+
+- Coverage map, goals, demo script: mention continuous monitoring, and show an
+  alert changing the urgency badge live during the demo.
+
+------------------------------------------------------------
+4. LIMITS TO STATE
+------------------------------------------------------------
+
+- "Live" means polling, so there is always a delay of up to one poll interval
+  plus block confirmation time.
+- Public APIs have rate limits, so only leaf and idle wallets are watched, not
+  the whole graph.
+- Live monitoring improves how current the reading is. It cannot make act_now
+  mean a freeze will succeed.
+
+------------------------------------------------------------
+PLACEHOLDER VALUES (to be tuned by investigators)
+------------------------------------------------------------
+
+  Fresh-transfer window ........ 15 minutes
+  Poll interval ................ 30 seconds
+  Stale threshold .............. about 2x poll interval
+  Large amount ................. 10,000
+  VASP confidence threshold .... 0.70
+  Linked complaints ............ 2 or more

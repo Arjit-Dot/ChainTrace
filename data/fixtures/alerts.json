@@ -30,5 +30,13 @@
     "case_id": "C-006",
     "message": "Funds entered a known mixer; trace-through is low confidence",
     "timestamp": 1792402300
+  },
+  {
+    "id": "A-5",
+    "type": "URGENCY_CHANGED",
+    "severity": "warning",
+    "case_id": "C-001",
+    "message": "Urgency changed from Act now to Act soon: the idle 3,720 USDT moved out and was traced to Example Exchange A",
+    "timestamp": 1792402400
   }
 ]

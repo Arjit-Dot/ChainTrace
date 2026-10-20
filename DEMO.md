@@ -28,7 +28,7 @@ In a **5-minute demo** the audience should see:
 4. Downstream wallets get a risk level, fraud type, and reason codes (AI); the reported wallet is labeled `Reported`.
 5. The case gets an urgency level (Act now / Act soon / Preserve) with the reasons that triggered it.
 6. A freeze request and PDF evidence report are generated.
-7. A live alert fires when funds move.
+7. Continuous monitoring watches the open wallets; when funds move, the case is re-checked and an alert changes the urgency badge live.
 8. A dashboard shows cases and a linked criminal network.
 
 **Rule for the 2 days:** use **cached/seeded data as the backbone** so the demo never breaks, and add one **live TRON trace** as a bonus. Label clearly in the UI what is live and what is simulated.
@@ -66,7 +66,7 @@ In a **5-minute demo** the audience should see:
 | Risk categorization | Low/Medium/High/Critical on downstream wallets + SHAP reasons | **Real model**, trained on synthetic + seed data |
 | Case urgency | Act now / Act soon / Preserve from rules, with the triggers shown | **Real logic**, placeholder thresholds |
 | Fraud typology | Investment / sextortion / ransomware / phishing | Rule-assisted ML |
-| Automated alerts | Live alert via SSE | Simulated trigger |
+| Continuous monitoring and alerts | Watchlist of leaf and idle wallets, polled; re-trace, attribution and urgency re-run on new transfers; alerts via SSE | **Real watcher**; the demo feed is a recorded transaction replay, labeled SIMULATED |
 | SAHYOG / NCRP integration | Mock connectors + API spec | Simulated |
 | Investigative recommendations | Rule-based action list | **Real** |
 | Fund-flow visualization | Interactive graph | **Real** |
@@ -194,10 +194,11 @@ chaintrace/
 **What:** Turn findings into actions.
 **How:**
 - **Case urgency** (output `urgency: act_now | act_soon | preserve` and `urgency_reasons[]` on the case; set by B in `recommendations.py` from the trace data, no ML). First match wins, top to bottom:
-  1. `act_now`: any of: idle funds in any wallet (`summary.idle_funds > 0`); funds reached a VASP deposit address and have not been swept out yet; the last outgoing transaction is recent (under 24 hours).
+  1. `act_now`: any of: idle funds at the last check (`summary.idle_funds > 0`); funds reached a VASP deposit address and have not been swept out yet; a fresh outgoing transfer was observed from a case wallet in the last 15 minutes.
   2. `act_soon`: any of: a VASP was identified at confidence 0.70 or higher (funds already swept to its hot wallet); amount lost is 10,000 or more; the case is linked to 2 or more complaints.
   3. `preserve`: everything else (funds entered a mixer, no VASP found, or an old trail with no idle funds).
-  `urgency_reasons[]` lists the triggers that fired, so an officer can see why. The thresholds (24 hours, 0.70, 10,000, 2 complaints) are placeholders for the demo; real values should come from investigators. `act_now` means a freeze is possible in this window, not guaranteed. Recommendation `priority` only orders the recommendations panel; the UI shows the urgency badge, not a second scale.
+  `urgency_reasons[]` lists the triggers that fired, so an officer can see why. The thresholds (15 minutes, 0.70, 10,000, 2 complaints) are placeholders for the demo; real values should come from investigators.
+  **As of and re-evaluation.** There is no provisional stage: urgency is computed once the trace finishes and kept current by monitoring (Step 8). `urgency_as_of` is the time of the last successful chain check, not of the last change, so a quiet case still shows a fresh time. `monitoring` is `{status: live | stale | off, last_checked_at, poll_interval_sec}`; `stale` means the last check is older than about twice the poll interval, so the badge cannot claim freshness it does not have. Urgency can go down as well as up: if idle funds move, `act_now` may drop to `act_soon` or `preserve`, and the reasons show why. `act_now` means a freeze is possible in this window, not guaranteed. Recommendation `priority` only orders the recommendations panel; the UI shows the urgency badge, not a second scale.
 - **Recommendation rules** (output `recommendations[]` of `{priority: urgent|high|normal, action, detail}`): idle funds found → "act immediately"; VASP found ≥ threshold → "issue freeze/KYC request to X"; mixer reached → "preserve evidence, monitor exits"; bridge reached → "continue on destination chain".
 - **Freeze notice:** text template filled with complaint ID, tx hashes, addresses, amounts, times; request freeze **plus** preservation of KYC, bank, phone and IP data. Leave legal-section references as placeholders. Served by `GET /api/cases/{case_id}/freeze-notice` as a `FreezeNotice` (`case_id, to_vasp, to_email, subject, body, requested_actions, status: draft|approved|sent`).
 - **PDF evidence report (ReportLab):** summary, graph image, transaction table, attribution evidence, methodology and limitations, SHA-256 hash of the report. Served by `GET /api/cases/{case_id}/report` as a PDF.
@@ -206,7 +207,9 @@ chaintrace/
 **Owner:** B6
 **What:** Real-time feel and integration story.
 **How:**
-- `GET /api/alerts/stream` using SSE (event name `alert`, data = `Alert` JSON), plus `GET /api/alerts` for history. A "Simulate fund movement" button calls `POST /api/alerts/simulate` (or a background replay of a recorded transaction) and pushes an alert. Alert types: `FUNDS_MOVED, REACHED_VASP, ENTERED_MIXER, NEW_COMPLAINT_LINKED, HIGH_RISK_WALLET`.
+- **Live watcher** (`backend/alerts.py`, B): once a case is traced, its leaf and idle wallets go on a watchlist and are polled for new transfers (placeholder: every 30 seconds) through `engine_client.new_transfers`, which calls the engine's `new_transfers(addresses, since_ts)`. Every poll re-evaluates urgency and updates `urgency_as_of`. When a new transfer appears the system (1) extends the graph by re-tracing, (2) re-runs attribution and urgency, (3) updates the "as of" time, (4) pushes an alert. A failed check changes nothing, so the case goes `stale` instead of looking fresh.
+- `GET /api/alerts/stream` using SSE (event name `alert`, data = `Alert` JSON), plus `GET /api/alerts` for history. Alert types: `FUNDS_MOVED, REACHED_VASP, ENTERED_MIXER, NEW_COMPLAINT_LINKED, HIGH_RISK_WALLET, URGENCY_CHANGED` (the message carries the old and new level).
+- **Demo mode:** with no TronGrid key there is no live feed, so a recorded transaction replay (`data/replay/movements.json`) stands in for it, and `POST /api/cases/{case_id}/simulate-movement` (the "Simulate fund movement" button) releases it, runs the check now and pushes the alerts. This is labeled SIMULATED. `POST /api/alerts/simulate` still replays a fixture alert.
 - `POST /api/integrations/ncrp/complaints`: accepts a `TraceRequest` (NCRP-style payload), starts a trace, returns an `IntegrationAck`. `POST /api/integrations/sahyog/notice`: accepts a `SahyogNoticeRequest` and returns an `IntegrationAck`.
 - Export the OpenAPI spec as the integration contract.
 
@@ -215,7 +218,7 @@ chaintrace/
 **What:** The part judges see.
 **How:**
 - **Pages:** (1) Dashboard, (2) New Complaint, (3) Case View, (4) Network View.
-- **Case View:** Cytoscape graph with colors by node type (victim grey, scam wallet red, intermediary orange, bridge blue, mixer purple, exchange green, unknown white); edge thickness = amount; click a node for risk, reasons and transactions. Add a "Nearest VASP" card, an urgency badge (Act now / Act soon / Preserve) with its reasons, a recommendations panel, and **Download Report / Freeze Notice** buttons.
+- **Case View:** Cytoscape graph with colors by node type (victim grey, scam wallet red, intermediary orange, bridge blue, mixer purple, exchange green, unknown white); edge thickness = amount; click a node for risk, reasons and transactions. Add a "Nearest VASP" card, an urgency badge (Act now / Act soon / Preserve) with its reasons, an "as of 14:32:10" time and a live / stale indicator (a stale case gets a visible warning; the page refreshes on every alert for the case), a recommendations panel, and **Download Report / Freeze Notice** buttons.
 - **Dashboard (Recharts):** KPI tiles from `GET /api/dashboard` (`total_cases`, `total_amount_traced`, `avg_time_to_attribution_sec`, `vasp_identified_pct`, `idle_funds_flagged`), `by_fraud_type`, `top_vasps`, `by_state`, and a live alert feed.
 - **Network View:** group seed complaints that share downstream wallets into one network graph (use `networkx.connected_components`), served by `GET /api/networks` as `Network[]`.
 - Use a dark theme, a consistent color legend, and a short animation as the trace builds hop by hop; it makes the speed visible.
@@ -242,7 +245,7 @@ chaintrace/
 | 2:00 | Open the Nearest VASP card | "Exchange, deposit address, confidence, evidence." |
 | 2:45 | Show urgency badge and reasons, then downstream risk, fraud type, SHAP reasons | "AI prioritizes; evidence stays explainable." |
 | 3:15 | Generate freeze notice + PDF report | "Ready to send in one click." |
-| 3:45 | Trigger a live alert | "If funds move, we know." |
+| 3:45 | Simulate fund movement: the alert fires and the urgency badge changes live | "If funds move, we know, and the case re-prioritizes itself." |
 | 4:15 | Open the Network View | "These complaints, one organized network." |
 | 4:45 | State limits and what's next | "Attribution and leads, not a magic recovery tool." |
 
@@ -255,6 +258,9 @@ chaintrace/
 - NCRP/SAHYOG links are simulated.
 - The tool finds the exchange; the exchange's KYC data links to people and the fiat/mule layer.
 - Mixers and privacy tools are flagged, not "solved".
+- "Live" means polling: there is always a delay of up to one poll interval plus block confirmation time. The demo's movement is a recorded replay, labeled SIMULATED.
+- Public APIs have rate limits, so only leaf and idle wallets are watched, not the whole graph.
+- Live monitoring improves how current the reading is. It cannot make `act_now` mean a freeze will succeed.
 
 ---
 
@@ -266,7 +272,7 @@ Cut in this order (last items first): Network View → alerts → ML model (fall
 
 ## 11. Team Split: Two People, Working Independently
 
-**Person A: Engine.** Owns everything that *produces* findings: chain data, tracing, attribution, risk/AI. The engine is **stateless**: a complaint goes in, a trace result comes out. No database, no UI.
+**Person A: Engine.** Owns everything that *produces* findings: chain data, tracing, attribution, risk/AI. The engine is **stateless**: a complaint goes in, a trace result comes out. No database, no UI. One extra light function supports live monitoring: `new_transfers(addresses, since_ts)` returns the new transfers of a few wallets so B's watcher need not re-run a full trace on every poll.
 **Person B: Product.** Owns everything built *from* the findings: interface, database, recommendations, reports, alerts, mock integrations, seed cases, dashboard, demo mode.
 
 A and B are connected by **one thing only: the contract** (`CONTRACT.md` and `backend/contract/schemas.py`, version `CONTRACT_VERSION`). Every file, folder and endpoint has exactly one owner. Neither person waits for the other: B builds against fixtures, A tests with scripts.
@@ -278,7 +284,7 @@ Tasks are numbered **A1-A8** and **B1-B8**, in the order each person does them. 
 1. **One shared artifact: the contract.** To change it: tell the other person first, edit `schemas.py` and bump `CONTRACT_VERSION`, update `tools/gen_fixtures.py` and run it, run `cd backend && pytest`, then merge together. Prefer additive changes (a new optional field); nothing is renamed or removed without that process. B never asks A for something the contract does not contain.
 2. **One owner per file** (11.2). Never edit the other person's files. If you need a change there, message them.
 3. **A is stateless, B owns persistence.** A never touches the database. B never reads `data/cache/`, `data/labels.csv`, `data/vasp_contacts.csv` or the model file; B only displays what the engine returns.
-4. **B touches the engine only through the seam.** The seam is `backend/engine.py`: `trace_complaint(req: TraceRequest) -> TraceResponse` and `wallet_risk(address) -> WalletRisk`. B never imports A's other modules (`chains/`, `tracing.py`, `attribution.py`, `risk.py`) and A never changes the seam's signatures. B calls the seam from `main.py`, or reaches it over HTTP via `backend/engine_client.py`, which has two modes:
+4. **B touches the engine only through the seam.** The seam is `backend/engine.py`: `trace_complaint(req: TraceRequest) -> TraceResponse`, `wallet_risk(address) -> WalletRisk` and (added with contract v1.1.0) `new_transfers(addresses, since_ts) -> list[Transfer]`. B never imports A's other modules (`chains/`, `tracing.py`, `attribution.py`, `risk.py`) and A never changes the seam's signatures. B calls the seam from `main.py`, or reaches it over HTTP via `backend/engine_client.py`, which has two modes:
    - `fixture` (default): returns a pre-built trace from `data/fixtures/trace_hero.json` or `data/seed_traces.json`. B works with no engine at all.
    - `http`: calls the engine (the same server after A merges, or A's laptop before that).
 5. **Each person tests alone.** A: scripts and `pytest`. B: fixtures. Both check their output against the same contract.
@@ -351,6 +357,10 @@ A2 comes before A3 on purpose: the adapter defines the cache format, and the scr
 - Output the graph in the contract format (`TraceResponse`, section 7 step 4 for field rules). Risk fields use fixed placeholder values until A6 (the reported wallet has `risk: null`), so the output is already valid.
 - *Done when:* running the tracer on the hero wallet prints a graph that matches the contract and stops at the exchange. **Optional early peek:** merge to `main` now and tell B; B can switch to `http` mode and see real graphs.
 
+**A5b. Live-monitoring seam** (`backend/engine.py`)
+- Add `new_transfers(addresses, since_ts) -> list[Transfer]`: outgoing transfers of the given wallets newer than `since_ts` (live with a TronGrid key, cache otherwise). It must pass through the contract change process because the seam signatures are otherwise fixed. The demo replay (`release_replay`, `data/replay/movements.json`) is delivered through it once.
+- *Done when:* a replayed movement is returned once, and a re-trace afterwards sees it.
+
 **A5. Attribution and real trace endpoint** (`backend/attribution.py`, `backend/engine.py`, Step 5 as written)
 - Direct match, sweep heuristic, confidence score. Heuristic-only results stay below 90% and are tagged `heuristic`.
 - Build the Nearest VASP result, including the transaction path and the nodal contact. Return an empty result when no exchange is found.
@@ -420,10 +430,11 @@ Then: Checkpoint 2, buffer, and rehearsal (11.6).
 - *Done when:* the PDF opens correctly for the hero case and one seeded case, and the hash is printed.
 
 **B6. Alerts and mock integrations** (`backend/alerts.py`, `backend/main.py`)
-- SSE alert stream. A "Simulate fund movement" button on Case View pushes a scripted `FUNDS_MOVED` or `REACHED_VASP` event for the open case. This is simulated and does not need the engine.
+- **Watcher:** poll the watchlist (leaf and idle wallets) every 30 s through `engine_client.new_transfers`; on a new transfer re-trace, re-run attribution and urgency, update `urgency_as_of`, push an alert; always refresh `monitoring` after a successful check.
+- SSE alert stream, including `URGENCY_CHANGED`. A "Simulate fund movement" button on Case View releases a recorded replay (SIMULATED) for the open case and re-checks it at once.
 - Mock NCRP endpoint: maps an NCRP-style payload to an engine request, runs it through `engine_client`, stores the case. Mock SAHYOG endpoint: accepts the freeze notice and returns an acknowledgment.
 - Export the OpenAPI spec as the integration document.
-- *Done when:* clicking Simulate shows the event in the UI, and a `curl` with an NCRP payload creates a case.
+- *Done when:* clicking Simulate shows the events in the UI and the urgency badge changes (Act now to Act soon for the idle-funds scenario), and a `curl` with an NCRP payload creates a case.
 
 **B7. Dashboard and Network View**
 - **Dashboard (Recharts):** KPI tiles (cases, total amount traced, average time-to-attribution, % with VASP identified), cases by fraud type, top receiving exchanges, and a live alert feed.
@@ -489,6 +500,7 @@ Contract rules live in `CONTRACT.md`. Endpoints are under `/api/...` and the con
 | Step 4 / A4: tracing engine | DONE | `backend/tracing.py`: best-first search, stops at labeled exchange/bridge/mixer, depth 5 and flows under 1%; pass-through (`intermediary`) at >=90% within 1 hour; idle balance for leaf nodes (computed from cached transfers); `build_response()` with placeholder risk and no `nearest_vasp`. Wired into `engine.trace_complaint` (`TRACING=fixture` restores the old stub). CLI: `cd backend && python -m tracing <wallet> [amount]`. `tests/test_tracing.py` (15 tests, offline). Hero trace reaches Example Exchange A at hop 3 |
 | Step 5 / A5: attribution + real trace endpoint | DONE | `backend/attribution.py`: sweep heuristic (>=5 senders, >=90% forwarded to a labeled hot wallet, `heuristic`, capped 0.89) and direct label match (`deterministic`, 0.95); weighted confidence; contact from `vasp_contacts.csv`; retypes the deposit node to `exchange`. `engine.trace_complaint` now returns graph + `nearest_vasp` + measured `time_to_attribution_sec`. `tests/test_attribution.py` (12 tests). Hero: Example Exchange A, deposit `TAD47A…`, hops 2, 7,850 USDT, confidence 0.87 |
 | Contract v1.1.0: reported wallet unscored, case urgency | DONE | `backend/contract/schemas.py` (`CONTRACT_VERSION` 1.1.0: nullable `risk`/`risk_score`, `urgency`, `urgency_reasons`), `tools/gen_fixtures.py`, `backend/make_seed_traces.py`, `data/fixtures/`, `data/seed_*.json` regenerated. `tracing.py` labels hop 0 `Reported` with `risk: null`. B4 urgency in `recommendations.build_urgency` (first match wins, placeholder thresholds), stored on the case by `store.py`; UI shows an urgency badge with reasons (Case View, case list) and a `Reported` badge in the node panel. `tests/test_urgency.py` (7 tests) |
+| Live monitoring and urgency "as of" (`changes.txt`) | DONE | Contract v1.1.0 adds `urgency_as_of`, `monitoring` (`live/stale/off`, `last_checked_at`, `poll_interval_sec`) and alert type `URGENCY_CHANGED`. Engine seam `new_transfers(addresses, since_ts)` plus the demo replay (`data/replay/movements.json`, SIMULATED). The `act_now` 24-hour trigger is now "fresh outgoing transfer in the last 15 minutes". B: `backend/alerts.py` watcher (30 s poll, SSE, re-trace on movement, stale when a check fails), `POST /api/cases/{id}/simulate-movement`, `store.reevaluate`. UI: urgency "as of" time, live/stale indicator and warning, Simulate fund movement button, per-case alert list. `tests/test_monitoring.py` (11 tests); demo with the `idle` scenario wallet |
 | A6-A8, B5-B8 | NOT STARTED | n/a |
 
 **Audit of Steps 1-3 (updated 2026-10-20).** Steps 1-3 are complete: the contract, routes and tests work, the cache holds 3 real flagged wallets (with next hops) and the scripted hero case, `labels.csv`/`vasp_contacts.csv` are aligned with the contract, and `backend/chains/tron.py` is the adapter. Open items: paste a TronGrid key into `.env`; find a real, verifiable TRON bridge or mixer label. `engine` + `product` are merged into `main`; Step 4 (tracing) is done. Step 5 (attribution) and contract v1.1.0 (reported wallet unscored, case urgency) are done. Next: A6 risk and typology (`backend/risk.py`).

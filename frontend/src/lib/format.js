@@ -23,6 +23,10 @@ export const formatTime = (sec) =>
         timeStyle: 'short',
       }) + ' IST'
 
+// "14:32:10" in IST, for the urgency "as of" time.
+export const formatClock = (sec) =>
+  sec == null ? '—' : new Date(sec * 1000).toLocaleTimeString('en-GB', { timeZone: 'Asia/Kolkata', hour12: false })
+
 export const formatDuration = (sec) => {
   if (sec == null) return '—'
   if (sec < 60) return `${Math.round(sec)} s`

@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from sse_starlette.sse import EventSourceResponse
 
+import alerts
 import engine_client
 import store
 from notices import build_freeze_notice
@@ -35,14 +36,14 @@ def load(name: str):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     store.init()                            # seed cases + seed traces into the case store
+    watcher = asyncio.create_task(alerts.run_watcher()) if store.monitoring_on() else None
     yield
+    if watcher:
+        watcher.cancel()
 
 
 app = FastAPI(title="ChainTrace API", version=CONTRACT_VERSION, lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-
-_alert_queues: List[asyncio.Queue] = []
-
 
 @app.get("/api/health")
 def health():
@@ -107,21 +108,19 @@ def networks():
 # ---- Alerts (SSE) ----
 @app.get("/api/alerts", response_model=List[Alert])
 def alert_history():
-    return load("alerts.json")
+    return alerts.history()
 
 
 @app.get("/api/alerts/stream")
 async def alert_stream():
-    q: asyncio.Queue = asyncio.Queue()
-    _alert_queues.append(q)
+    q = alerts.subscribe()
 
     async def gen():
         try:
             while True:
-                alert = await q.get()
-                yield {"event": "alert", "data": json.dumps(alert)}
+                yield {"event": "alert", "data": json.dumps(await q.get())}
         finally:
-            _alert_queues.remove(q)
+            alerts.unsubscribe(q)
 
     return EventSourceResponse(gen())
 
@@ -129,12 +128,25 @@ async def alert_stream():
 @app.post("/api/alerts/simulate", response_model=Alert)
 async def simulate_alert():
     """Demo button: pushes the next fixture alert to every open stream."""
-    alerts = load("alerts.json")
-    alert = dict(alerts[int(time.time()) % len(alerts)])
+    fixtures = load("alerts.json")
+    alert = dict(fixtures[int(time.time()) % len(fixtures)])
     alert["timestamp"] = int(time.time())
-    for q in list(_alert_queues):
-        await q.put(alert)
+    await alerts.publish(Alert(**alert))
     return alert
+
+
+@app.post("/api/cases/{case_id}/simulate-movement", response_model=List[Alert])
+async def simulate_movement(case_id: str):
+    """Demo: replay a recorded movement of this case's idle funds (SIMULATED), re-check the case now, push alerts."""
+    trace = store.get_trace(case_id)
+    if trace is None:
+        raise HTTPException(404, "Case not found")
+    if not sum(engine_client.release_replay(a) for a in alerts.watchlist(trace)):
+        raise HTTPException(404, "No recorded movement to replay for this case.")
+    new = await asyncio.to_thread(alerts.poll_case, case_id, None, True)
+    for alert in new:
+        await alerts.publish(alert)
+    return new
 
 
 # ---- Mock integrations ----

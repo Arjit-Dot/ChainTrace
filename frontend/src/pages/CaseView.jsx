@@ -1,26 +1,55 @@
-import { FileDown, FileWarning, Info } from 'lucide-react'
-import { useState } from 'react'
-import { useParams } from 'react-router-dom'
-import FreezeNoticeModal from '../components/FreezeNoticeModal'
-import Legend from '../components/Legend'
-import NearestVaspCard from '../components/NearestVaspCard'
-import NodePanel from '../components/NodePanel'
-import PageHeader from '../components/PageHeader'
-import RecommendationsPanel from '../components/RecommendationsPanel'
-import { ErrorState, Loading } from '../components/Status'
-import SummaryStrip from '../components/SummaryStrip'
-import TraceGraph from '../components/TraceGraph'
-import { useFetch } from '../hooks/useFetch'
-import { getCase, reportUrl } from '../lib/api'
-import { humanize, shortAddr } from '../lib/format'
+import { FileDown, FileWarning, Info, Play } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import FreezeNoticeModal from "../components/FreezeNoticeModal";
+import Legend from "../components/Legend";
+import NearestVaspCard from "../components/NearestVaspCard";
+import NodePanel from "../components/NodePanel";
+import PageHeader from "../components/PageHeader";
+import RecommendationsPanel from "../components/RecommendationsPanel";
+import { ErrorState, Loading } from "../components/Status";
+import SummaryStrip from "../components/SummaryStrip";
+import TraceGraph from "../components/TraceGraph";
+import { useFetch } from "../hooks/useFetch";
+import {
+  alertStreamUrl,
+  getCase,
+  reportUrl,
+  simulateMovement,
+} from "../lib/api";
+import { humanize, shortAddr } from "../lib/format";
 
 const btn =
-  'inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50'
+  "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50";
 
-function CaseBody({ trace }) {
-  const [selected, setSelected] = useState(null)
-  const [noticeOpen, setNoticeOpen] = useState(false)
-  const node = selected && trace.graph.nodes.find((n) => n.id === selected)
+function CaseBody({ trace, reload }) {
+  const [selected, setSelected] = useState(null);
+  const [noticeOpen, setNoticeOpen] = useState(false);
+  const [alerts, setAlerts] = useState([]);
+  const [simMsg, setSimMsg] = useState(null);
+
+  // Live monitoring: re-read the case every 30 s, and straight away when an alert for it arrives.
+  useEffect(() => {
+    const timer = setInterval(reload, 30000);
+    const stream = new EventSource(alertStreamUrl());
+    stream.addEventListener("alert", (e) => {
+      const alert = JSON.parse(e.data);
+      if (alert.case_id !== trace.case_id) return;
+      setAlerts((a) => [alert, ...a].slice(0, 5));
+      reload();
+    });
+    return () => {
+      clearInterval(timer);
+      stream.close();
+    };
+  }, [trace.case_id, reload]);
+
+  const replay = () =>
+    simulateMovement(trace.case_id).then(
+      () => setSimMsg(null),
+      (e) => setSimMsg(e.message),
+    );
+  const node = selected && trace.graph.nodes.find((n) => n.id === selected);
 
   return (
     <>
@@ -28,21 +57,50 @@ function CaseBody({ trace }) {
         title={`Case ${trace.case_id}`}
         subtitle={`${trace.complaint_id} · ${humanize(trace.fraud_type)} · reported wallet ${shortAddr(trace.wallet, 8)}`}
       >
+        {trace.summary.idle_funds > 0 && (
+          <button
+            onClick={replay}
+            title="Replay a recorded movement of the idle funds (SIMULATED) and re-check the case"
+            className={`${btn} border-amber-400/50 text-amber-300 hover:bg-amber-400/10`}
+          >
+            <Play className="size-4" /> Simulate fund movement
+          </button>
+        )}
         <button
           disabled={!trace.nearest_vasp}
           onClick={() => setNoticeOpen(true)}
-          title={trace.nearest_vasp ? 'Draft a freeze request to the exchange' : 'No exchange identified: nothing to freeze'}
+          title={
+            trace.nearest_vasp
+              ? "Draft a freeze request to the exchange"
+              : "No exchange identified: nothing to freeze"
+          }
           className={`${btn} border-emerald-500/50 text-emerald-300 enabled:hover:bg-emerald-500/10`}
         >
           <FileWarning className="size-4" /> Freeze Notice
         </button>
-        <a href={reportUrl(trace.case_id)} className={`${btn} border-line text-ink hover:bg-panel-2`}>
+        <a
+          href={reportUrl(trace.case_id)}
+          className={`${btn} border-line text-ink hover:bg-panel-2`}
+        >
           <FileDown className="size-4" /> Download Report
         </a>
       </PageHeader>
 
       <div className="space-y-6 p-6">
         <SummaryStrip trace={trace} />
+        {simMsg && <p className="text-xs text-amber-300">{simMsg}</p>}
+        {alerts.length > 0 && (
+          <ul className="space-y-1 rounded-md border border-line bg-panel-2/60 px-3 py-2 text-xs">
+            {alerts.map((a) => (
+              <li key={a.id}>
+                <span className="font-semibold">
+                  {a.type.replaceAll("_", " ")}
+                </span>{" "}
+                · {a.message}
+              </li>
+            ))}
+          </ul>
+        )}
         {trace.notes && (
           <p className="flex items-start gap-2 rounded-md border border-line bg-panel-2/60 px-3 py-2 text-xs text-muted">
             <Info className="mt-px size-3.5 shrink-0" /> {trace.notes}
@@ -56,17 +114,25 @@ function CaseBody({ trace }) {
               <Legend />
             </div>
             <div className="h-[520px]">
-              <TraceGraph trace={trace} selected={selected} onSelect={setSelected} />
+              <TraceGraph
+                trace={trace}
+                selected={selected}
+                onSelect={setSelected}
+              />
             </div>
             <p className="border-t border-line px-4 py-2 text-xs text-muted">
-              Click a wallet for details. Green path = route to the Nearest VASP · dashed = bridge / mixer · amber ring =
-              idle funds.
+              Click a wallet for details. Green path = route to the Nearest VASP
+              · dashed = bridge / mixer · amber ring = idle funds.
             </p>
           </section>
 
           <div className="space-y-6">
             {node ? (
-              <NodePanel node={node} graph={trace.graph} onClose={() => setSelected(null)} />
+              <NodePanel
+                node={node}
+                graph={trace.graph}
+                onClose={() => setSelected(null)}
+              />
             ) : (
               <NearestVaspCard
                 vasp={trace.nearest_vasp}
@@ -80,16 +146,21 @@ function CaseBody({ trace }) {
         <RecommendationsPanel items={trace.recommendations} />
       </div>
 
-      {noticeOpen && <FreezeNoticeModal caseId={trace.case_id} onClose={() => setNoticeOpen(false)} />}
+      {noticeOpen && (
+        <FreezeNoticeModal
+          caseId={trace.case_id}
+          onClose={() => setNoticeOpen(false)}
+        />
+      )}
     </>
-  )
+  );
 }
 
 export default function CaseView() {
-  const { id } = useParams()
-  const { data, loading, error, reload } = useFetch(() => getCase(id), [id])
+  const { id } = useParams();
+  const { data, loading, error, reload } = useFetch(() => getCase(id), [id]);
 
-  if (loading) return <Loading label={`Loading ${id}…`} />
-  if (error) return <ErrorState error={error} onRetry={reload} />
-  return <CaseBody key={id} trace={data} />
+  if (loading && !data) return <Loading label={`Loading ${id}…`} />;
+  if (error && !data) return <ErrorState error={error} onRetry={reload} />;
+  return <CaseBody key={id} trace={data} reload={reload} />;
 }

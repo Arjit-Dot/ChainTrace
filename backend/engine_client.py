@@ -91,6 +91,24 @@ def _repoint(data: dict, wallet: str, chain: Optional[str]) -> dict:
     return data
 
 
+# ---------- live monitoring ----------
+def new_transfers(addresses: list, since_ts: int) -> list:
+    """Outgoing transfers from `addresses` since `since_ts`. Only the in-process engine can see new transfers;
+    fixture and http modes report none (an engine failure raises, so the watcher marks the case stale)."""
+    if mode() != "engine":
+        return []
+    import engine
+    return engine.new_transfers(addresses, since_ts)
+
+
+def release_replay(address: str) -> int:
+    """Demo: release a recorded movement for `address` (SIMULATED). 0 when there is none or not in engine mode."""
+    if mode() != "engine":
+        return 0
+    import engine
+    return engine.release_replay(address)
+
+
 # ---------- wallet risk ----------
 def risk(address: str) -> WalletRisk:
     m = mode()

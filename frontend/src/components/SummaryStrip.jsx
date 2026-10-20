@@ -1,6 +1,11 @@
 import { URGENCY } from "../lib/colors";
-import { formatDuration, formatUSDT, humanize } from "../lib/format";
-import { SourceBadge, UrgencyBadge } from "./Badges";
+import {
+  formatClock,
+  formatDuration,
+  formatUSDT,
+  humanize,
+} from "../lib/format";
+import { MonitorIndicator, SourceBadge, UrgencyBadge } from "./Badges";
 
 function Stat({ label, children, highlight }) {
   return (
@@ -48,6 +53,13 @@ export default function SummaryStrip({ trace }) {
           <SourceBadge source={trace.source} />
         </Stat>
       </div>
+      {trace.monitoring?.status === "stale" && (
+        <p className="mt-2 rounded-md border border-amber-400/50 bg-amber-400/10 px-3 py-2 text-xs text-amber-200">
+          Stale: the last chain check was at{" "}
+          {formatClock(trace.monitoring.last_checked_at)}. This urgency may be
+          out of date.
+        </p>
+      )}
       {trace.urgency_reasons?.length > 0 && (
         <p className="mt-2 text-xs text-muted">
           <span className="font-semibold text-slate-300">

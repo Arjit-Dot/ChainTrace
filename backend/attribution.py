@@ -30,6 +30,12 @@ def load_contacts(path: Path = CONTACTS_CSV) -> Dict[str, str]:
         return {r["vasp"]: r["email"] for r in csv.DictReader(f)}
 
 
+def deposit_addresses(path: Path = ROOT / "data" / "labels.csv") -> set:
+    """Labeled addresses that are published customer deposit addresses (not the exchange's own hot wallet)."""
+    with open(path, newline="") as f:
+        return {r["address"] for r in csv.DictReader(f) if "deposit address" in (r.get("note") or "")}
+
+
 def vasp_name(label: Optional[str]) -> Optional[str]:
     """'Example Exchange A (hot wallet)' -> 'Example Exchange A'."""
     return re.sub(r"\s*\(.*\)\s*$", "", label).strip() if label else None
@@ -98,7 +104,7 @@ def attribute(graph: Graph, adapter, labels: Dict[str, Tuple[str, str]],
         # direct match: the trace itself reached a labeled exchange address
         into = _inbound(graph, hot.id)
         if into is not None:
-            hot.label = hot.label or vasp
+            hot.label = hot.label or (f"{vasp} (deposit address)" if hot.id in deposit_addresses() else vasp)
             return NearestVASP(vasp=vasp, deposit_address=hot.id, hops=hot.hop, amount=into.amount,
                                timestamp=into.timestamp, confidence=DIRECT_CONFIDENCE, method="deterministic",
                                evidence=[f"Funds were sent directly to {hot.id[:8]}..., labeled {vasp} in the label set"],

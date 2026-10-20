@@ -21,12 +21,14 @@ def variant(**changes):
 
 def test_hero_is_act_now_because_of_idle_funds():
     urgency, reasons = build_urgency(HERO, now=LONG_AFTER)
-    assert urgency == "act_now" and "3,720 USDT idle in a wallet" in reasons[0]
+    assert urgency == "act_now" and "3,720 USDT idle at the last check" in reasons[0]
 
 
 def test_recent_outgoing_transaction_is_act_now():
-    assert build_urgency(variant(), now=LAST_TX + 3600)[0] == "act_now"
-    assert build_urgency(variant(), now=LAST_TX + 25 * 3600)[0] != "act_now"
+    assert build_urgency(variant(), now=LAST_TX + 600)[0] == "act_now"
+    assert build_urgency(variant(), now=LAST_TX + 600)[1] == ["Fresh outgoing transfer in the last 15 minutes"]
+    assert build_urgency(variant(), now=LAST_TX + 16 * 60)[0] != "act_now"     # 15 minutes is the window
+    assert build_urgency(variant(), now=LAST_TX + 3600)[0] != "act_now"        # no longer a 24-hour rule
 
 
 def test_funds_unswept_at_deposit_address_is_act_now():

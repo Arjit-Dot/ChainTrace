@@ -34,6 +34,7 @@ export const getRisk = (address) => request(`/wallets/${enc(address)}/risk`)
 export const getCases = () => request('/cases')
 export const getCase = (id) => request(`/cases/${enc(id)}`)
 export const getFreezeNotice = (id) => request(`/cases/${enc(id)}/freeze-notice`)
+export const simulateMovement = (id) => post(`/cases/${enc(id)}/simulate-movement`)
 export const reportUrl = (id) => `${BASE}/api/cases/${enc(id)}/report`
 
 // Analytics

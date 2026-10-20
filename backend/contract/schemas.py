@@ -13,6 +13,7 @@ CONTRACT_VERSION = "1.1.0"
 NodeType = Literal["victim", "scam_wallet", "intermediary", "bridge", "mixer", "exchange", "unknown"]
 RiskLevel = Literal["Low", "Medium", "High", "Critical"]
 Urgency = Literal["act_now", "act_soon", "preserve"]   # set by B (recommendations.py); the engine returns None
+MonitorStatus = Literal["live", "stale", "off"]   # stale: last check older than ~2x the poll interval
 Source = Literal["live", "cached", "simulated"]
 Method = Literal["deterministic", "heuristic"]
 EdgeType = Literal["transfer", "bridge", "swap", "mixer_in"]
@@ -89,6 +90,13 @@ class TraceSummary(BaseModel):
     time_to_attribution_sec: Optional[float] = None
 
 
+class Monitoring(BaseModel):
+    """Live monitoring of the case's leaf and idle wallets (set by B's watcher; the engine returns None)."""
+    status: MonitorStatus
+    last_checked_at: Optional[int] = None     # epoch seconds of the last successful chain check
+    poll_interval_sec: float = 30
+
+
 class TraceResponse(BaseModel):
     contract_version: str = CONTRACT_VERSION
     case_id: str
@@ -101,6 +109,8 @@ class TraceResponse(BaseModel):
     risk_score: Optional[float] = None
     urgency: Optional[Urgency] = None         # engine returns None; B sets it in recommendations.py
     urgency_reasons: List[str] = []           # the triggers that fired
+    urgency_as_of: Optional[int] = None       # time of the last successful chain check, not of the last change
+    monitoring: Optional[Monitoring] = None
     typology: Typology = "unknown"
     graph: Graph
     nearest_vasp: Optional[NearestVASP] = None
@@ -130,6 +140,8 @@ class CaseSummary(BaseModel):
     risk: Optional[RiskLevel] = None          # None: mirrors the reported wallet
     urgency: Optional[Urgency] = None
     urgency_reasons: List[str] = []
+    urgency_as_of: Optional[int] = None
+    monitoring: Optional[Monitoring] = None
     status: Literal["tracing", "attributed", "notice_drafted", "notice_sent", "unresolved"]
     vasp: Optional[str] = None
     time_to_attribution_sec: Optional[float] = None
@@ -180,7 +192,7 @@ class Network(BaseModel):
 # ---------- Alerts ----------
 class Alert(BaseModel):
     id: str
-    type: Literal["FUNDS_MOVED", "REACHED_VASP", "ENTERED_MIXER", "NEW_COMPLAINT_LINKED", "HIGH_RISK_WALLET"]
+    type: Literal["FUNDS_MOVED", "REACHED_VASP", "ENTERED_MIXER", "NEW_COMPLAINT_LINKED", "HIGH_RISK_WALLET", "URGENCY_CHANGED"]
     severity: Literal["info", "warning", "critical"]
     case_id: str
     message: str

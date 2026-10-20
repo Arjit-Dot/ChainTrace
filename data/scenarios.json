@@ -61,7 +61,7 @@
   },
   {
     "key": "idle",
-    "title": "No exchange: funds still idle in the last wallet (act now)",
+    "title": "No exchange: funds still idle in the last wallet (act now). Live-monitoring demo: the replay moves them to Example Exchange B",
     "wallet": "TJgNArE5dkoiDgHUjimdizwNaTZZwLh1Lg",
     "amount": 6000.0,
     "expect": {

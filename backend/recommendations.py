@@ -11,7 +11,8 @@ Rules, in priority order:
   no VASP found                  -> normal  "Monitor wallet; re-trace on movement"
 
 Case urgency (CONTRACT.md section 4, first match wins; thresholds are demo placeholders):
-  act_now   idle funds; funds at a VASP deposit address not yet swept; last outgoing tx under 24 h ago
+  act_now   idle funds at the last check; funds at a VASP deposit address not yet swept;
+            a fresh outgoing transfer (under 15 min old) from a case wallet
   act_soon  VASP identified at confidence >= 0.70; amount lost >= 10,000; 2+ other linked complaints
   preserve  everything else
 """
@@ -25,7 +26,7 @@ CHAIN_NAMES = {"tron": "TRON", "ethereum": "Ethereum", "bsc": "BSC", "polygon": 
                "bitcoin": "Bitcoin", "solana": "Solana"}
 _ORDER = {"urgent": 0, "high": 1, "normal": 2}
 
-RECENT_SECONDS = 24 * 3600
+FRESH_SECONDS = 15 * 60       # a transfer this recent means the money is still moving
 ACT_SOON_CONFIDENCE = 0.70
 ACT_SOON_AMOUNT = 10_000
 ACT_SOON_LINKED = 2
@@ -107,12 +108,13 @@ def build_urgency(trace: TraceResponse, linked_complaints: int = 0,
     victims = {n.id for n in trace.graph.nodes if n.type == "victim"}
     now_reasons: List[str] = []
     if trace.summary.idle_funds > 0:
-        now_reasons.append(f"{amount(trace.summary.idle_funds)} USDT idle in a wallet")
-    if v and not any(e.source == v.deposit_address for e in edges):
+        now_reasons.append(f"{amount(trace.summary.idle_funds)} USDT idle at the last check")
+    dep = next((n for n in trace.graph.nodes if v and n.id == v.deposit_address), None)
+    if dep and (dep.label or "").endswith("(deposit address)") and not any(e.source == dep.id for e in edges):
         now_reasons.append(f"Funds sit at the {v.vasp} deposit address and have not been swept")
     moves = [e.timestamp for e in edges if e.source not in victims]
-    if moves and now - max(moves) < RECENT_SECONDS:
-        now_reasons.append("Last outgoing transaction was under 24 hours ago")
+    if moves and 0 <= now - max(moves) < FRESH_SECONDS:
+        now_reasons.append("Fresh outgoing transfer in the last 15 minutes")
     if now_reasons:
         return "act_now", now_reasons
 
