@@ -98,16 +98,16 @@ def duration_text(sec: float) -> str:
     return f"{sec / 86400:.0f} days"
 
 
-def rule_reasons(f: WalletFeatures, k: int = 3) -> List[str]:
+def rule_reasons(f: WalletFeatures, k: int = 3, exclude: Tuple[str, ...] = ()) -> List[str]:
     """Up to k readable reasons, strongest first. Only signals of the winning archetype that reach REASON_MIN
     are quoted; a wallet with none gets a single 'no strong signals' line so the list is never empty."""
     s = signals(f)
     weights = MULE_WEIGHTS if _weighted(MULE_WEIGHTS, s) >= _weighted(COLLECTOR_WEIGHTS, s) else COLLECTOR_WEIGHTS
-    ranked = sorted(((w * s[key], key) for key, w in weights.items() if s[key] >= REASON_MIN), reverse=True)
+    ranked = sorted(((w * s[key], key) for key, w in weights.items() if s[key] >= REASON_MIN and key not in exclude), reverse=True)
     return [_sentence(key, f) for _, key in ranked[:k]] or [NO_SIGNAL_REASON]
 
 
-def score_with_rules(f: WalletFeatures) -> Tuple[str, float, List[str]]:
-    """(risk level, risk score, reasons) from the rules alone."""
+def score_with_rules(f: WalletFeatures, exclude: Tuple[str, ...] = ()) -> Tuple[str, float, List[str]]:
+    """(risk level, risk score, reasons) from the rules alone. `exclude` lists signal names not to quote."""
     score = rule_score(f)
-    return level_for(score), score, rule_reasons(f)
+    return level_for(score), score, rule_reasons(f, exclude=exclude)

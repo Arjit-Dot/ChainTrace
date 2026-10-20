@@ -133,9 +133,12 @@ class TronAdapter:
         p = self.cache_path(address)
         return json.loads(p.read_text()) if p.exists() else None
 
-    def write_cache(self, address: str, raw: List[dict], origin: str = "trongrid") -> dict:
+    def write_cache(self, address: str, raw: List[dict], origin: str = "trongrid",
+                    truncated: Optional[bool] = None) -> dict:
         doc = {"address": address, "chain": "tron", "origin": origin,
                "fetched_at": int(time.time()), "data": raw}
+        if truncated is not None:   # True: the wallet has more transfers than we fetched
+            doc["truncated"] = truncated
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.cache_path(address).write_text(json.dumps(doc, indent=1))
         return doc
@@ -143,16 +146,22 @@ class TronAdapter:
     # live ----------------------------------------------------------
     def fetch_live(self, address: str, limit: int = PAGE_SIZE) -> List[dict]:
         """Raw USDT-TRC20 transfers (newest first), following TronGrid's fingerprint paging."""
+        return self._fetch(address, limit)[0]
+
+    def _fetch(self, address: str, limit: int) -> Tuple[List[dict], bool]:
+        """(raw transfers, truncated). truncated means TronGrid had more transfers than `limit`."""
         params = {"contract_address": USDT_TRC20, "limit": min(limit, PAGE_SIZE)}
         out: List[dict] = []
+        more = False
         while len(out) < limit:
             body = self._get(f"/v1/accounts/{address}/transactions/trc20", params)
             out.extend(body.get("data", []))
             fingerprint = (body.get("meta") or {}).get("fingerprint")
-            if not fingerprint or not body.get("data"):
+            more = bool(fingerprint and body.get("data"))
+            if not more:
                 break
             params = {**params, "fingerprint": fingerprint}
-        return out[:limit]
+        return out[:limit], more or len(out) > limit
 
     def _get(self, path: str, params: dict, retries: int = 3) -> dict:
         for attempt in range(retries + 1):
@@ -178,11 +187,20 @@ class TronAdapter:
         if doc is None:
             if self.offline:
                 raise LookupError(f"{address} is not cached and the adapter is offline")
-            doc = self.write_cache(address, self.fetch_live(address, limit))
+            raw, truncated = self._fetch(address, limit)
+            doc = self.write_cache(address, raw, truncated=truncated)
             source = "live"
         items = [t for t in (normalize(r) for r in doc["data"]) if t]
         items.sort(key=lambda t: (t.timestamp, t.tx_hash))
         return items, source
+
+    def history_truncated(self, address: str) -> bool:
+        """True if the cached history is only the newest part of the wallet's transfers (age and transfer count are
+        then unreliable). Caches written before this flag existed count as truncated when they hold a full page."""
+        doc = self.read_cache(address)
+        if doc is None:
+            return False
+        return bool(doc["truncated"]) if "truncated" in doc else len(doc["data"]) >= PAGE_SIZE
 
     def outgoing(self, address: str, **kw) -> List[Transfer]:
         return [t for t in self.transfers(address, **kw)[0] if t.from_addr == address]

@@ -128,3 +128,56 @@ def test_hero_hot_wallet_is_labeled():
     assert all(is_tron_address(a) or detect_chain(a) == r["chain"] for a, r in labels.items())
     assert {r["type"] for r in labels.values()} <= {"exchange", "bridge", "mixer", "swap"}
     assert all(r["source"] for r in labels.values())
+
+
+# ---- truncated history (a busy wallet has more transfers than one fetch returns)
+def _paged_client(pages, calls):
+    def handler(request):
+        calls.append(dict(request.url.params))
+        return httpx.Response(200, json=pages[len(calls) - 1])
+    return httpx.Client(base_url="https://api.trongrid.io", transport=httpx.MockTransport(handler))
+
+
+def test_fetch_stopped_by_the_limit_with_more_available_is_flagged_truncated(tmp_path):
+    pages = [{"success": True, "data": [raw(tx=f"{i:02d}" * 32, ts_ms=1000 + i) for i in range(3)], "meta": {"fingerprint": "more"}}]
+    a = TronAdapter(cache_dir=tmp_path, client=_paged_client(pages, []))
+    items, source = a.transfers(ADDR, limit=3)
+    assert source == "live" and len(items) == 3
+    assert a.read_cache(ADDR)["truncated"] is True and a.history_truncated(ADDR) is True
+
+
+def test_complete_history_is_not_flagged(tmp_path):
+    pages = [{"success": True, "data": [raw(tx="aa" * 32, ts_ms=1000)], "meta": {}}]
+    a = TronAdapter(cache_dir=tmp_path, client=_paged_client(pages, []))
+    a.transfers(ADDR, limit=3)
+    assert a.read_cache(ADDR)["truncated"] is False and a.history_truncated(ADDR) is False
+
+
+def test_exactly_the_limit_with_no_more_pages_is_not_truncated(tmp_path):
+    pages = [{"success": True, "data": [raw(tx=f"{i:02d}" * 32, ts_ms=1000 + i) for i in range(3)], "meta": {}}]
+    a = TronAdapter(cache_dir=tmp_path, client=_paged_client(pages, []))
+    a.transfers(ADDR, limit=3)
+    assert a.history_truncated(ADDR) is False
+
+
+def test_old_cache_files_without_the_flag_count_as_truncated_when_a_full_page(tmp_path):
+    a = TronAdapter(cache_dir=tmp_path, offline=True)
+    a.write_cache(ADDR, [raw(tx=f"{i:064d}") for i in range(200)])
+    assert "truncated" not in a.read_cache(ADDR) and a.history_truncated(ADDR) is True
+    a.write_cache(OTHER, [raw(tx=f"{i:064d}") for i in range(199)])
+    assert a.history_truncated(OTHER) is False
+    assert a.history_truncated("TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo") is False     # not in this cache dir: nothing to flag
+
+
+def test_fetch_live_still_returns_a_plain_list(tmp_path):
+    pages = [{"success": True, "data": [raw(tx="bb" * 32)], "meta": {}}]
+    assert len(TronAdapter(cache_dir=tmp_path, client=_paged_client(pages, [])).fetch_live(ADDR)) == 1
+
+
+def test_committed_real_cache_marks_the_busy_wallets_truncated():
+    a = TronAdapter(offline=True)
+    capped = [p.stem for p in (CACHE / "tron").glob("*.json")
+              if len(json.loads(p.read_text())["data"]) >= 200]
+    assert capped and all(a.history_truncated(addr) for addr in capped)
+    assert not a.history_truncated("TJhpBRFXNSoFpe6ek2opbrGhU21e8eCxJu")          # 21 transfers: complete
+    assert not a.history_truncated("TMhTyFX8dfbnrswVFDYwoM6bXz1LjZ3ZXt")          # scripted hero wallet
