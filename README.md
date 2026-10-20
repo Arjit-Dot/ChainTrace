@@ -1,106 +1,453 @@
 # ChainTrace
 
-A blockchain tracer for cybercrime investigators (i4c). Given a wallet reported in a fraud complaint, ChainTrace follows the stolen USDT forward across wallets, shows the fund flow as a graph, and (as the later steps land) names the exchange that holds the money, scores risk, and drafts a freeze notice.
+A real-time crypto fraud attribution tool for cybercrime investigators. Give it a wallet from a fraud complaint and it follows the stolen USDT forward, draws the fund flow, names the exchange that received the money, ranks how urgent the case is, drafts the freeze request, and keeps watching the wallets that still hold funds.
 
-## Status
+> **Everything in the demo data is fictional unless stated.** Names like "Example Exchange A", the hero wallet and the seeded cases are made up. The cache also holds three real wallets that Tether froze; see [Data and its honesty limits](#9-data-and-its-honesty-limits).
 
-| Piece | State |
-|---|---|
-| API contract and all `/api` routes | done (`backend/contract/schemas.py`, `backend/main.py`) |
-| TRON chain adapter (TronGrid, cache first) | done (`backend/engine/chains/tron.py`) |
-| Tracing engine (best-first, stop rules, pass-through, idle funds) | done (`backend/engine/trace/tracing.py`) |
-| Case store, recommendations, case urgency (act now / act soon / preserve), dashboard, networks, freeze notice, React frontend | done |
-| Attribution (nearest exchange) | done (`backend/engine/trace/attribution.py`) |
-| Live monitoring: watcher, urgency "as of", alerts (demo feed is a recorded replay) | done (`backend/product/alerts.py`, `engine.new_transfers`) |
-| Downstream wallet risk and typology (the reported wallet is not scored) | not built; placeholders |
+---
 
-The demo data is partly fictional: the hero case (`TUNoHG…`), "Example Exchange A/B/C" and the seed cases are scripted. The cache also holds three real wallets that Tether blacklisted. See `data/cache/SOURCES.md` and `data/reference/LABELS.md`.
+## Index
 
-## Layout
+1. [Background: the problem](#1-background-the-problem)
+2. [The product](#2-the-product)
+3. [Our solution](#3-our-solution)
+4. [Set up the project on your device](#4-set-up-the-project-on-your-device)
+5. [The backend](#5-the-backend)
+6. [The frontend](#6-the-frontend)
+7. [The risk model: features, selection, training](#7-the-risk-model-features-selection-training)
+8. [How to read the website](#8-how-to-read-the-website)
+9. [Data and its honesty limits](#9-data-and-its-honesty-limits)
+10. [Tests](#10-tests)
+11. [Project status and further reading](#11-project-status-and-further-reading)
+
+---
+
+## 1. Background: the problem
+
+Victims of cyber-fraud in India report the crypto wallet addresses they paid on the national cybercrime portal (NCRP) and the 1930 helpline. Fraudsters do not keep the money in that wallet. Within minutes they move it through a chain of burner wallets, swap it across chains, run it through bridges and mixers, and finally cash it out at an exchange.
+
+Manual tracing takes days. By the time an investigator knows which exchange received the money, the exchange has often already paid it out, so the freeze request arrives too late.
+
+Three facts shape the whole design:
+
+- **Wallets carry no identity.** A wallet address does not say who owns it. The identity lives at the exchange: crypto is only useful to a fraudster once it is converted to cash, and that conversion point (exchange, P2P, OTC) is where KYC records exist.
+- **The exchange is the chokepoint.** If we can say *which exchange received the funds, at which deposit address*, an officer can send that exchange a freeze and KYC request. That request is the useful output.
+- **Speed matters more than completeness.** A fast, explainable answer while some money may still be there is worth more than a perfect report a week later.
+
+---
+
+## 2. The product
+
+ChainTrace is an **attribution and lead-generation tool**. It does:
+
+- Start from a complaint (wallet, amount, fraud type, state) and trace the funds forward across several hops.
+- Show the fund flow as an interactive graph.
+- Name the exchange that received the money, with a confidence score and the evidence behind it.
+- Tell the officer how urgent the case is (**Act now / Act soon / Preserve**) and why.
+- Draft a freeze-and-KYC notice to the exchange, and recommend next actions.
+- Keep watching wallets that still hold money and raise an alert, and re-rank the case, when they move.
+- Group complaints that share wallets into one criminal network (the seeded demo cases show this).
+
+It does **not**:
+
+- Recover the money. `Act now` means a freeze may still be possible in this window, not that it will succeed.
+- Identify the criminal from the chain alone. The exchange's KYC data is the bridge to real people, bank accounts and UPI mule accounts.
+- "Solve" mixers or privacy tools. They are flagged as endpoints with a warning, not traced through.
+
+---
+
+## 3. Our solution
+
+One complaint goes through a pipeline. Each stage is a separate module, and the first four are deterministic, so their output can be explained and defended.
 
 ```
-backend/
-  main.py        API routes (run: cd backend && uvicorn main:app)
-  paths.py       where every data file lives
-  contract/      the API contract as Pydantic models
-  engine/        Person A: finds things. __init__.py is the seam (trace_complaint, wallet_risk, new_transfers);
-                 chains/ = TRON adapter, trace/ = tracer + attribution, model/ = risk model (Step 6, not built yet)
-  product/       Person B: builds from the findings. case store, recommendations and urgency, live-monitoring
-                 watcher and alerts, freeze notice, engine client
-  tests/         contract/, engine/, product/ (run pytest from the repo root or backend/)
-frontend/src/    components/common (layout, badges), components/case (graph, panels), pages, hooks, lib
-data/
-  reference/     labels.csv, vasp_contacts.csv, LABELS.md
-  cache/         raw TronGrid responses (real flagged wallets + scripted hero and scenarios)
-  scenarios/     attribution test scenarios + the live-monitoring replay
-  seed/          the 8 seeded demo cases and their traces
-  fixtures/      one example response per endpoint
-  scripts/       builders for the files above (fixtures, seed traces, cache, scenarios)
-docs/archive/    the original contract pack
-CONTRACT.md      the API contract and change process
-DEMO.md          the build plan and progress log
+complaint ──► 1. Trace ──► 2. Attribute ──► 3. Score risk ──► 4. Rank urgency ──► 5. Act ──► 6. Monitor
+ (wallet,       follow       which exchange     how suspicious    Act now / Act      freeze      watch idle
+  amount…)      the money    got it?            is each wallet?   soon / Preserve    notice      wallets, alert
 ```
 
-## Set up locally
+| Stage | What it does | Where | State |
+|---|---|---|---|
+| **1. Trace** | Best-first search forward from the reported wallet. Stops at known exchanges, bridges and mixers, at depth 5, and for flows under 1% of the case value. Tags a wallet `intermediary` if it forwards 90% or more of what it receives within about an hour. Flags leaf wallets still holding money as **idle funds**. | `backend/engine/trace/tracing.py` | Done |
+| **2. Attribute** | Names the exchange. A **direct match** means the trace reached an address in the label list (`deterministic`, confidence 0.95). The **sweep heuristic** treats a wallet with many different senders that forwards its balance to a labeled hot wallet as a customer deposit address (`heuristic`, confidence capped below 0.90). | `backend/engine/trace/attribution.py` | Done |
+| **3. Score risk** | Risk level (Low to Critical), reasons and fraud type for each downstream wallet. The reported wallet is not scored: a victim already named it. | `backend/engine/model/` | In progress (features done; see [section 7](#7-the-risk-model-features-selection-training)) |
+| **4. Rank urgency** | Case-level rule set, first match wins (see [section 8](#82-urgency-the-badge-that-matters-most)). | `backend/product/recommendations.py` | Done |
+| **5. Act** | Recommendations panel and a freeze-notice draft built from a template. The PDF evidence report is a sample file for now. | `backend/product/` | Notice done; PDF report not built |
+| **6. Monitor** | A watcher polls the leaf and idle wallets every 30 seconds. When one moves it re-traces, re-runs attribution and urgency, updates the "as of" time and pushes an alert. | `backend/product/alerts.py` | Done (demo feed is a recorded replay) |
 
-Requirements: Python 3.12, Node 18+.
+**Why deterministic first, AI second.** Tracing and attribution are rules and label lookups. That keeps them explainable. AI is used where rules are weakest: scoring how suspicious a wallet looks and classifying the fraud type.
+
+**Design choice: cache first.** The system works with no API key by reading a cache of saved TronGrid responses, so the demo never depends on the network. With a key it can call TronGrid live and save what it gets.
+
+---
+
+## 4. Set up the project on your device
+
+### 4.1 What you need
+
+| Tool | Version | Used for |
+|---|---|---|
+| Python | **3.12** (the pinned libraries were tested on it) | backend and model |
+| Node.js | 18 or newer | frontend |
+| Git | any | to clone |
+| A TronGrid API key | optional | live blockchain data; free from <https://www.trongrid.io/> |
+
+You do not need a key to run the demo. Without one, the system reads only the cached wallets.
+
+### 4.2 Install
 
 ```bash
-# 1. backend dependencies
+# 1. get the code
+git clone https://github.com/Arjit-Dot/ChainTrace.git
+cd ChainTrace
+
+# 2. backend: a virtual environment and the pinned libraries
 python3.12 -m venv env
-source env/bin/activate
+source env/bin/activate            # Windows: env\Scripts\activate
 pip install -r requirements.txt
 
-# 2. optional: TronGrid key (works without one, from the cache, or rate-limited live)
-cp .env.example .env        # then paste the key from trongrid.io
+# 3. optional: a TronGrid key
+cp .env.example .env               # then paste the key after TRONGRID_API_KEY=
 
-# 3. frontend dependencies
+# 4. frontend libraries
 cd frontend && npm install && cd ..
 ```
 
-## Run
-
-Two terminals:
+### 4.3 Run it (two terminals)
 
 ```bash
-# backend, on :8000  (docs at http://localhost:8000/docs)
+# terminal 1 - backend on :8000  (API docs at http://localhost:8000/docs)
+source env/bin/activate
 cd backend
 ENGINE_MODE=engine uvicorn main:app --reload --port 8000
 
-# frontend, on :5173 (proxies /api to :8000)
+# terminal 2 - frontend on :5173 (it proxies /api to :8000)
 cd frontend
 npm run dev
 ```
 
-Open http://localhost:5173, go to **New Complaint**, and submit wallet `TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo` with amount `12000`. You get the traced fund-flow graph ending at Example Exchange A.
+Open <http://localhost:5173>.
 
-### Engine modes
+First thing to try: go to **New Complaint**, click **Fill hero example** (wallet `TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo`, amount 12000) and submit. You land on the traced case, ending at Example Exchange A.
 
-`ENGINE_MODE` picks where traces come from:
+### 4.4 Engine modes
 
-- `fixture` (default): prebuilt traces; no engine needed.
-- `engine`: the real tracer in `backend/engine/__init__.py`. With no `TRONGRID_API_KEY` it reads only `data/cache/`, so wallets outside the cache show a single node. Set `TRACING=fixture` to use the old fixture inside engine mode.
-- `http`: a separate engine at `ENGINE_URL`.
+`ENGINE_MODE` chooses where traces come from:
 
-If the engine fails, the API falls back to the fixture and says so in the trace `notes`.
+| Mode | What it does |
+|---|---|
+| `fixture` (default) | Returns pre-built traces. No engine runs. Useful for working on the interface. |
+| `engine` | Runs the real tracer, attribution and urgency in-process. Use this for the full demo. |
+| `http` | Calls a separate engine at `ENGINE_URL`. |
 
-## Try live monitoring
+If the engine fails, the API falls back to the fixture and says so in the case's `notes`, so a demo never shows a blank page.
 
-With `ENGINE_MODE=engine`, submit wallet `TJgNArE5dkoiDgHUjimdizwNaTZZwLh1Lg` (amount `6000`). The case shows **Act now** (5,900 USDT idle). Click **Simulate fund movement**: a recorded transfer (SIMULATED) moves the funds to Example Exchange B, the alerts appear, and the badge drops to **Act soon**. The urgency card shows an "as of" time and a live/stale indicator; the backend polls every 30 seconds (`CHAINTRACE_POLL_SEC`, and `CHAINTRACE_MONITOR=0` turns the watcher off).
+### 4.5 Environment variables
 
-## Try the tracer on its own
+| Variable | Default | Meaning |
+|---|---|---|
+| `TRONGRID_API_KEY` | empty | Enables live TronGrid calls. Without it the engine is cache-only. |
+| `ENGINE_MODE` | `fixture` | See above. |
+| `ENGINE_URL` | `http://localhost:8001` | Engine address for `http` mode. |
+| `CHAINTRACE_POLL_SEC` | `30` | How often the watcher polls. |
+| `CHAINTRACE_MONITOR` | `1` | `0` turns the watcher off (cases then show monitoring "off"). |
+| `CHAINTRACE_DB` | `data/chaintrace.db` | Where the SQLite case store lives. |
+| `TRACING` | `real` | `fixture` makes the engine return the hero fixture instead of tracing. |
+| `VITE_API_BASE` | empty | Frontend API base URL if the backend is elsewhere. |
+
+### 4.6 Reset or rebuild
+
+- **Fresh case list:** stop the backend and delete `data/chaintrace.db`. Seeded cases come back on the next start; cases you submitted are gone.
+- **Rebuild fixtures, seeds and scenarios** (only needed after a contract or data change), from the repo root:
 
 ```bash
-cd backend
-python -m engine.trace.tracing TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo 12000
+python data/scripts/gen_fixtures.py                 # one example response per endpoint
+cp data/fixtures/cases.json data/seed/seed_cases.json
+python data/scripts/make_seed_traces.py             # the 8 seeded traces
+python data/scripts/make_attribution_scenarios.py   # the 8 test scenarios + replay feed
 ```
 
-Refill or extend the cache for a wallet: `python -m engine.chains.tron --help`.
+---
 
-## Tests
+## 5. The backend
+
+A Python 3.12 FastAPI application. It is split into two packages with a clear boundary, plus a shared contract.
+
+```
+backend/
+  main.py          API routes. Run with: uvicorn main:app
+  paths.py         where every data file lives (import paths from here)
+  contract/        schemas.py: the API contract as Pydantic models. The single source of truth.
+  engine/          FINDS things (traces, attribution, risk)
+    __init__.py      the seam: trace_complaint, wallet_risk, new_transfers, replay helpers
+    chains/tron.py   TronGrid adapter: normalises transfers, cache first, then live, then save
+    trace/           tracing.py (forward trace), attribution.py (which exchange)
+    model/           features.py (done); risk scoring, typology (in progress)
+  product/         BUILDS from the findings
+    engine_client.py how the product reaches the engine (fixture / engine / http)
+    store.py         SQLite case store; seeds the 8 demo cases at startup
+    recommendations.py   action list and case urgency
+    linking.py       groups complaints that share wallets into networks
+    notices.py       freeze notice, from a Jinja template in product/templates/
+    alerts.py        live-monitoring watcher and the alert stream
+  tests/           contract/, engine/, product/
+```
+
+### 5.1 The one rule: the contract
+
+`backend/contract/schemas.py` defines every request and response shape. Conventions that never change:
+
+- Timestamps are Unix epoch **seconds**, UTC.
+- Amounts are token units as floats (`7850.0` means 7,850 USDT), never raw integers with decimals.
+- Node types: `victim`, `scam_wallet`, `intermediary`, `bridge`, `mixer`, `exchange`, `unknown`.
+- Hop numbers: `-1` for victims, `0` for the reported wallet, increasing downstream.
+- Heuristic attribution confidence must stay **below 0.90**; only a direct label match goes higher.
+- Every `nearest_vasp` carries evidence, and its deposit address must exist in the graph.
+
+The engine returns the technical findings; the product side adds urgency, recommendations and monitoring on top. Changing the contract has a defined process in [CONTRACT.md](CONTRACT.md).
+
+### 5.2 Engine: how a trace runs
+
+1. **Adapter** (`engine/chains/tron.py`). Fetches USDT-TRC20 transfers for a wallet, converts timestamps to seconds and amounts to token units, and caches the raw response. It also detects the chain from an address format (TRON, Ethereum, Bitcoin, Solana).
+2. **Tracer** (`engine/trace/tracing.py`). Walks forward, biggest and most recent transfer first. Each outgoing transfer becomes an edge. It stops at labeled endpoints, depth 5 and flows under 1% of the case value. It also marks pass-through wallets and computes idle balances.
+3. **Attribution** (`engine/trace/attribution.py`). Looks for the nearest labeled exchange; chooses between the sweep heuristic and a direct match; builds the evidence list and fills in the nodal contact from `vasp_contacts.csv`.
+4. **Seam** (`engine/__init__.py`). Runs 1 to 3 and returns one `TraceResponse`. It also exposes `new_transfers(addresses, since_ts)`, a light call the watcher uses to check a few wallets without a full re-trace.
+
+### 5.3 Product: what happens after the trace
+
+- `store.py` saves each case (summary plus full trace) in SQLite and stamps it with an urgency, an "as of" time and its monitoring status.
+- `recommendations.py` turns the trace into an action list and the urgency rank.
+- `alerts.py` runs the watcher in the background and serves alerts over server-sent events.
+- `notices.py` fills the freeze-notice template from the trace.
+
+### 5.4 API endpoints
+
+All routes live in `main.py`; interactive docs are at <http://localhost:8000/docs>.
+
+| Method | Path | Does |
+|---|---|---|
+| POST | `/api/trace` | Submit a complaint; run the engine; store and return the case |
+| GET | `/api/cases` | All cases, newest first |
+| GET | `/api/cases/{id}` | One case, full trace |
+| GET | `/api/cases/{id}/freeze-notice` | Draft the freeze notice (404 when no exchange was found) |
+| GET | `/api/cases/{id}/report` | Sample PDF (the real report is not built yet) |
+| POST | `/api/cases/{id}/simulate-movement` | Demo: replay a recorded movement of the idle funds |
+| GET | `/api/wallets/{address}/risk` | Risk of one wallet (still a fixture until the model lands) |
+| GET | `/api/alerts`, `/api/alerts/stream` | Alert history and the live stream |
+| GET | `/api/dashboard`, `/api/networks` | Static sample data for now |
+| POST | `/api/integrations/ncrp/complaints`, `/api/integrations/sahyog/notice` | Mock NCRP and SAHYOG connectors |
+| GET | `/api/health` | Status, contract version and engine mode |
+
+### 5.5 The data folder
+
+```
+data/
+  reference/   labels.csv (exchanges, mixers, bridges), vasp_contacts.csv, LABELS.md
+  cache/       raw TronGrid responses; SOURCES.md says which are real and which are scripted
+  scenarios/   8 attribution scenarios (scenarios.json) + the live-monitoring replay feed
+  seed/        the 8 seeded demo cases and their pre-built traces
+  fixtures/    one example response per endpoint
+  scripts/     the scripts that build all of the above
+```
+
+---
+
+## 6. The frontend
+
+React with Vite, Tailwind CSS for styling and Cytoscape for the graph.
+
+```
+frontend/src/
+  pages/        Dashboard, NewComplaint, CaseView, NetworkView
+  components/
+    common/     Layout (sidebar, health check), Badges, PageHeader, Status, CopyButton
+    case/       TraceGraph, NodePanel, NearestVaspCard, SummaryStrip,
+                RecommendationsPanel, FreezeNoticeModal, Legend
+  hooks/        useFetch (loading, error and reload for one API call)
+  lib/          api.js (the only place that talks HTTP), colors.js, format.js
+```
+
+Design rules that explain how it behaves:
+
+- `lib/api.js` is the only file that calls the backend. In development Vite proxies `/api` to port 8000.
+- Colors for node types, risk levels, urgency and data source are defined once in `lib/colors.js`.
+- Every screen has a loading, error and empty state, so nothing is ever blank.
+- The case page re-reads the case every 30 seconds and instantly when an alert for that case arrives.
+
+Not built yet: the dashboard charts and KPI tiles, the Networks page (a placeholder), and the Demo Mode toggle (disabled in the sidebar).
+
+---
+
+## 7. The risk model: features, selection, training
+
+> **Status: in progress (Step 6).** The seven features are built and tested. Scoring, the trained model, typology and the wiring into traces are not built yet. Until then every downstream wallet shows the default Low risk with no reasons. This section describes what is being built.
+
+### 7.1 What it answers
+
+For each wallet downstream of the reported one: *how much does this wallet look like part of a fraud flow?* That ranks which hops an investigator should follow first. The reported wallet itself is not scored: a victim already named it.
+
+Wallets that are labeled get fixed values instead of a model score: exchange Low, bridge Medium, mixer Critical. The model scores the unlabeled wallets, the intermediaries and unknowns.
+
+### 7.2 The seven features
+
+All computed from a wallet's USDT transfers in `backend/engine/model/features.py`:
+
+| Feature | Meaning | Scam-like looks like | Why it is a signal |
+|---|---|---|---|
+| `age_days` | Days from the wallet's first transfer to when the traced funds arrived | Very young | Mule wallets are often created just before use |
+| `tx_count` | Transfers touching the wallet | Very few | A wallet with a short history has little legitimate use |
+| `in_out_ratio` | Amount sent divided by amount received (capped at 1) | Close to 1 | Pass-through wallets keep nothing |
+| `median_forward_sec` | Typical time from money arriving to being sent on | Minutes | Fast forwarding is the signature of laundering |
+| `unique_senders` | Distinct wallets that paid it | Many (for a collector) | Collectors receive from many victims |
+| `round_number_ratio` | Share of transfers with round amounts (multiples of 50 USDT) | High | Scam payments are often fixed round sums |
+| `fan_in_degree` | Unique senders divided by unique recipients | High | Many in, few out means consolidation |
+
+Age is measured **at the moment funds arrived**, not from today. This keeps the numbers identical on cached data and avoids a wallet looking more innocent each day. For a standalone "score this address" request, the wallet's last transfer is used instead.
+
+### 7.3 How the features were selected
+
+They come from the build plan (DEMO.md Step 6) and were chosen on three rules:
+
+- **Computable from transfers alone.** No outside data or identities are needed, so the model works on any wallet we can fetch.
+- **Explainable in a sentence.** Each one maps to plain-language wording ("forwards funds in 4 minutes", "89 unique senders") so an officer can read why a wallet scored high.
+- **Aimed at the behaviours in the problem:** layering and pass-through (forward time, in/out ratio), collection (unique senders, fan-in), and disposable wallets (age, transaction count, round amounts).
+
+There is no automatic feature selection and no learned feature search: with seven hand-picked, interpretable inputs that was unnecessary.
+
+### 7.4 The plan for scoring and training
+
+- **Rules first.** A hand-written formula turns the features into a 0 to 1 score and a level (Low below 0.25, Medium below 0.50, High below 0.75, Critical above; placeholders). It is the fallback if the trained model is missing.
+- **XGBoost second.** A gradient-boosted tree classifier trained on about 6,000 synthetic wallets across four profiles (scam collector, pass-through mule, normal user, exchange-like) with overlapping ranges and a little label noise. A fixed random seed makes the training repeatable. The model is saved to `data/models/risk_model.pkl`.
+- **Reasons from SHAP.** For each scored wallet the three features that pushed the score up the most are turned into a sentence with the real value.
+- **Held-out evaluation.** About 20 to 25% of the synthetic data is kept aside and never trained on; the training script prints AUC, precision, recall and a confusion matrix. The three real flagged wallets are also held out as a separate sanity check.
+- **Typology.** A rule-assisted classifier labels the fraud type (`investment_scam`, `task_scam`, `sextortion`, `ransomware`, `phishing`, `darknet`, `unknown`) from patterns such as many small deposits plus fast consolidation, many tiny unique senders, or few large payments plus a mixer.
+
+### 7.5 Limits to know
+
+- **The model learns our assumptions.** Synthetic data comes from ranges we chose, so the model's score reflects those assumptions, not measured fraud behaviour. The held-out synthetic score will look good for that reason and proves little.
+- **Real wallets differ.** One real flagged wallet in the cache is old and forwards slowly (a median of about a day), unlike the fast mules we simulated. Real labeled data, such as confirmed complaint wallets, would be needed for a trustworthy model.
+- **"Flagged" is not "convicted".** The real wallets are Tether-frozen addresses. Tether does not publish why.
+- The interface and the slides must say the model is trained on synthetic and seed data.
+
+---
+
+## 8. How to read the website
+
+### 8.1 The pages
+
+| Page | What it shows |
+|---|---|
+| **Dashboard** | A table of all cases, newest first: case, complaint, wallet, amount lost, fraud type, state, **urgency**, exchange, time to attribution, status. Click a case to open it. (KPI tiles and charts are not built yet.) |
+| **New Complaint** | The form that starts a trace. "Fill hero example" loads the demo case. The chain is detected from the address. |
+| **Case View** | One case in full. See below. |
+| **Networks** | Placeholder for the linked-complaints view. |
+
+### 8.2 Urgency: the badge that matters most
+
+Shown at the top of every case and as a column on the dashboard. First rule that matches wins; hover or read the "Why …" line to see the exact triggers.
+
+| Badge | Fires when | What it means |
+|---|---|---|
+| **Act now** (red) | There are idle funds at the last check; or funds sit at an exchange deposit address that has not been swept yet; or a fresh transfer (under 15 minutes old) left a case wallet | A freeze may still be possible. Contact the exchange first. |
+| **Act soon** (amber) | An exchange was identified at 0.70 confidence or higher; or the amount lost is 10,000 or more; or the case is linked to 2 or more other complaints | The money has probably moved on; build the case and send the request promptly. |
+| **Preserve** (blue) | Everything else, for example the money entered a mixer or no exchange was found | Keep the evidence and keep monitoring. |
+
+The thresholds (15 minutes, 0.70, 10,000, 2 complaints) are placeholders for investigators to tune. Urgency can go **down** as well as up: if idle funds move to an exchange, Act now becomes Act soon, and the reasons say why.
+
+### 8.3 Under the badge: "as of" and Live / Stale
+
+- **as of 14:32:10** is the time of the last successful check of the chain, not the time something last changed. A quiet case still shows a fresh time.
+- **Live** (green dot) means the watcher checked recently.
+- **Stale** (amber) means the last check is older than twice the poll interval. The page shows a warning that the urgency may be out of date.
+- **Monitoring off** means the watcher is switched off.
+
+### 8.4 The fund-flow graph
+
+- **Node colors:** victim grey, scam (reported) wallet red, intermediary orange, bridge blue, mixer purple, exchange green, unknown white.
+- **Edge thickness** shows the amount. A green path is the route to the Nearest VASP. Dashed edges are bridges or mixers. An **amber ring** marks a wallet still holding funds.
+- **Click a wallet** to open its panel on the right: type, chain, hop, typology, risk badge with reasons, any idle balance, and its incoming and outgoing transfers. The reported wallet shows a **Reported** badge instead of a risk, since it is not scored.
+
+### 8.5 The Nearest VASP card
+
+The answer to "which exchange got the money":
+
+- **Exchange** and the **deposit address** at it, with how many hops away it is, the amount and the time.
+- **Confidence** and the **method** tag:
+  - `deterministic`: the trace reached an address in our label list. Confidence is a fixed 0.95.
+  - `heuristic`: the sweep pattern. Confidence is a weighted score, always below 0.90.
+  - Neither is a probability. 0.95 means "the destination matches a known label", not "95% chance a freeze works".
+- **Evidence:** the facts behind the call, for example "14 different wallets over 66 hours" and "99% forwarded to the labeled hot wallet".
+- **Contact:** the exchange's nodal officer from the contact list (mock contacts in the demo).
+- When no exchange is reached the card shows an empty state and the notice button is disabled.
+
+### 8.6 Other items on a case
+
+- **Summary strip:** amount lost, total traced, **idle funds** (highlighted when above zero), hops and node count, time to attribution, urgency, and the **data source** badge.
+- **Data source badge:** `LIVE` (fetched from TronGrid), `CACHED` (read from saved responses), `SIMULATED` (fictional demo data).
+- **Recommendations panel:** ordered actions such as "Act on idle funds", "Issue freeze and KYC request to X", "Continue trace on Ethereum" (after a bridge) or "Preserve mixer evidence".
+- **Freeze Notice button:** opens a draft addressed to the exchange, citing the transaction path, and asking for a freeze plus preservation of KYC, bank, phone and IP data. Legal references are placeholders.
+- **Download Report:** currently returns a sample PDF.
+- **Alert list:** when the watcher raises an alert for this case it appears under the summary and the page refreshes.
+
+### 8.7 A two-minute tour (with live monitoring)
+
+1. Open **New Complaint**, enter wallet `TJgNArE5dkoiDgHUjimdizwNaTZZwLh1Lg`, amount `6000`, submit.
+2. The case says **Act now** because 5,900 USDT is idle in the last wallet (amber ring on the graph). No exchange is named yet.
+3. Click **Simulate fund movement**. A recorded transfer (labeled SIMULATED) moves the money to Example Exchange B.
+4. Three alerts appear (funds moved, reached an exchange, urgency changed). The graph extends, the Nearest VASP card names Example Exchange B at 0.95 (`deterministic`) and the badge drops to **Act soon**.
+5. Open **Freeze Notice** to see the draft request.
+
+Other wallets worth trying (all fictional): `TXCFXFx5tuZ1ky3HgTEHZpoLxXmJ32XLvj` (direct match, 8000), `TDongf8XirZvCUFazHwM2FG7cukpnF9h9D` (sweep heuristic, 5000), `TPA2pH1ZJWxMFeyMDEup4JQg51kkcVUMKe` (ends at a mixer, 4000), `TMmiNnkHcoyUuNbK7TPwwTfr8ofi82Kohz` (ends at a bridge, 4000). All 8 scenarios are listed in `data/scenarios/scenarios.json`.
+
+The seeded cases on the dashboard (C-001 to C-008) show the other situations: shared deposit addresses across complaints, a case ending in a mixer, an isolated case, and a case that left TRON through a bridge with idle funds.
+
+---
+
+## 9. Data and its honesty limits
+
+- **Fictional:** the hero case, the example exchanges, bridges and mixer, the 8 scenarios, the seeded cases and their wallet addresses.
+- **Real:** three TRON wallets that Tether froze on 2026-10-20, with their USDT-TRC20 history from TronGrid, plus a few real exchange wallets in `labels.csv` whose labels come from a Dune query and are **not independently verified**. See `data/cache/SOURCES.md` and `data/reference/LABELS.md`.
+- **The label list is small.** A real deployment needs a much larger, verified one.
+- **No real bridge or mixer label on TRON** is in the list yet.
+- **NCRP and SAHYOG links are simulated.**
+- **"Live" means polling.** There is always a delay of up to one poll interval plus block confirmation time. Only leaf and idle wallets are watched, because public APIs have rate limits. The demo's fund movement is a recorded replay, labeled SIMULATED.
+- **Live monitoring improves how current the reading is.** It cannot make `Act now` mean a freeze will succeed.
+- **The risk model** (when built) is trained on synthetic and seed data; see [section 7.5](#75-limits-to-know).
+
+---
+
+## 10. Tests
+
+Run from the repo root (or from `backend/`); all tests run offline:
 
 ```bash
-cd backend && python -m pytest -q
+pytest -q
 ```
 
-All tests run offline.
+| Folder | Covers |
+|---|---|
+| `backend/tests/contract/` | Engine output matches the contract (graph shape, exchange in graph, idle funds add up) |
+| `backend/tests/engine/` | TRON adapter, tracing rules, attribution, the 8 attribution scenarios end to end, the seven model features |
+| `backend/tests/product/` | Seed cases and traces, the case store and API, urgency rules, live monitoring, alerts and replay |
+
+To check the frontend compiles: `cd frontend && npm run build`.
+
+---
+
+## 11. Project status and further reading
+
+| Step | State |
+|---|---|
+| 1 to 3: contract, routes, cache, labels, hero case, TRON adapter | Done |
+| 4: tracing engine | Done |
+| 5: attribution | Done |
+| Live monitoring, urgency, contract v1.1.0 | Done |
+| 6: risk model and typology | In progress: features done |
+| 7: PDF report | Not built (freeze notice and recommendations are done) |
+| 8 and 9: dashboard charts, Networks page, Demo Mode | Not built |
+
+Documents in this repo:
+
+- [DEMO.md](DEMO.md): the full build plan, the demo script, the team split and the detailed progress log.
+- [CONTRACT.md](CONTRACT.md): the API contract in plain language and the process for changing it.
+- `data/cache/SOURCES.md`, `data/reference/LABELS.md`: where the data came from.
