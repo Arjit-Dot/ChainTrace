@@ -1,4 +1,4 @@
-import { FileDown, FileWarning } from 'lucide-react'
+import { FileDown, FileWarning, Info } from 'lucide-react'
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import Legend from '../components/Legend'
@@ -37,6 +37,11 @@ function CaseBody({ trace }) {
 
       <div className="space-y-6 p-6">
         <SummaryStrip trace={trace} />
+        {trace.notes && (
+          <p className="flex items-start gap-2 rounded-md border border-line bg-panel-2/60 px-3 py-2 text-xs text-muted">
+            <Info className="mt-px size-3.5 shrink-0" /> {trace.notes}
+          </p>
+        )}
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
           <section className="flex flex-col self-start rounded-lg border border-line bg-panel">
