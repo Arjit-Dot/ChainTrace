@@ -129,7 +129,7 @@ chaintrace/
 **What:** Repo, environment, folder structure, API keys.
 **How:**
 - Kickoff (together): repo, the structure from section 5, `CONTRACT.md` and `backend/contract/schemas.py`, the pinned `requirements.txt`, and `backend/main.py` with `/api/health` and every contract route on fixtures (all supplied by the contract pack).
-- A: `python -m venv .venv`, then `pip install -r requirements.txt` (it already includes `scikit-learn xgboost shap pytest`). Create a free TronGrid API key and store it in `.env`.
+- A: create the virtual environment (`python3.12 -m venv env`, the folder is git-ignored as `env/`), then `pip install -r requirements.txt` (it already includes `scikit-learn xgboost shap pytest`). Create a free TronGrid API key and store it in `.env` (git-ignored; **not created yet**).
 - B: `reportlab matplotlib` are already in `requirements.txt`; install it, then scaffold the frontend (Vite, Tailwind, Cytoscape.js, Recharts).
 - Both: run `cd backend && uvicorn main:app --reload --port 8000`, and confirm `/api/health` and `/docs` load and `pytest` passes.
 
@@ -320,7 +320,7 @@ The only shared work.
 A2 comes before A3 on purpose: the adapter defines the cache format, and the scripted hero data has to match it.
 
 **A1. Setup and wallet shortlist**
-- `python -m venv .venv`, then add the engine libraries (`scikit-learn xgboost shap pytest`) to your block in `requirements.txt` and run `pip install -r requirements.txt`.
+- Create the venv (`python3.12 -m venv env`), then `pip install -r requirements.txt` (the engine libraries `scikit-learn xgboost shap pytest` are already listed; add `requests` or switch `data/scripts/scamWallet.py` to `httpx`).
 - Create a free TronGrid key, store it in `.env` as `TRONGRID_API_KEY`, and confirm it with one request.
 - Shortlist 3 real TRON scam/laundering wallets from public sources (e.g., flagged addresses on Tronscan). Record the source of each in `data/cache/SOURCES.md`.
 - *Done when:* the server runs, `/docs` loads, the key returns data, and 3 wallets with sources are listed.
@@ -467,10 +467,18 @@ Contract rules live in `CONTRACT.md`. Endpoints are under `/api/...` and the con
 | Contract tests (4 passing: graph shape, Nearest VASP in graph, idle funds, wallet risk) | DONE | `backend/tests/test_contract.py` |
 | Hero example + fixtures for every endpoint | DONE | `data/fixtures/` (`trace_hero.json` is the hero) |
 | Product routes (cases, freeze notice, report, dashboard, networks, alerts SSE, NCRP/SAHYOG mocks) | STUB DONE | `backend/main.py` (TODO(B): real implementations, B3-B8) |
-| A1 wallet shortlist and A2 cache of 3 real wallets | PARTIAL | `data/cache/` (adapter `chains/tron.py` and `SOURCES.md` still missing) |
-| A3 `labels.csv`, `vasp_contacts.csv` | DONE | `data/` (scripted hero cache data still to do) |
-| B3 `seed_cases.json` | DONE (data only) | `data/seed_cases.json` (`seed_traces.json`, `db.py`, `engine_client.py` still to do) |
-| Frontend scaffold (B1) | PARTIAL | `frontend/` (Vite scaffold only; Tailwind, Cytoscape, Recharts, routes not yet) |
+| Step 1: repo, structure, venv (`env/`, Python 3.12, all libraries installed), contract and `/api/health` route | DONE | `env/`, `requirements.txt`, `backend/` |
+| Step 1: TronGrid key in `.env` | NOT DONE | `.env` does not exist |
+| Step 1 / B1: frontend scaffold | BROKEN | `frontend/`: Vite, Tailwind, Cytoscape, Recharts and router are installed, but `src/main.jsx` imports `./App.jsx`, which does not exist, so `vite build` fails. No pages or API client yet. |
+| Step 2 / A3: `labels.csv` | PARTIAL | `data/labels.csv`: 6 exchange hot wallets (TRON checksums valid), 1 DEX pool, 1 Tornado Cash (Ethereum) address. Needs: real per-row sources instead of "Dune Analytics", a true TRON bridge or mixer, `chain` as `tron` and `type` aligned with the contract, hero hot wallet row |
+| Step 2 / A3: `vasp_contacts.csv` | DONE | `data/vasp_contacts.csv`: one mock contact for each of the 5 exchanges |
+| Step 2 / A1: 3 real scam wallets cached | NOT DONE | `data/cache/` holds 3 Tether `AddedBlackList` events (`0x…` addresses, all in one block, files named `…_UNKNOWN`), not transaction histories, so nothing can be traced. `SOURCES.md` is missing. Redo as USDT-TRC20 transfer histories for 3 TRON `T…` wallets. |
+| Step 2 / A3: hero case | NOT DONE | No hero data in TronGrid format in `data/cache/`; no hero hot wallet in `labels.csv` |
+| Step 2 / B3: `seed_cases.json` | PARTIAL | `data/seed_cases.json`: 8 synthetic cases (2 linked groups, 3 isolated), an exact copy of `data/fixtures/cases.json`. `seed_traces.json` (with mixer, bridge, idle-funds and no-exchange cases) still missing |
+| Step 3 / A2: chain adapter | NOT DONE | `backend/chains/tron.py` missing: no `Transfer` normalization, cache-first logic, address detection or test. `data/scripts/scamWallet.py` is a one-off event fetcher (writes to `../cache/`), not the adapter. |
+| B3: `db.py`, `engine_client.py`, cases API, New Complaint | NOT STARTED | n/a |
 | A4-A8, B2, B4-B8 | NOT STARTED | n/a |
+
+**Audit of Steps 1-3 (last checked after the contract merge).** Steps 1-3 are only partly complete: the contract, routes and tests work; the data and adapter work is not finished. Next in order: (1) create `.env` with `TRONGRID_API_KEY`; (2) pick 3 real TRON scam wallets and write `data/cache/SOURCES.md`; (3) build `backend/chains/tron.py` and refill the cache; (4) script the hero case and add its hot wallet to `labels.csv`; (5) fix `labels.csv`; (6) build `seed_traces.json`; (7) add `frontend/src/App.jsx` so the scaffold builds.
 
 **Reconciliation notes.** The contract pack's layout won where it differed from section 5: the contract is a package (`contract/schemas.py`, not `contract.py`), the hero example is `data/fixtures/trace_hero.json`, the engine seam is `engine.py`, and `main.py` holds all routes as CONTRACT.md lists. The `routes_engine.py` / `routes_product.py` split was tried and dropped after merging `origin/main`; the API surface was identical. DEMO.md sections 6-11 were then aligned with CONTRACT.md: `/api` endpoint paths, epoch-second timestamps, the seven node types, `deterministic`/`heuristic` methods, the `live/cached/simulated` source badge, typology and alert enums, the contract change process, and `main.py` owned by B with `engine.py` as the A/B seam. Run: `pip install -r requirements.txt`, then `cd backend && uvicorn main:app --reload --port 8000`.
