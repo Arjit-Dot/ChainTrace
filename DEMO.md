@@ -81,7 +81,7 @@ Same structure as the original: `backend/`, `data/`, `frontend/`. Every file has
 ```
 chaintrace/
 ├── backend/
-│   ├── main.py                 # Shared: all /api routes on fixtures, per CONTRACT.md (B owns routes, frozen layout)
+│   ├── main.py                 # B: all /api routes, on fixtures until the TODO(B) stubs are replaced (per CONTRACT.md)
 │   ├── contract/schemas.py     # Shared: the contract as Pydantic models (frozen, DONE)
 │   ├── contract/__init__.py    # Shared (DONE)
 │   ├── engine.py               # A: the seam; stub returns the hero fixture until A4-A6 (stub DONE)
@@ -128,10 +128,10 @@ chaintrace/
 **Owner:** kickoff (both) + A1 (backend) + B1 (frontend)
 **What:** Repo, environment, folder structure, API keys.
 **How:**
-- Kickoff (together): repo, the structure from section 5, your existing contract file, `requirements.txt` with the base libraries (`fastapi uvicorn httpx networkx pandas`), and `main.py` with a `/health` route.
-- A: `python -m venv .venv`, then add `scikit-learn xgboost shap pytest` to A's block in `requirements.txt` and install. Create a free TronGrid API key and store it in `.env`.
-- B: add `reportlab matplotlib` to B's block in `requirements.txt` and install, then scaffold the frontend (Vite, Tailwind, Cytoscape.js, Recharts).
-- Both: confirm `/health` and `/docs` load.
+- Kickoff (together): repo, the structure from section 5, `CONTRACT.md` and `backend/contract/schemas.py`, the pinned `requirements.txt`, and `backend/main.py` with `/api/health` and every contract route on fixtures (all supplied by the contract pack).
+- A: `python -m venv .venv`, then `pip install -r requirements.txt` (it already includes `scikit-learn xgboost shap pytest`). Create a free TronGrid API key and store it in `.env`.
+- B: `reportlab matplotlib` are already in `requirements.txt`; install it, then scaffold the frontend (Vite, Tailwind, Cytoscape.js, Recharts).
+- Both: run `cd backend && uvicorn main:app --reload --port 8000`, and confirm `/api/health` and `/docs` load and `pytest` passes.
 
 ### Step 2. Seed data (2 hrs)
 **Owner:** A1 (pick wallets) + A3 (cache, labels, contacts, hero case) + B3 (seed cases)
@@ -139,17 +139,17 @@ chaintrace/
 **How:**
 - **(A)** Pick **3 real TRON scam/laundering wallets** from public sources (e.g., publicly flagged addresses on Tronscan) and save their TronGrid responses into `data/cache/` (the Step 3 adapter does the saving).
 - **(A)** Build `labels.csv` with columns `address, chain, entity, type, source`. Include 4-5 major exchanges' known hot wallets, 1-2 mixer/bridge addresses, and note the source of every label. Also build `vasp_contacts.csv` (one mock nodal contact per exchange).
-- **(B)** Create `seed_cases.json` with 8-10 complaints (complaint ID, wallet, amount, fraud type, state), using synthetic addresses. Give every case its own pre-built trace in `seed_traces.json`, in your contract format, so the dashboard and Network View never wait for the engine. Some should share a downstream wallet so the network feature has something to find.
+- **(B)** Create `seed_cases.json` with 8-10 complaints (complaint ID, wallet, amount, fraud type, state), using synthetic addresses. Give every case its own pre-built trace in `seed_traces.json`, in the contract format (`TraceResponse`), so the dashboard and Network View never wait for the engine. Some should share a downstream wallet so the network feature has something to find.
 - **(A)** Create one **fully scripted case** where the trace clearly ends at an exchange; this is your hero demo. **(B)** uses the same hero wallet (agreed at kickoff) for the New Complaint example.
 
 ### Step 3. Chain adapter (2 hrs)
 **Owner:** A2
 **What:** Fetch and normalize transactions.
 **How:**
-- Call TronGrid: `GET /v1/accounts/{addr}/transactions/trc20?contract_address=TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t&limit=200` (USDT-TRC20; 6 decimals; timestamps in ms).
-- Normalize to `Transfer(tx_hash, from, to, amount, timestamp)`, in the units your contract specifies.
+- Call TronGrid: `GET /v1/accounts/{addr}/transactions/trc20?contract_address=TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t&limit=200` (USDT-TRC20; 6 decimals; timestamps in ms; the contract wants seconds and float token units, so convert here).
+- Normalize to `Transfer(tx_hash, from, to, amount, timestamp)`, in the contract's units: timestamps in Unix epoch **seconds** (UTC), amounts as token-unit floats (`7850.0` = 7,850 USDT), never raw integers with decimals.
 - Always try the cache first; fall back to live; save live results to the cache.
-- Add address-format detection (TRON `T…`, Ethereum `0x…`, Bitcoin `1/3/bc1…`) to show multi-chain routing, even if only TRON is fully implemented.
+- Add address-format detection (TRON `T…`, Ethereum `0x…`, Bitcoin `1/3/bc1…`) to show multi-chain routing, even if only TRON is fully implemented. Chain values must be from the contract's `Chain` enum: `tron, ethereum, bsc, polygon, bitcoin, solana`.
 
 ### Step 4. Tracing engine (3 hrs)
 **Owner:** A4
@@ -159,7 +159,7 @@ chaintrace/
 - Add each outgoing transfer as a graph edge. Stop expanding at: known exchange, mixer, bridge, depth 5, or flows under 1% of the case value.
 - **Pass-through detection:** tag a wallet `intermediary` if it forwards ≥90% of what it receives within ~1 hour.
 - Check balances of leaf nodes; a leaf still holding funds gets an "idle funds" flag.
-- Output a graph as JSON in your contract format: nodes (address, type, label) and edges (tx, amount, time).
+- Output the graph in the contract format (`Graph` in `schemas.py`): nodes (`id` = address, `chain`, `type`, `label`, `hop`, `risk`, `risk_score`, `reasons`, `typology`, `idle_balance`) and edges (`source`, `target`, `tx_hash`, `amount`, `token`, `timestamp`, `edge_type`). Node `type` is one of `victim, scam_wallet, intermediary, bridge, mixer, exchange, unknown`; `hop` is `-1` for victims, `0` for the reported wallet, increasing downstream; `summary.idle_funds` must equal the sum of node `idle_balance`.
 
 ### Step 5. Attribution engine (3 hrs)
 **Owner:** A5
@@ -167,10 +167,10 @@ chaintrace/
 **How:**
 - **Direct match:** destination address found in `labels.csv`.
 - **Sweep heuristic:** if a candidate deposit address receives from many unrelated wallets and forwards its balance to a labeled hot wallet, attribute it to that exchange.
-- **Confidence score:** weighted sum of `label_match`, `sweep_count`, `counterparty_diversity`. Cap heuristic-only results below 90% and tag them `heuristic`.
-- Return a "Nearest VASP" object: exchange, deposit address, hops, amount, time, confidence, evidence list, nodal contact from `vasp_contacts.csv`.
+- **Confidence score:** weighted sum of `label_match`, `sweep_count`, `counterparty_diversity`. Cap heuristic-only results below 0.90 and set `method` to `heuristic`; a direct label match is `deterministic`. Confidence is a 0-1 float.
+- Return a `NearestVASP` object: `vasp`, `deposit_address`, `hops`, `amount`, `timestamp`, `confidence`, `method`, `evidence[]` (never empty), `contact` from `vasp_contacts.csv`. Its `deposit_address` must exist in the graph. Return `null` when no exchange is found.
 
-**End of Day 1 checkpoint:** `POST /trace` with a wallet returns a graph plus a Nearest VASP result for the hero case. This is A's acceptance test; B switches to the real engine at Checkpoint 1 (11.6).
+**End of Day 1 checkpoint:** `POST /api/trace` with a wallet returns a graph plus a Nearest VASP result for the hero case. This is A's acceptance test; B switches to the real engine at Checkpoint 1 (11.6).
 
 ---
 
@@ -183,23 +183,23 @@ chaintrace/
 - **Features per wallet:** age, tx count, in/out ratio, median time-to-forward, unique senders, round-number ratio, fan-in degree.
 - **Training data:** generate a synthetic labeled set (scam collectors vs normal vs exchange-like) using realistic ranges, plus your seed wallets. Be upfront in the UI and slides that the model is trained on synthetic + seed data for the demo.
 - Train XGBoost; map probability to Low/Medium/High/Critical; compute SHAP top-3 reasons ("forwards funds in 4 minutes", "89 unique senders").
-- **Typology:** rule-assisted classifier using signatures: many small deposits + fast consolidation → investment/task scam; many unique tiny senders → sextortion; few large payments + mixer → ransomware.
-- Expose `GET /wallets/{addr}/risk`.
+- **Typology:** rule-assisted classifier using signatures: many small deposits + fast consolidation → `investment_scam` / `task_scam`; many unique tiny senders → `sextortion`; few large payments + mixer → `ransomware`. Allowed typology values: `investment_scam, task_scam, sextortion, ransomware, phishing, darknet, unknown`.
+- Expose `GET /api/wallets/{address}/risk`, returning `WalletRisk` (`address, risk, risk_score, reasons, typology`); `risk_score` is 0 to 1.
 
 ### Step 7. Reports and recommendations (2 hrs)
 **Owner:** B4 (recommendations, freeze notice) + B5 (PDF report)
 **What:** Turn findings into actions.
 **How:**
-- **Recommendation rules:** idle funds found → "act immediately"; VASP found ≥ threshold → "issue freeze/KYC request to X"; mixer reached → "preserve evidence, monitor exits"; bridge reached → "continue on destination chain".
-- **Freeze notice:** text template filled with complaint ID, tx hashes, addresses, amounts, times; request freeze **plus** preservation of KYC, bank, phone and IP data. Leave legal-section references as placeholders.
-- **PDF evidence report (ReportLab):** summary, graph image, transaction table, attribution evidence, methodology and limitations, SHA-256 hash of the report.
+- **Recommendation rules** (output `recommendations[]` of `{priority: urgent|high|normal, action, detail}`): idle funds found → "act immediately"; VASP found ≥ threshold → "issue freeze/KYC request to X"; mixer reached → "preserve evidence, monitor exits"; bridge reached → "continue on destination chain".
+- **Freeze notice:** text template filled with complaint ID, tx hashes, addresses, amounts, times; request freeze **plus** preservation of KYC, bank, phone and IP data. Leave legal-section references as placeholders. Served by `GET /api/cases/{case_id}/freeze-notice` as a `FreezeNotice` (`case_id, to_vasp, to_email, subject, body, requested_actions, status: draft|approved|sent`).
+- **PDF evidence report (ReportLab):** summary, graph image, transaction table, attribution evidence, methodology and limitations, SHA-256 hash of the report. Served by `GET /api/cases/{case_id}/report` as a PDF.
 
 ### Step 8. Alerts and mock integrations (1.5 hrs)
 **Owner:** B6
 **What:** Real-time feel and integration story.
 **How:**
-- `GET /alerts/stream` using SSE. A "Simulate fund movement" button (or a background replay of a recorded transaction) pushes an alert like `FUNDS_MOVED` or `REACHED_VASP`.
-- `POST /integrations/ncrp/complaints`: accepts the NCRP-style payload and starts a trace. `POST /integrations/sahyog/notice`: accepts the freeze notice and returns a mock acknowledgment.
+- `GET /api/alerts/stream` using SSE (event name `alert`, data = `Alert` JSON), plus `GET /api/alerts` for history. A "Simulate fund movement" button calls `POST /api/alerts/simulate` (or a background replay of a recorded transaction) and pushes an alert. Alert types: `FUNDS_MOVED, REACHED_VASP, ENTERED_MIXER, NEW_COMPLAINT_LINKED, HIGH_RISK_WALLET`.
+- `POST /api/integrations/ncrp/complaints`: accepts a `TraceRequest` (NCRP-style payload), starts a trace, returns an `IntegrationAck`. `POST /api/integrations/sahyog/notice`: accepts a `SahyogNoticeRequest` and returns an `IntegrationAck`.
 - Export the OpenAPI spec as the integration contract.
 
 ### Step 9. Frontend (5 hrs)
@@ -207,9 +207,9 @@ chaintrace/
 **What:** The part judges see.
 **How:**
 - **Pages:** (1) Dashboard, (2) New Complaint, (3) Case View, (4) Network View.
-- **Case View:** Cytoscape graph with colors by node type (victim, scam wallet, intermediary, bridge, mixer, exchange); edge thickness = amount; click a node for risk, reasons and transactions. Add a "Nearest VASP" card, a risk badge, a recommendations panel, and **Download Report / Freeze Notice** buttons.
-- **Dashboard (Recharts):** KPI tiles (cases, total amount traced, average time-to-attribution, % with VASP identified), cases by fraud type, top receiving exchanges, a live alert feed.
-- **Network View:** group seed complaints that share downstream wallets into one network graph (use `networkx.connected_components`).
+- **Case View:** Cytoscape graph with colors by node type (victim grey, scam wallet red, intermediary orange, bridge blue, mixer purple, exchange green, unknown white); edge thickness = amount; click a node for risk, reasons and transactions. Add a "Nearest VASP" card, a risk badge, a recommendations panel, and **Download Report / Freeze Notice** buttons.
+- **Dashboard (Recharts):** KPI tiles from `GET /api/dashboard` (`total_cases`, `total_amount_traced`, `avg_time_to_attribution_sec`, `vasp_identified_pct`, `idle_funds_flagged`), `by_fraud_type`, `top_vasps`, `by_state`, and a live alert feed.
+- **Network View:** group seed complaints that share downstream wallets into one network graph (use `networkx.connected_components`), served by `GET /api/networks` as `Network[]`.
 - Use a dark theme, a consistent color legend, and a short animation as the trace builds hop by hop; it makes the speed visible.
 
 ### Step 10. Polish and rehearsal (2 hrs)
@@ -217,7 +217,7 @@ chaintrace/
 **What:** A demo that cannot fail.
 **How:**
 - Add a "Demo Mode" toggle that forces cached data.
-- Mark each result as `LIVE` or `SIMULATED`.
+- Mark each result with its `source` field (`live`, `cached` or `simulated`) as a badge.
 - Prepare 5-6 slides from sections 8 and 9 (A8).
 - Rehearse the script below three times with a timer.
 - Record a screen capture as a backup.
@@ -261,16 +261,16 @@ Cut in this order (last items first): Network View → alerts → ML model (fall
 **Person A: Engine.** Owns everything that *produces* findings: chain data, tracing, attribution, risk/AI. The engine is **stateless**: a complaint goes in, a trace result comes out. No database, no UI.
 **Person B: Product.** Owns everything built *from* the findings: interface, database, recommendations, reports, alerts, mock integrations, seed cases, dashboard, demo mode.
 
-A and B are connected by **one thing only: the contract** you already have, kept in your existing contract file. Every file, folder and endpoint has exactly one owner. Neither person waits for the other: B builds against fixtures, A tests with scripts.
+A and B are connected by **one thing only: the contract** (`CONTRACT.md` and `backend/contract/schemas.py`, version `CONTRACT_VERSION`). Every file, folder and endpoint has exactly one owner. Neither person waits for the other: B builds against fixtures, A tests with scripts.
 
 Tasks are numbered **A1-A8** and **B1-B8**, in the order each person does them. The "Step" column maps each task back to the build reference in sections 6 and 7.
 
 ### 11.1 Rules that keep A and B independent
 
-1. **One shared artifact: the contract.** It is frozen at kickoff. After that it only grows (a new optional field is fine, with a message to the other person). Nothing is renamed or removed, and B never asks A for something the contract does not contain.
+1. **One shared artifact: the contract.** To change it: tell the other person first, edit `schemas.py` and bump `CONTRACT_VERSION`, update `tools/gen_fixtures.py` and run it, run `cd backend && pytest`, then merge together. Prefer additive changes (a new optional field); nothing is renamed or removed without that process. B never asks A for something the contract does not contain.
 2. **One owner per file** (11.2). Never edit the other person's files. If you need a change there, message them.
 3. **A is stateless, B owns persistence.** A never touches the database. B never reads `data/cache/`, `data/labels.csv`, `data/vasp_contacts.csv` or the model file; B only displays what the engine returns.
-4. **B never imports A's code.** B reaches the engine only through its HTTP endpoint, via `backend/engine_client.py`, which has two modes:
+4. **B touches the engine only through the seam.** The seam is `backend/engine.py`: `trace_complaint(req: TraceRequest) -> TraceResponse` and `wallet_risk(address) -> WalletRisk`. B never imports A's other modules (`chains/`, `tracing.py`, `attribution.py`, `risk.py`) and A never changes the seam's signatures. B calls the seam from `main.py`, or reaches it over HTTP via `backend/engine_client.py`, which has two modes:
    - `fixture` (default): returns a pre-built trace from `data/fixtures/trace_hero.json` or `data/seed_traces.json`. B works with no engine at all.
    - `http`: calls the engine (the same server after A merges, or A's laptop before that).
 5. **Each person tests alone.** A: scripts and `pytest`. B: fixtures. Both check their output against the same contract.
@@ -282,13 +282,13 @@ Tasks are numbered **A1-A8** and **B1-B8**, in the order each person does them. 
 | | Person A: Engine | Person B: Product |
 |---|---|---|
 | Build steps | 1 (backend), 2 (cache, labels, contacts, hero case), 3, 4, 5, 6, 10 (slides) | 1 (frontend), 2 (seed cases), 7, 8, 9, 10 (demo mode) |
-| Backend files | `engine.py`, `chains/tron.py`, `tracing.py`, `attribution.py`, `risk.py`, `tests/test_contract.py`, `test_engine.py` | `db.py`, `engine_client.py`, `recommendations.py`, `reports.py`, `alerts.py`, `make_seed_traces.py`, `test_product.py` |
+| Backend files | `engine.py` (the seam; A edits only this and the modules it imports), `chains/tron.py, `tracing.py`, `attribution.py`, `risk.py`, `tests/test_contract.py`, `test_engine.py` | `main.py` (routes), `db.py`, `engine_client.py`, `recommendations.py`, `reports.py`, `alerts.py`, `make_seed_traces.py`, `test_product.py` |
 | Frontend and other | `slides.pptx` | `frontend/` |
 | Data | `data/cache/`, `data/scripts/`, `data/labels.csv`, `data/vasp_contacts.csv`, `data/risk_model.pkl` | `data/seed_cases.json`, `data/seed_traces.json` |
 | Endpoints | trace, wallet risk | cases, complaints, reports, freeze notice, alerts, mock NCRP / SAHYOG |
 | `requirements.txt` | Own block of lines (engine libraries) | Own block of lines (product libraries) |
 | Env vars | `TRONGRID_API_KEY` | `ENGINE_MODE`, `ENGINE_URL`, `VITE_API_BASE` |
-| Shared, frozen after kickoff | `CONTRACT.md`, `backend/contract/`, `backend/main.py`, `data/fixtures/`, `tools/gen_fixtures.py` | same |
+| Shared (change only via 11.1 rule 1) | `CONTRACT.md`, `backend/contract/`, `backend/main.py`, `data/fixtures/`, `tools/gen_fixtures.py` | same |
 | Workload | about 18.5 hrs | about 17.5 hrs |
 | Difficulty | High: graph algorithms, heuristics, ML | Medium: UI, templates, glue |
 | Main risk | Logic bugs, API limits | Time lost on visual polish |
@@ -298,9 +298,9 @@ Tasks are numbered **A1-A8** and **B1-B8**, in the order each person does them. 
 The only shared work.
 
 - Create the repo with the structure from section 5. Create branches `engine` and `product`.
-- Add your existing contract file to `backend/`, and write `data/fixtures/trace_hero.json`: one hand-written example response (about 8 nodes: victim → scam wallet → 2 intermediaries → deposit address → exchange) that matches the contract.
-- Write `backend/main.py` once: the `/api/health` route and every contract route on fixtures (already done in the contract pack). The engine stub in `engine.py` returns the hero example. **After this, nobody edits `main.py`.**
-- Start `requirements.txt` with the base libraries (`fastapi uvicorn httpx networkx pandas`). After that, each person adds lines only in their own block.
+- Add `CONTRACT.md` and `backend/contract/schemas.py`, and `data/fixtures/trace_hero.json`: the hand-written hero response (11 nodes: 3 victims → reported wallet → 2 pass-throughs → deposit address → exchange hot wallet, plus a mixer, a bridge and an Ethereum wallet with idle funds) that matches the contract.
+- Write `backend/main.py` once: the `/api/health` route and every contract route on fixtures (already done in the contract pack). The engine stub in `engine.py` returns the hero example. `main.py` is B's file (routes); A never edits it, and the seam in `engine.py` is A's.
+- `requirements.txt` is the pinned list from the contract pack. After that, each person adds lines only under their own comment block.
 - Agree the constants: hero wallet address, hero complaint ID, backend port 8000, frontend port 5173.
 - **Done when:** the server starts, `/docs` loads, and the hero example matches the contract.
 
@@ -326,7 +326,7 @@ A2 comes before A3 on purpose: the adapter defines the cache format, and the scr
 - *Done when:* the server runs, `/docs` loads, the key returns data, and 3 wallets with sources are listed.
 
 **A2. Chain adapter and cache** (`backend/chains/tron.py`)
-- Call TronGrid as in Step 3. Normalize to `Transfer(tx_hash, from, to, amount, timestamp)`, using the units your contract specifies. Do all conversion here so B never has to.
+- Call TronGrid as in Step 3. Normalize to `Transfer(tx_hash, from, to, amount, timestamp)`, using the contract's units (epoch seconds, float token amounts). Do all conversion here so B never has to.
 - Cache first, then live, and save live results to `data/cache/`. Support a cache-only option that never calls the network.
 - Address-format detection (TRON `T…`, Ethereum `0x…`, Bitcoin `1/3/bc1…`). Only TRON is implemented; others return "unsupported".
 - Run it on the 3 shortlisted wallets to fill the cache.
@@ -340,13 +340,13 @@ A2 comes before A3 on purpose: the adapter defines the cache format, and the scr
 
 **A4. Tracing engine** (`backend/tracing.py`, Step 4 as written)
 - Best-first search, stop rules, pass-through detection, idle-funds check.
-- Output the graph in your contract format. Risk fields use fixed placeholder values until A6, so the output is already valid.
+- Output the graph in the contract format (`TraceResponse`, section 7 step 4 for field rules). Risk fields use fixed placeholder values until A6, so the output is already valid.
 - *Done when:* running the tracer on the hero wallet prints a graph that matches the contract and stops at the exchange. **Optional early peek:** merge to `main` now and tell B; B can switch to `http` mode and see real graphs.
 
 **A5. Attribution and real trace endpoint** (`backend/attribution.py`, `backend/engine.py`, Step 5 as written)
 - Direct match, sweep heuristic, confidence score. Heuristic-only results stay below 90% and are tagged `heuristic`.
 - Build the Nearest VASP result, including the transaction path and the nodal contact. Return an empty result when no exchange is found.
-- Replace the stub in `engine.py` (`trace_complaint`) with the real trace endpoint, including the errors and cache-only behaviour your contract defines.
+- Replace the stub in `engine.py` (`trace_complaint`) with the real trace (keep the signature and return type). The contract defines no error or cache-only fields yet; if needed (e.g. an optional `cache_only` on `TraceRequest`), add them through 11.1 rule 1.
 - *Done when:* the trace endpoint returns a valid response for the hero wallet with a Nearest VASP result (confidence about 0.8-0.9, `heuristic`). This is the end-of-Day-1 acceptance test.
 
 **A6. Risk and typology** (`backend/risk.py`)
@@ -473,4 +473,4 @@ Contract rules live in `CONTRACT.md`. Endpoints are under `/api/...` and the con
 | Frontend scaffold (B1) | PARTIAL | `frontend/` (Vite scaffold only; Tailwind, Cytoscape, Recharts, routes not yet) |
 | A4-A8, B2, B4-B8 | NOT STARTED | n/a |
 
-**Reconciliation notes.** The contract pack's layout won where it differed from section 5: the contract is a package (`contract/schemas.py`, not `contract.py`), the hero example is `data/fixtures/trace_hero.json`, the engine seam is `engine.py`, and `main.py` holds all routes as CONTRACT.md lists. The `routes_engine.py` / `routes_product.py` split was tried and dropped after merging `origin/main`; the API surface was identical. Run: `pip install -r requirements.txt`, then `cd backend && uvicorn main:app --reload --port 8000`.
+**Reconciliation notes.** The contract pack's layout won where it differed from section 5: the contract is a package (`contract/schemas.py`, not `contract.py`), the hero example is `data/fixtures/trace_hero.json`, the engine seam is `engine.py`, and `main.py` holds all routes as CONTRACT.md lists. The `routes_engine.py` / `routes_product.py` split was tried and dropped after merging `origin/main`; the API surface was identical. DEMO.md sections 6-11 were then aligned with CONTRACT.md: `/api` endpoint paths, epoch-second timestamps, the seven node types, `deterministic`/`heuristic` methods, the `live/cached/simulated` source badge, typology and alert enums, the contract change process, and `main.py` owned by B with `engine.py` as the A/B seam. Run: `pip install -r requirements.txt`, then `cd backend && uvicorn main:app --reload --port 8000`.
