@@ -104,3 +104,39 @@ def test_engine_failure_falls_back_to_fixture(client, monkeypatch):
 def test_wallet_risk_reads_seed_nodes(client):
     r = client.get(f"/api/wallets/{TRACES['C-004'].wallet}/risk").json()
     assert r["risk"] == TRACES["C-004"].risk
+
+
+# ---------- B4: recommendations and freeze notice ----------
+def test_hero_recommendations_match_the_fixture():
+    from recommendations import build_recommendations
+    hero = TraceResponse(**json.loads((DATA / "fixtures" / "trace_hero.json").read_text()))
+    assert build_recommendations(hero) == hero.recommendations
+
+
+def test_stored_cases_carry_recommendations(client):
+    c6 = client.get("/api/cases/C-006").json()["recommendations"]
+    assert any(r["action"].startswith("Monitor wallet") for r in c6)
+    c8 = [r["action"] for r in client.get("/api/cases/C-008").json()["recommendations"]]
+    assert c8[0] == "Act on idle funds" and "Continue trace on BSC" in c8
+    new = client.post("/api/trace", json={"complaint_id": "X", "wallet": HERO_WALLET}).json()
+    assert [r["priority"] for r in new["recommendations"]] == ["urgent", "high", "high", "normal"]
+
+
+def test_freeze_notice_is_generated_from_each_case(client):
+    n1 = client.get("/api/cases/C-001/freeze-notice").json()
+    n4 = client.get("/api/cases/C-004/freeze-notice").json()
+    for n, cid in ((n1, "C-001"), (n4, "C-004")):
+        t = TRACES[cid]
+        assert n["to_vasp"] == t.nearest_vasp.vasp and n["to_email"] == t.nearest_vasp.contact
+        assert t.nearest_vasp.deposit_address in n["body"] and "[LEGAL SECTION]" in n["body"]
+        deposit_tx = next(e.tx_hash for e in t.graph.edges if e.target == t.nearest_vasp.deposit_address)
+        assert deposit_tx in n["body"] and "IST" in n["body"] and "UTC" in n["body"]
+    assert n1["body"] != n4["body"] and n1["status"] == "draft"
+
+
+def test_freeze_notice_status_and_missing_vasp(client):
+    assert client.get("/api/cases/C-006/freeze-notice").status_code == 404
+    assert client.get("/api/cases/C-999/freeze-notice").status_code == 404
+    assert client.get("/api/cases/C-003/freeze-notice").json()["status"] == "sent"
+    client.get("/api/cases/C-002/freeze-notice")  # drafting moves an attributed case on
+    assert next(c for c in client.get("/api/cases").json() if c["case_id"] == "C-002")["status"] == "notice_drafted"

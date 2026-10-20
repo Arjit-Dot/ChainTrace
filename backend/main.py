@@ -19,6 +19,7 @@ from sse_starlette.sse import EventSourceResponse
 
 import engine_client
 import store
+from notices import build_freeze_notice
 from contract.schemas import (
     Alert, CaseSummary, DashboardStats, FreezeNotice, IntegrationAck, Network,
     SahyogNoticeRequest, TraceRequest, TraceResponse, WalletRisk, CONTRACT_VERSION,
@@ -52,7 +53,7 @@ def health():
 @app.post("/api/trace", response_model=TraceResponse)
 def trace(req: TraceRequest):
     """Submit a complaint: run the engine, store the result as a new case, return it."""
-    return store.add_case(req, engine_client.trace(req))  # TODO(B4): add recommendations
+    return store.add_case(req, engine_client.trace(req))  # store adds B's recommendations
 
 
 @app.get("/api/wallets/{address}/risk", response_model=WalletRisk)
@@ -76,9 +77,14 @@ def get_case(case_id: str):
 
 @app.get("/api/cases/{case_id}/freeze-notice", response_model=FreezeNotice)
 def freeze_notice(case_id: str):
-    data = load("freeze_notice_hero.json")  # TODO(B): generate from the real case
-    data["case_id"] = case_id
-    return data
+    """Draft the freeze notice from the stored trace. 404 when there is no exchange to freeze."""
+    trace = store.get_trace(case_id)
+    if trace is None:
+        raise HTTPException(404, "Case not found")
+    if trace.nearest_vasp is None:
+        raise HTTPException(404, "No exchange identified for this case: nothing to freeze.")
+    case = store.set_status(case_id, "notice_drafted", only_from={"attributed"})
+    return build_freeze_notice(trace, case)
 
 
 @app.get("/api/cases/{case_id}/report")

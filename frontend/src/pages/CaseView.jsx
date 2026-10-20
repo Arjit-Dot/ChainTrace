@@ -1,6 +1,7 @@
 import { FileDown, FileWarning, Info } from 'lucide-react'
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
+import FreezeNoticeModal from '../components/FreezeNoticeModal'
 import Legend from '../components/Legend'
 import NearestVaspCard from '../components/NearestVaspCard'
 import NodePanel from '../components/NodePanel'
@@ -18,6 +19,7 @@ const btn =
 
 function CaseBody({ trace }) {
   const [selected, setSelected] = useState(null)
+  const [noticeOpen, setNoticeOpen] = useState(false)
   const node = selected && trace.graph.nodes.find((n) => n.id === selected)
 
   return (
@@ -26,8 +28,12 @@ function CaseBody({ trace }) {
         title={`Case ${trace.case_id}`}
         subtitle={`${trace.complaint_id} · ${humanize(trace.fraud_type)} · reported wallet ${shortAddr(trace.wallet, 8)}`}
       >
-        {/* Freeze Notice modal is wired in B4 */}
-        <button disabled title="Freeze notice arrives in B4" className={`${btn} border-emerald-500/50 text-emerald-300`}>
+        <button
+          disabled={!trace.nearest_vasp}
+          onClick={() => setNoticeOpen(true)}
+          title={trace.nearest_vasp ? 'Draft a freeze request to the exchange' : 'No exchange identified: nothing to freeze'}
+          className={`${btn} border-emerald-500/50 text-emerald-300 enabled:hover:bg-emerald-500/10`}
+        >
           <FileWarning className="size-4" /> Freeze Notice
         </button>
         <a href={reportUrl(trace.case_id)} className={`${btn} border-line text-ink hover:bg-panel-2`}>
@@ -73,6 +79,8 @@ function CaseBody({ trace }) {
 
         <RecommendationsPanel items={trace.recommendations} />
       </div>
+
+      {noticeOpen && <FreezeNoticeModal caseId={trace.case_id} onClose={() => setNoticeOpen(false)} />}
     </>
   )
 }

@@ -17,6 +17,7 @@ from typing import List, Optional
 
 from contract.schemas import CaseSummary, TraceRequest, TraceResponse
 from linking import case_groups
+from recommendations import with_recommendations
 
 DATA = Path(__file__).resolve().parents[1] / "data"
 _lock = threading.Lock()
@@ -50,7 +51,7 @@ def init(reset: bool = False) -> None:
             con.execute("DELETE FROM cases")
         for c in cases:
             summary = CaseSummary(**c)
-            trace = TraceResponse(**traces[summary.case_id])
+            trace = with_recommendations(TraceResponse(**traces[summary.case_id]))
             con.execute("INSERT OR REPLACE INTO cases VALUES (?, ?, ?, ?)",
                         (summary.case_id, _seq(summary.case_id),
                          summary.model_dump_json(), trace.model_dump_json()))
@@ -85,11 +86,11 @@ def all_traces() -> dict:
 
 # ---------- writes ----------
 def add_case(req: TraceRequest, trace: TraceResponse) -> TraceResponse:
-    """Store an engine result as a new case (next C-NNN id) and return the stored trace."""
+    """Store an engine result as a new case (next C-NNN id, B's recommendations added) and return it."""
     with _lock, _connect() as con:
         seq = (con.execute("SELECT MAX(seq) FROM cases").fetchone()[0] or 0) + 1
         case_id = f"C-{seq:03d}"
-        trace = trace.model_copy(update={"case_id": case_id})
+        trace = with_recommendations(trace.model_copy(update={"case_id": case_id}))
         summary = CaseSummary(
             case_id=case_id,
             complaint_id=req.complaint_id,
@@ -107,6 +108,19 @@ def add_case(req: TraceRequest, trace: TraceResponse) -> TraceResponse:
         con.execute("INSERT INTO cases VALUES (?, ?, ?, ?)",
                     (case_id, seq, summary.model_dump_json(), trace.model_dump_json()))
     return trace
+
+
+def set_status(case_id: str, status: str, only_from: Optional[set] = None) -> Optional[CaseSummary]:
+    """Move a case to `status` (optionally only if it is currently in `only_from`)."""
+    with _lock, _connect() as con:
+        row = con.execute("SELECT summary FROM cases WHERE case_id = ?", (case_id,)).fetchone()
+        if row is None:
+            return None
+        summary = CaseSummary.model_validate_json(row[0])
+        if only_from is None or summary.status in only_from:
+            summary = summary.model_copy(update={"status": status})
+            con.execute("UPDATE cases SET summary = ? WHERE case_id = ?", (summary.model_dump_json(), case_id))
+    return summary
 
 
 def _network_for(con: sqlite3.Connection, case_id: str, trace: TraceResponse) -> Optional[str]:
