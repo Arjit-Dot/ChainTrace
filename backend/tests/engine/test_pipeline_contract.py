@@ -47,7 +47,7 @@ def test_the_hero_trace_is_valid_fast_and_matches_its_expected_shape():
     t, seconds = timed_trace(HERO, 12000.0)
     assert_trace_invariants(t)
     assert seconds < TIME_LIMIT and t.nearest_vasp.vasp == "Example Exchange A" and t.typology == "investment_scam"
-    assert (t.summary.hops, t.summary.nodes, t.summary.total_traced) == (3, 9, 11800.0) and t.notes is None
+    assert (t.summary.hops, t.summary.nodes, t.summary.total_traced, t.summary.idle_funds) == (3, 10, 11800.0, 3720.0) and t.notes is None
 
 
 def test_the_real_second_hop_wallets_all_pass_too():

@@ -25,6 +25,9 @@ LABELED = {
     "mixer": ("Critical", 0.91, "Known mixing service"),
 }
 CARRIES_TYPOLOGY = {"High", "Critical"}
+# A wallet on another chain that received money crossing a bridge from the traced flow. Not the model (which only reads
+# TRON wallets): a fixed, context-based rule, the same values as the hero fixture.
+BRIDGED = ("High", 0.74)
 
 
 def _fixed(node: Node) -> Optional[Tuple[str, float, str]]:
@@ -48,8 +51,16 @@ def score_graph(graph: Graph, adapter, wallet: str) -> Tuple[Graph, str]:
     found = classify_wallet(wallet, root_transfers, graph)
     typology = found.typology
 
+    types = {n.id: n.type for n in graph.nodes}
+    bridged = {e.target for e in graph.edges if types.get(e.source) == "bridge"}
+    sends = {e.source for e in graph.edges}
     nodes = []
     for n in graph.nodes:
+        if n.hop >= 1 and n.chain != "tron" and n.id in bridged:
+            reasons = ["Received bridged funds from the traced flow"] + (["No outflow yet"] if n.id not in sends else [])
+            nodes.append(n.model_copy(update={"risk": BRIDGED[0], "risk_score": BRIDGED[1], "reasons": reasons,
+                                              "typology": typology}))
+            continue
         if n.hop == 0 and typology != "unknown":
             nodes.append(n.model_copy(update={"typology": typology, "reasons": found.reasons}))
             continue

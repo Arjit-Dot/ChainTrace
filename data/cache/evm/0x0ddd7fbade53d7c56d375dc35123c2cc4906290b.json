@@ -1,0 +1,16 @@
+{
+  "address": "0x0ddd7fbade53d7c56d375dc35123c2cc4906290b",
+  "chain": "ethereum",
+  "origin": "scripted-evm",
+  "note": "SIMULATED: seeded, not from a real chain",
+  "data": [
+    {
+      "tx_hash": "60587ef3c8fe03e0efa7f2dd8cd98588a753e3afbe28b99d8148666a1e5983e2",
+      "from": "0x847cf53110ac0658ff055f3902b4025be7dd6642",
+      "to": "0x0ddd7fbade53d7c56d375dc35123c2cc4906290b",
+      "amount": 3720.0,
+      "timestamp": 1792400900,
+      "token": "USDT"
+    }
+  ]
+}

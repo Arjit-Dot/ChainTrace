@@ -9,7 +9,10 @@ Added on top, so attribution has something to find:
   - the bridge exit (TRON -> Ethereum) goes to data/cache/bridge_legs.json, because the
     TRON adapter only sees the TRON side.
 
-Run from the repo root:   python data/scripts/make_hero_cache.py
+Also writes the Ethereum side of the hero's bridge crossing to data/cache/evm/ (SIMULATED, read by
+engine/chains/evm_stub.py): one wallet that received the bridged 3,720 USDT and has not moved it.
+
+Run from the repo root:   python data/scripts/make_hero_cache.py [--evm-only]
 """
 import hashlib
 import json
@@ -42,8 +45,27 @@ def raw_transfer(tx_hash, src, dst, amount, ts):
             "from": src, "to": dst, "type": "Transfer", "value": str(round(amount * 10 ** 6))}
 
 
+def write_evm_stub(hero):
+    """The Ethereum wallet at the end of the bridge leg holds its funds: seeded transfers, origin scripted-evm."""
+    leg = next(x for x in json.loads((CACHE / "bridge_legs.json").read_text()).values())
+    wallet = leg["to"]
+    exit_from = evm_addr("example-bridge-ethereum-exit")
+    doc = {"address": wallet, "chain": leg["dest_chain"], "origin": "scripted-evm", "note": "SIMULATED: seeded, not from a real chain",
+           "data": [{"tx_hash": leg["tx_hash"], "from": exit_from, "to": wallet, "amount": leg["amount"],
+                     "timestamp": leg["timestamp"], "token": leg["token"]}]}
+    (CACHE / "evm").mkdir(exist_ok=True)
+    (CACHE / "evm" / f"{wallet.lower()}.json").write_text(json.dumps(doc, indent=2) + "\n")
+    print(f"wrote data/cache/evm/{wallet.lower()}.json")
+
+
+def evm_addr(seed: str) -> str:
+    return "0x" + hashlib.sha256(seed.encode()).hexdigest()[:40]
+
+
 def main():
     hero = json.loads(FIXTURE.read_text())
+    if "--evm-only" in sys.argv:
+        return write_evm_stub(hero)
     chain = {n["id"]: n["chain"] for n in hero["graph"]["nodes"]}
     deposit = hero["nearest_vasp"]["deposit_address"]
     hot = next(e["target"] for e in hero["graph"]["edges"] if e["source"] == deposit)
@@ -80,6 +102,7 @@ def main():
         adapter.write_cache(addr, items, origin="scripted-hero")
     (CACHE / "bridge_legs.json").write_text(json.dumps(bridge_legs, indent=2))
     print(f"wrote {len(by_addr)} scripted cache files ({len(transfers)} transfers) and bridge_legs.json")
+    write_evm_stub(hero)
 
 
 if __name__ == "__main__":

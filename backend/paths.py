@@ -20,6 +20,8 @@ REPLAY_JSON = SCENARIOS / "replay_movements.json"
 
 CACHE = DATA / "cache"                    # raw TronGrid responses
 TRON_CACHE = CACHE / "tron"
+EVM_CACHE = CACHE / "evm"                 # seeded (SIMULATED) transfers on other chains
+BRIDGE_LEGS = CACHE / "bridge_legs.json"  # bridge exits: the TRON-side tx -> the wallet that received on the other chain
 SCRIPTS = DATA / "scripts"
 MODELS = DATA / "models"                  # trained risk model
 MODEL_PKL = MODELS / "risk_model.pkl"

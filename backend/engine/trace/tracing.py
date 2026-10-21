@@ -7,6 +7,7 @@ attribution (`nearest_vasp`) is A5.
 """
 import csv
 import heapq
+import json
 import sys
 import time
 from dataclasses import dataclass
@@ -14,8 +15,9 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
 from contract.schemas import Edge, Graph, Node, TraceRequest, TraceResponse, TraceSummary
+from engine.chains.evm_stub import EvmStubAdapter
 from engine.chains.tron import Transfer, TronAdapter
-from paths import LABELS_CSV
+from paths import BRIDGE_LEGS, LABELS_CSV
 
 
 STOP_TYPES = {"exchange", "bridge", "mixer"}
@@ -46,6 +48,11 @@ def load_labels(path: Path = LABELS_CSV) -> Dict[str, Tuple[str, str]]:
     return out
 
 
+def load_bridge_legs(path: Path = BRIDGE_LEGS) -> Dict[str, dict]:
+    """TRON-side transfer into a bridge (tx hash) -> where the money came out on the other chain. Seeded, SIMULATED."""
+    return json.loads(Path(path).read_text()) if Path(path).exists() else {}
+
+
 def is_pass_through(transfers: List[Transfer], addr: str, arrival_ts: int, arrived: float) -> bool:
     """True if `addr` forwards >= 90% of `arrived` within an hour of `arrival_ts`."""
     if arrived <= 0:
@@ -65,14 +72,17 @@ def trace(wallet: str, adapter: TronAdapter, case_value: Optional[float] = None,
           max_depth: int = MAX_DEPTH, min_share: float = MIN_SHARE,
           labels: Optional[Dict[str, Tuple[str, str]]] = None, max_expanded: int = MAX_EXPANDED,
           time_budget: float = TIME_BUDGET_SEC, stats: Optional[TraceStats] = None,
-          clock: Callable[[], float] = time.monotonic, payment_tx: Optional[str] = None) -> Graph:
+          clock: Callable[[], float] = time.monotonic, payment_tx: Optional[str] = None,
+          bridge_legs: Optional[Dict[str, dict]] = None, evm=None) -> Graph:
     labels = load_labels() if labels is None else labels
     stats = TraceStats() if stats is None else stats
     started = clock()
+    legs = load_bridge_legs() if bridge_legs is None else bridge_legs
+    evm = EvmStubAdapter() if evm is None else evm
 
-    def history(addr: str) -> List[Transfer]:
+    def history(addr: str, chain: str = "tron") -> List[Transfer]:
         try:
-            return adapter.transfers(addr)[0]
+            return (adapter if chain == "tron" else evm).transfers(addr)[0]
         except (LookupError, ValueError):  # uncached offline or not a TRON address: no history, do not crash
             return []
 
@@ -110,7 +120,22 @@ def trace(wallet: str, adapter: TronAdapter, case_value: Optional[float] = None,
             continue
         expanded.add(addr)
         hop = nodes[addr].hop
-        if hop >= max_depth or addr in labels:
+        if hop >= max_depth:
+            continue
+        if addr in labels:
+            if labels[addr][1] == "bridge":                      # money that crossed a bridge we have a seeded exit for
+                for e in [e for e in edges.values() if e.target == addr and e.tx_hash in legs and legs[e.tx_hash]["bridge"] == addr]:
+                    leg = legs[e.tx_hash]
+                    dest, chain = leg["to"], leg["dest_chain"]
+                    if dest not in nodes:
+                        nodes[dest] = Node(id=dest, chain=chain, type="unknown", hop=hop + 1,
+                                           label=f"{chain.capitalize()}-side wallet (bridged funds)")
+                        arrival[dest] = (leg["timestamp"], leg["amount"])
+                        counter += 1
+                        heapq.heappush(heap, (-leg["amount"], -leg["timestamp"], counter, dest))
+                    edges.setdefault(f"{leg['tx_hash']}:{addr}:{dest}", Edge(
+                        source=addr, target=dest, tx_hash=leg["tx_hash"], amount=float(leg["amount"]), token=leg.get("token", "USDT"),
+                        timestamp=int(leg["timestamp"]), edge_type="bridge"))
             continue
         if addr != wallet:                   # biggest flows go first, so what is cut is the smallest
             if stats.expanded >= max_expanded:
@@ -120,7 +145,7 @@ def trace(wallet: str, adapter: TronAdapter, case_value: Optional[float] = None,
                 stats.stopped = "time budget"
                 break
             stats.expanded += 1
-        hist = [t for t in history(addr) if t.from_addr != t.to_addr] if addr != wallet else root_hist
+        hist = [t for t in history(addr, nodes[addr].chain) if t.from_addr != t.to_addr] if addr != wallet else root_hist
         since, arrived = arrival[addr]
         outgoing = [t for t in hist if t.from_addr == addr and t.timestamp >= since and t.amount >= floor]
         if addr != wallet and not is_pass_through(hist, addr, since, arrived):
@@ -130,7 +155,7 @@ def trace(wallet: str, adapter: TronAdapter, case_value: Optional[float] = None,
         for t in outgoing:
             entity, ltype = labels.get(t.to_addr, (None, None))
             if t.to_addr not in nodes:
-                nodes[t.to_addr] = Node(id=t.to_addr, type=ltype or "unknown", label=entity, hop=hop + 1)
+                nodes[t.to_addr] = Node(id=t.to_addr, chain=nodes[addr].chain, type=ltype or "unknown", label=entity, hop=hop + 1)
                 arrival[t.to_addr] = (t.timestamp, t.amount)
                 counter += 1
                 heapq.heappush(heap, (-t.amount, -t.timestamp, counter, t.to_addr))
@@ -143,7 +168,7 @@ def trace(wallet: str, adapter: TronAdapter, case_value: Optional[float] = None,
             if clock() - started > time_budget:
                 stats.unchecked_leaves += 1
                 continue
-            node.idle_balance = idle_balance(root_hist if addr == wallet else history(addr), addr)
+            node.idle_balance = idle_balance(root_hist if addr == wallet else history(addr, node.chain), addr)
 
     ordered = sorted(nodes.values(), key=lambda n: (n.hop, n.id))
     return Graph(nodes=ordered, edges=sorted(edges.values(), key=lambda e: (e.timestamp, e.tx_hash)))
