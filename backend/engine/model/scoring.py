@@ -113,7 +113,7 @@ def score_wallet(f: WalletFeatures, model_path: Optional[Path] = None, truncated
         inner = _score(f, model_path, exclude=TRUNCATED_UNRELIABLE)
         score = min(inner.score, TRUNCATED_CAP)
         others = [r for r in inner.reasons if r != NO_SIGNAL_REASON]
-        return RiskScore(level_for(score), score, [TRUNCATED_REASON] + others, inner.method)
+        return RiskScore(level_for(score), score, [TRUNCATED_REASON] + others[:MAX_REASONS - 1], inner.method)
     return _score(f, model_path)
 
 

@@ -70,7 +70,7 @@ complaint ──► 1. Trace ──► 2. Attribute ──► 3. Score risk ─�
 |---|---|---|---|
 | **1. Trace** | Best-first search forward from the reported wallet. Stops at known exchanges, bridges and mixers, at depth 5, and for flows under 1% of the case value. Tags a wallet `intermediary` if it forwards 90% or more of what it receives within about an hour. Flags leaf wallets still holding money as **idle funds**. | `backend/engine/trace/tracing.py` | Done |
 | **2. Attribute** | Names the exchange. A **direct match** means the trace reached an address in the label list (`deterministic`, confidence 0.95). The **sweep heuristic** treats a wallet with many different senders that forwards its balance to a labeled hot wallet as a customer deposit address (`heuristic`, confidence capped below 0.90). | `backend/engine/trace/attribution.py` | Done |
-| **3. Score risk** | Risk level (Low to Critical), reasons and fraud type for each downstream wallet. The reported wallet is not scored: a victim already named it. | `backend/engine/model/` | Done in traces (the standalone risk endpoint is Step 6.7); see [section 7](#7-the-risk-model-features-selection-training) |
+| **3. Score risk** | Risk level (Low to Critical), reasons and fraud type for each downstream wallet. The reported wallet is not scored: a victim already named it. | `backend/engine/model/` | Done; see [section 7](#7-the-risk-model-features-selection-training) |
 | **4. Rank urgency** | Case-level rule set, first match wins (see [section 8](#82-urgency-the-badge-that-matters-most)). | `backend/product/recommendations.py` | Done |
 | **5. Act** | Recommendations panel and a freeze-notice draft built from a template. A PDF evidence report is generated from the stored case. | `backend/product/` | Done (freeze notice, recommendations, PDF report) |
 | **6. Monitor** | A watcher polls the leaf and idle wallets every 30 seconds. When one moves it re-traces, re-runs attribution and urgency, updates the "as of" time and pushes an alert. | `backend/product/alerts.py` | Done (demo feed is a recorded replay) |
@@ -236,7 +236,7 @@ All routes live in `main.py`; interactive docs are at <http://localhost:8000/doc
 | GET | `/api/cases/{id}/freeze-notice` | Draft the freeze notice (404 when no exchange was found) |
 | GET | `/api/cases/{id}/report` | The PDF evidence report for the case |
 | POST | `/api/cases/{id}/simulate-movement` | Demo: replay a recorded movement of the idle funds |
-| GET | `/api/wallets/{address}/risk` | Risk of one wallet (still a fixture; the real one is Step 6.7). Traced wallets are already scored inside `/api/trace` |
+| GET | `/api/wallets/{address}/risk` | Risk of one TRON wallet, scored from its own transfers (labeled exchange, bridge and mixer addresses get fixed values; an unknown or non-TRON address is Low with a reason saying it was not scored). Traced wallets are also scored inside `/api/trace` |
 | GET | `/api/alerts`, `/api/alerts/stream` | Alert history and the live stream |
 | GET | `/api/dashboard`, `/api/networks` | Figures and linked-complaint groups computed from the stored cases |
 | POST | `/api/alerts/simulate` | Push the next scripted alert for a case (SIMULATED) |
@@ -287,7 +287,7 @@ Not built yet: the Demo Mode toggle (disabled in the sidebar). The trace graph a
 
 ## 7. The risk model: features, selection, training
 
-> **Status: Step 6 is wired into traces** (`engine/model/risk.py`); the standalone `GET /api/wallets/{address}/risk` endpoint still returns a fixture (Step 6.7). Every traced downstream wallet now carries a risk level, score and reasons, and the case carries a fraud type. The model is trained on synthetic data and its reasons are our assumptions; see the limits below.
+> **Status: Step 6 is done.** Every traced downstream wallet carries a risk level, score and reasons, the case carries a fraud type, and `GET /api/wallets/{address}/risk` scores any TRON address on its own (`engine/model/risk.py`). On its own, a wallet's age is measured to its last transfer (there is no trace to say when funds arrived). The model is trained on synthetic data and its reasons are our assumptions; see the limits below.
 
 ### 7.1 What it answers
 
@@ -454,7 +454,7 @@ To check the frontend compiles: `cd frontend && npm run build`.
 | 4: tracing engine | Done |
 | 5: attribution | Done |
 | Live monitoring, urgency, contract v1.1.0 | Done |
-| 6: risk model and typology | In progress: scoring is wired into traces; the standalone risk endpoint and final checks are left |
+| 6: risk model and typology | Done (trained on synthetic data; see section 7 for the limits) |
 | 7: PDF report, freeze notice, recommendations | Done |
 | 8: alerts, mock NCRP and SAHYOG, API spec (`docs/openapi.json`) | Done |
 | 9: dashboard, Network View, trace animation | Done |

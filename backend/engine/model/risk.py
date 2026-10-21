@@ -9,9 +9,10 @@ Put risk scores, reasons and fraud typology onto a traced graph (Step 6.6).
                                 history was only partly fetched is capped at Medium (see scoring.py)
 The case typology comes from the reported wallet's behaviour; High and Critical wallets carry it.
 """
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from contract.schemas import Graph, Node
+from engine.chains.tron import detect_chain, is_tron_address
 from engine.model.features import extract_features
 from engine.model.scoring import NO_HISTORY_REASON, score_wallet
 from engine.model.typology import classify_wallet
@@ -70,3 +71,31 @@ def score_graph(graph: Graph, adapter, wallet: str) -> Tuple[Graph, str]:
             "risk": r.level, "risk_score": r.score, "reasons": r.reasons,
             "typology": typology if r.level in CARRIES_TYPOLOGY else "unknown"}))
     return Graph(nodes=nodes, edges=graph.edges), typology
+
+
+def wallet_risk_for(address: str, adapter, labels: Dict[str, Tuple[str, str]],
+                    deposit_addresses=frozenset()) -> Tuple[str, float, List[str], str]:
+    """(risk, score, reasons, typology) for one address on its own, for GET /api/wallets/{address}/risk.
+
+    Labeled exchange, bridge and mixer addresses get the fixed values; anything else is scored from its own transfers.
+    There is no trace here, so age is measured to the wallet's last transfer, and the typology (only given to High and
+    Critical wallets) comes from the wallet's own payments with no mixer information. An address we cannot score (not a
+    TRON address, or no history available) is Low with a reason saying why: the contract has no 'unknown' level."""
+    if not is_tron_address(address):
+        chain = detect_chain(address)
+        why = f"this is a {chain.capitalize()} address and only TRON wallets can be scored" if chain else "not a valid wallet address"
+        return "Low", 0.0, [f"Not scored: {why}"], "unknown"
+    label = labels.get(address)
+    if label:
+        kind = label[1]
+        key = "exchange_deposit" if kind == "exchange" and address in deposit_addresses else "exchange_hot" if kind == "exchange" else kind
+        risk, score, reason = LABELED[key]
+        return risk, score, [reason], "unknown"
+    try:
+        transfers = adapter.transfers(address)[0]
+    except (LookupError, ValueError):
+        return "Low", 0.0, [NO_HISTORY_REASON], "unknown"
+    truncated = bool(getattr(adapter, "history_truncated", lambda a: False)(address))
+    r = score_wallet(extract_features(address, transfers), truncated=truncated)
+    typology = classify_wallet(address, transfers).typology if r.level in CARRIES_TYPOLOGY else "unknown"
+    return r.level, r.score, r.reasons, typology

@@ -79,10 +79,18 @@ def trace_complaint(req: TraceRequest) -> TraceResponse:
 
 
 def wallet_risk(address: str) -> WalletRisk:
-    """Risk level, score, reason codes and typology for one wallet. TODO(A): replace the stub."""
-    data = _load("wallet_risk_hero.json")
-    data["address"] = address
-    return WalletRisk(**data)
+    """Risk level, score, reason codes and typology for one wallet, from its own transfers (see model/risk.py).
+
+    TRACING=fixture returns the hero fixture instead, like trace_complaint."""
+    if os.getenv("TRACING", "real") != "real":
+        data = _load("wallet_risk_hero.json")
+        data["address"] = address
+        return WalletRisk(**data)
+    from engine.model.risk import wallet_risk_for
+    from engine.trace.attribution import deposit_addresses
+    from engine.trace.tracing import load_labels
+    risk, score, reasons, typology = wallet_risk_for(address, _adapter(), load_labels(), deposit_addresses())
+    return WalletRisk(address=address, risk=risk, risk_score=score, reasons=reasons, typology=typology)
 
 
 def new_transfers(addresses: List[str], since_ts: int) -> List[Transfer]:
