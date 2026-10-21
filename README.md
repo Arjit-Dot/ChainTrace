@@ -643,3 +643,32 @@ The left menu has **Inbox**, **Dashboard** and **Networks**. A number on Inbox c
 7. **Report and cease.** Download the evidence report, draft the freeze, hold and takedown requests, and approve and send them. The tracker moves to *Action initiated*.
 8. **Refer.** Download the dossier, record the referral to the agency, and leave any arrest to them.
 9. **Close.** Close the complaint. The dashboard shows the case as Closed, and the citizen is pointed to the 1930 helpline.
+
+### 12.10 How the trace works, and where it stops
+
+**The trace is best-first search, not breadth-first.** Breadth-first search would read wallets level by level. This one keeps a priority queue and always reads next the wallet that received the **largest, then most recent**, transfer. Starting from the reported wallet it repeats:
+
+1. Take the next wallet and read its outgoing USDT transfers from the blockchain. This is public data, so no credentials are involved.
+2. Turn each transfer into an edge and each receiver into a node, and queue the receivers. A wallet already seen is never read twice, so loops end.
+3. Stop expanding at a labelled **exchange, bridge, mixer or DEX pool**, at **depth 5**, and for flows under **1%** of the case value.
+4. Read at most **40 wallets in 30 seconds**. Largest-first means that budget is spent on the money that matters most.
+5. Tag a wallet that forwards 90% or more of what it received within an hour as an **intermediary**, the usual pattern of a mule wallet.
+6. Check the leaf wallets for an **idle balance**.
+
+The whole on-chain trace runs in one go. It does not pause, and it needs no manual input.
+
+**Where it stops, and why.** A blockchain is public, but an exchange's customer records and a bank's accounts are not. At a labelled exchange deposit address the chain ends: the trace can name the exchange but not the account holder, whose identity sits in the exchange's records and can only be reached by a legal request. A bank account is not on a chain at all. These are the points where a person has to ask an institution, and where the work passes from the tracer to the officer.
+
+**What happens at that boundary.** The investigation layer takes over, and it is separate from the tracer:
+
+- **The officer is the one who pauses.** The leads panel says whom to ask (the exchange, the bank, the telecom operator, the token issuer) and what to ask for. The officer approves each letter before it can be sent.
+- **A reply adds identifiers, not graph.** What an institution answers (a registered phone, an email, a device, a mule bank account) is added to the case's identifier ledger and opens new leads. The next question follows from the last answer.
+- **Banks are not traced through.** The graph shows the on-chain money only. A bank account appears as an identifier and an outcome, with the freeze or lien request it needs, and as a suspected mule. Where the money went after a bank account is only known from what the bank replies.
+- **The demo replies are fictional.** The chains of "money moved on to another account" in the demo are invented to show the workflow, and stop after two bank accounts with a cash withdrawal. No real bank data is used or implied.
+
+**What this build does not do yet.**
+
+- It does not follow money through a bank. That needs the bank's records, which only the bank can supply.
+- A wallet named in a reply does not start a new trace by itself. An officer would trace it from there as a new step.
+- A real reply would have to be entered by the officer, since nothing is received automatically. The demo simulates the reply with a button.
+
