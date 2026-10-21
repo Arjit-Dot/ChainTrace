@@ -1,0 +1,1794 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ChainTrace API",
+    "version": "1.1.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/trace": {
+      "post": {
+        "summary": "Trace",
+        "description": "Submit a complaint: run the engine, store the result as a new case, push alerts, return it.",
+        "operationId": "trace_api_trace_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TraceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TraceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/wallets/{address}/risk": {
+      "get": {
+        "summary": "Risk",
+        "operationId": "risk_api_wallets__address__risk_get",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Address"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletRisk"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cases": {
+      "get": {
+        "summary": "List Cases",
+        "operationId": "list_cases_api_cases_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CaseSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Cases Api Cases Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cases/{case_id}": {
+      "get": {
+        "summary": "Get Case",
+        "operationId": "get_case_api_cases__case_id__get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TraceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cases/{case_id}/freeze-notice": {
+      "get": {
+        "summary": "Freeze Notice",
+        "description": "Draft the freeze notice from the stored trace. 404 when there is no exchange to freeze.",
+        "operationId": "freeze_notice_api_cases__case_id__freeze_notice_get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreezeNotice"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cases/{case_id}/report": {
+      "get": {
+        "summary": "Report",
+        "description": "PDF evidence report built from the stored trace. The footer hash is also sent as X-Evidence-SHA256.",
+        "operationId": "report_api_cases__case_id__report_get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/pdf": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard": {
+      "get": {
+        "summary": "Dashboard",
+        "operationId": "dashboard_api_dashboard_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardStats"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/networks": {
+      "get": {
+        "summary": "Networks",
+        "operationId": "networks_api_networks_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Network"
+                  },
+                  "type": "array",
+                  "title": "Response Networks Api Networks Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alerts": {
+      "get": {
+        "tags": [
+          "alerts"
+        ],
+        "summary": "Alert History",
+        "operationId": "alert_history_api_alerts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Alert"
+                  },
+                  "type": "array",
+                  "title": "Response Alert History Api Alerts Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alerts/stream": {
+      "get": {
+        "tags": [
+          "alerts"
+        ],
+        "summary": "Alert Stream",
+        "operationId": "alert_stream_api_alerts_stream_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alerts/simulate": {
+      "post": {
+        "tags": [
+          "alerts"
+        ],
+        "summary": "Simulate Alert",
+        "description": "Demo button: push the next scripted alert for a case (default C-001) to every open stream. SIMULATED.",
+        "operationId": "simulate_alert_api_alerts_simulate_post",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Alert"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/integrations/ncrp/complaints": {
+      "post": {
+        "tags": [
+          "integrations (simulated)"
+        ],
+        "summary": "Ncrp Complaint",
+        "operationId": "ncrp_complaint_api_integrations_ncrp_complaints_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TraceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationAck"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/integrations/sahyog/notice": {
+      "post": {
+        "tags": [
+          "integrations (simulated)"
+        ],
+        "summary": "Sahyog Notice",
+        "operationId": "sahyog_notice_api_integrations_sahyog_notice_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SahyogNoticeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationAck"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cases/{case_id}/simulate-movement": {
+      "post": {
+        "summary": "Simulate Movement",
+        "description": "Demo: replay a recorded movement of this case's idle funds (SIMULATED), re-check the case now, push alerts.",
+        "operationId": "simulate_movement_api_cases__case_id__simulate_movement_post",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Alert"
+                  },
+                  "title": "Response Simulate Movement Api Cases  Case Id  Simulate Movement Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Alert": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "FUNDS_MOVED",
+              "REACHED_VASP",
+              "ENTERED_MIXER",
+              "NEW_COMPLAINT_LINKED",
+              "HIGH_RISK_WALLET",
+              "URGENCY_CHANGED"
+            ],
+            "title": "Type"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "critical"
+            ],
+            "title": "Severity"
+          },
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "timestamp": {
+            "type": "integer",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "severity",
+          "case_id",
+          "message",
+          "timestamp"
+        ],
+        "title": "Alert"
+      },
+      "CaseSummary": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "complaint_id": {
+            "type": "string",
+            "title": "Complaint Id"
+          },
+          "wallet": {
+            "type": "string",
+            "title": "Wallet"
+          },
+          "amount_lost": {
+            "type": "number",
+            "title": "Amount Lost"
+          },
+          "fraud_type": {
+            "type": "string",
+            "title": "Fraud Type"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          },
+          "risk": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "Low",
+                  "Medium",
+                  "High",
+                  "Critical"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk"
+          },
+          "urgency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "act_now",
+                  "act_soon",
+                  "preserve"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Urgency"
+          },
+          "urgency_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Urgency Reasons",
+            "default": []
+          },
+          "urgency_as_of": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Urgency As Of"
+          },
+          "monitoring": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Monitoring"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "tracing",
+              "attributed",
+              "notice_drafted",
+              "notice_sent",
+              "unresolved"
+            ],
+            "title": "Status"
+          },
+          "vasp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vasp"
+          },
+          "time_to_attribution_sec": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time To Attribution Sec"
+          },
+          "network_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Network Id"
+          },
+          "reported_at": {
+            "type": "integer",
+            "title": "Reported At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "complaint_id",
+          "wallet",
+          "amount_lost",
+          "fraud_type",
+          "state",
+          "status",
+          "reported_at"
+        ],
+        "title": "CaseSummary"
+      },
+      "CountItem": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "count"
+        ],
+        "title": "CountItem"
+      },
+      "DashboardStats": {
+        "properties": {
+          "total_cases": {
+            "type": "integer",
+            "title": "Total Cases"
+          },
+          "total_amount_lost": {
+            "type": "number",
+            "title": "Total Amount Lost"
+          },
+          "total_amount_traced": {
+            "type": "number",
+            "title": "Total Amount Traced"
+          },
+          "vasp_identified_pct": {
+            "type": "number",
+            "title": "Vasp Identified Pct"
+          },
+          "avg_time_to_attribution_sec": {
+            "type": "number",
+            "title": "Avg Time To Attribution Sec"
+          },
+          "idle_funds_flagged": {
+            "type": "number",
+            "title": "Idle Funds Flagged"
+          },
+          "by_fraud_type": {
+            "items": {
+              "$ref": "#/components/schemas/CountItem"
+            },
+            "type": "array",
+            "title": "By Fraud Type"
+          },
+          "top_vasps": {
+            "items": {
+              "$ref": "#/components/schemas/CountItem"
+            },
+            "type": "array",
+            "title": "Top Vasps"
+          },
+          "by_state": {
+            "items": {
+              "$ref": "#/components/schemas/CountItem"
+            },
+            "type": "array",
+            "title": "By State"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_cases",
+          "total_amount_lost",
+          "total_amount_traced",
+          "vasp_identified_pct",
+          "avg_time_to_attribution_sec",
+          "idle_funds_flagged",
+          "by_fraud_type",
+          "top_vasps",
+          "by_state"
+        ],
+        "title": "DashboardStats"
+      },
+      "Edge": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          },
+          "tx_hash": {
+            "type": "string",
+            "title": "Tx Hash"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "token": {
+            "type": "string",
+            "title": "Token",
+            "default": "USDT"
+          },
+          "timestamp": {
+            "type": "integer",
+            "title": "Timestamp"
+          },
+          "edge_type": {
+            "type": "string",
+            "enum": [
+              "transfer",
+              "bridge",
+              "swap",
+              "mixer_in"
+            ],
+            "title": "Edge Type",
+            "default": "transfer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "target",
+          "tx_hash",
+          "amount",
+          "timestamp"
+        ],
+        "title": "Edge"
+      },
+      "FreezeNotice": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "to_vasp": {
+            "type": "string",
+            "title": "To Vasp"
+          },
+          "to_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Email"
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "requested_actions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Requested Actions"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "approved",
+              "sent"
+            ],
+            "title": "Status",
+            "default": "draft"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "to_vasp",
+          "subject",
+          "body",
+          "requested_actions"
+        ],
+        "title": "FreezeNotice"
+      },
+      "Graph": {
+        "properties": {
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/Node"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/Edge"
+            },
+            "type": "array",
+            "title": "Edges"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nodes",
+          "edges"
+        ],
+        "title": "Graph"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "IntegrationAck": {
+        "properties": {
+          "ack_id": {
+            "type": "string",
+            "title": "Ack Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "received",
+              "queued",
+              "acknowledged_by_vasp"
+            ],
+            "title": "Status"
+          },
+          "received_at": {
+            "type": "integer",
+            "title": "Received At"
+          },
+          "case_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ack_id",
+          "status",
+          "received_at"
+        ],
+        "title": "IntegrationAck"
+      },
+      "Monitoring": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "live",
+              "stale",
+              "off"
+            ],
+            "title": "Status"
+          },
+          "last_checked_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Checked At"
+          },
+          "poll_interval_sec": {
+            "type": "number",
+            "title": "Poll Interval Sec",
+            "default": 30
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "Monitoring",
+        "description": "Live monitoring of the case's leaf and idle wallets (set by B's watcher; the engine returns None)."
+      },
+      "NearestVASP": {
+        "properties": {
+          "vasp": {
+            "type": "string",
+            "title": "Vasp"
+          },
+          "deposit_address": {
+            "type": "string",
+            "title": "Deposit Address"
+          },
+          "hops": {
+            "type": "integer",
+            "title": "Hops"
+          },
+          "amount": {
+            "type": "number",
+            "title": "Amount"
+          },
+          "timestamp": {
+            "type": "integer",
+            "title": "Timestamp"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "deterministic",
+              "heuristic"
+            ],
+            "title": "Method"
+          },
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "contact": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact"
+          }
+        },
+        "type": "object",
+        "required": [
+          "vasp",
+          "deposit_address",
+          "hops",
+          "amount",
+          "timestamp",
+          "confidence",
+          "method",
+          "evidence"
+        ],
+        "title": "NearestVASP"
+      },
+      "Network": {
+        "properties": {
+          "network_id": {
+            "type": "string",
+            "title": "Network Id"
+          },
+          "complaint_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Complaint Ids"
+          },
+          "victim_count": {
+            "type": "integer",
+            "title": "Victim Count"
+          },
+          "total_amount": {
+            "type": "number",
+            "title": "Total Amount"
+          },
+          "states": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "States"
+          },
+          "vasp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vasp"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/NetworkNode"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/NetworkEdge"
+            },
+            "type": "array",
+            "title": "Edges"
+          }
+        },
+        "type": "object",
+        "required": [
+          "network_id",
+          "complaint_ids",
+          "victim_count",
+          "total_amount",
+          "states",
+          "nodes",
+          "edges"
+        ],
+        "title": "Network"
+      },
+      "NetworkEdge": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "target"
+        ],
+        "title": "NetworkEdge"
+      },
+      "NetworkNode": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "complaint",
+              "wallet",
+              "exchange"
+            ],
+            "title": "Type"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "label"
+        ],
+        "title": "NetworkNode"
+      },
+      "Node": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "chain": {
+            "type": "string",
+            "enum": [
+              "tron",
+              "ethereum",
+              "bsc",
+              "polygon",
+              "bitcoin",
+              "solana"
+            ],
+            "title": "Chain",
+            "default": "tron"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "victim",
+              "scam_wallet",
+              "intermediary",
+              "bridge",
+              "mixer",
+              "exchange",
+              "unknown"
+            ],
+            "title": "Type"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "hop": {
+            "type": "integer",
+            "title": "Hop",
+            "default": 0
+          },
+          "risk": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "Low",
+                  "Medium",
+                  "High",
+                  "Critical"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk",
+            "default": "Low"
+          },
+          "risk_score": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Score",
+            "default": 0.0
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons",
+            "default": []
+          },
+          "typology": {
+            "type": "string",
+            "enum": [
+              "investment_scam",
+              "task_scam",
+              "sextortion",
+              "ransomware",
+              "phishing",
+              "darknet",
+              "unknown"
+            ],
+            "title": "Typology",
+            "default": "unknown"
+          },
+          "idle_balance": {
+            "type": "number",
+            "title": "Idle Balance",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type"
+        ],
+        "title": "Node"
+      },
+      "Recommendation": {
+        "properties": {
+          "priority": {
+            "type": "string",
+            "enum": [
+              "urgent",
+              "high",
+              "normal"
+            ],
+            "title": "Priority"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "priority",
+          "action",
+          "detail"
+        ],
+        "title": "Recommendation"
+      },
+      "SahyogNoticeRequest": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "to_vasp": {
+            "type": "string",
+            "title": "To Vasp"
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "to_vasp",
+          "subject",
+          "body"
+        ],
+        "title": "SahyogNoticeRequest"
+      },
+      "TraceRequest": {
+        "properties": {
+          "complaint_id": {
+            "type": "string",
+            "title": "Complaint Id"
+          },
+          "wallet": {
+            "type": "string",
+            "title": "Wallet"
+          },
+          "chain": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "tron",
+                  "ethereum",
+                  "bsc",
+                  "polygon",
+                  "bitcoin",
+                  "solana"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chain"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency",
+            "default": "USDT"
+          },
+          "tx_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tx Hash"
+          },
+          "fraud_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fraud Type"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "reported_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reported At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "complaint_id",
+          "wallet"
+        ],
+        "title": "TraceRequest"
+      },
+      "TraceResponse": {
+        "properties": {
+          "contract_version": {
+            "type": "string",
+            "title": "Contract Version",
+            "default": "1.1.0"
+          },
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "complaint_id": {
+            "type": "string",
+            "title": "Complaint Id"
+          },
+          "wallet": {
+            "type": "string",
+            "title": "Wallet"
+          },
+          "chain": {
+            "type": "string",
+            "enum": [
+              "tron",
+              "ethereum",
+              "bsc",
+              "polygon",
+              "bitcoin",
+              "solana"
+            ],
+            "title": "Chain",
+            "default": "tron"
+          },
+          "fraud_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fraud Type"
+          },
+          "amount_lost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Lost"
+          },
+          "risk": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "Low",
+                  "Medium",
+                  "High",
+                  "Critical"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk"
+          },
+          "risk_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Score"
+          },
+          "urgency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "act_now",
+                  "act_soon",
+                  "preserve"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Urgency"
+          },
+          "urgency_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Urgency Reasons",
+            "default": []
+          },
+          "urgency_as_of": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Urgency As Of"
+          },
+          "monitoring": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Monitoring"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "typology": {
+            "type": "string",
+            "enum": [
+              "investment_scam",
+              "task_scam",
+              "sextortion",
+              "ransomware",
+              "phishing",
+              "darknet",
+              "unknown"
+            ],
+            "title": "Typology",
+            "default": "unknown"
+          },
+          "graph": {
+            "$ref": "#/components/schemas/Graph"
+          },
+          "nearest_vasp": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NearestVASP"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "summary": {
+            "$ref": "#/components/schemas/TraceSummary"
+          },
+          "recommendations": {
+            "items": {
+              "$ref": "#/components/schemas/Recommendation"
+            },
+            "type": "array",
+            "title": "Recommendations",
+            "default": []
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "live",
+              "cached",
+              "simulated"
+            ],
+            "title": "Source"
+          },
+          "generated_at": {
+            "type": "integer",
+            "title": "Generated At"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "complaint_id",
+          "wallet",
+          "graph",
+          "summary",
+          "source",
+          "generated_at"
+        ],
+        "title": "TraceResponse"
+      },
+      "TraceSummary": {
+        "properties": {
+          "hops": {
+            "type": "integer",
+            "title": "Hops"
+          },
+          "nodes": {
+            "type": "integer",
+            "title": "Nodes"
+          },
+          "total_traced": {
+            "type": "number",
+            "title": "Total Traced"
+          },
+          "idle_funds": {
+            "type": "number",
+            "title": "Idle Funds"
+          },
+          "time_to_attribution_sec": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time To Attribution Sec"
+          }
+        },
+        "type": "object",
+        "required": [
+          "hops",
+          "nodes",
+          "total_traced",
+          "idle_funds"
+        ],
+        "title": "TraceSummary"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WalletRisk": {
+        "properties": {
+          "address": {
+            "type": "string",
+            "title": "Address"
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "Low",
+              "Medium",
+              "High",
+              "Critical"
+            ],
+            "title": "Risk"
+          },
+          "risk_score": {
+            "type": "number",
+            "title": "Risk Score"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons"
+          },
+          "typology": {
+            "type": "string",
+            "enum": [
+              "investment_scam",
+              "task_scam",
+              "sextortion",
+              "ransomware",
+              "phishing",
+              "darknet",
+              "unknown"
+            ],
+            "title": "Typology",
+            "default": "unknown"
+          }
+        },
+        "type": "object",
+        "required": [
+          "address",
+          "risk",
+          "risk_score",
+          "reasons"
+        ],
+        "title": "WalletRisk"
+      }
+    }
+  }
+}

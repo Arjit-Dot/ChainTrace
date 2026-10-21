@@ -11,10 +11,11 @@ import { ErrorState, Loading } from "../components/common/Status";
 import SummaryStrip from "../components/case/SummaryStrip";
 import TraceGraph from "../components/case/TraceGraph";
 import { useFetch } from "../hooks/useFetch";
+import { useAlertListener } from "../hooks/useAlerts";
 import {
-  alertStreamUrl,
   getCase,
   getReport,
+  simulateAlert,
   simulateMovement,
 } from "../lib/api";
 import { humanize, shortAddr } from "../lib/format";
@@ -28,28 +29,34 @@ function CaseBody({ trace, reload }) {
   const [alerts, setAlerts] = useState([]);
   const [simMsg, setSimMsg] = useState(null);
   const [reportBusy, setReportBusy] = useState(false);
+  const [simBusy, setSimBusy] = useState(false);
 
   // Live monitoring: re-read the case every 30 s, and straight away when an alert for it arrives.
   useEffect(() => {
     const timer = setInterval(reload, 30000);
-    const stream = new EventSource(alertStreamUrl());
-    stream.addEventListener("alert", (e) => {
-      const alert = JSON.parse(e.data);
-      if (alert.case_id !== trace.case_id) return;
-      setAlerts((a) => [alert, ...a].slice(0, 5));
-      reload();
-    });
-    return () => {
-      clearInterval(timer);
-      stream.close();
-    };
-  }, [trace.case_id, reload]);
+    return () => clearInterval(timer);
+  }, [reload]);
+  useAlertListener((alert) => {
+    if (alert.case_id !== trace.case_id) return;
+    setAlerts((a) => [alert, ...a].slice(0, 5));
+    reload();
+  });
 
-  const replay = () =>
-    simulateMovement(trace.case_id).then(
-      () => setSimMsg(null),
-      (e) => setSimMsg(e.message),
-    );
+  // Engine mode replays a recorded transfer and re-traces; otherwise (fixture / Demo Mode) there is nothing to
+  // replay, so the next scripted alert for this case is pushed instead. Both are SIMULATED.
+  const simulate = async () => {
+    setSimBusy(true);
+    setSimMsg(null);
+    try {
+      await simulateMovement(trace.case_id).catch(() =>
+        simulateAlert(trace.case_id),
+      );
+    } catch (e) {
+      setSimMsg(e.message);
+    } finally {
+      setSimBusy(false);
+    }
+  };
   const downloadReport = async () => {
     setReportBusy(true);
     setSimMsg(null);
@@ -75,15 +82,17 @@ function CaseBody({ trace, reload }) {
         title={`Case ${trace.case_id}`}
         subtitle={`${trace.complaint_id} · ${humanize(trace.fraud_type)} · reported wallet ${shortAddr(trace.wallet, 8)}`}
       >
-        {trace.summary.idle_funds > 0 && (
-          <button
-            onClick={replay}
-            title="Replay a recorded movement of the idle funds (SIMULATED) and re-check the case"
-            className={`${btn} border-amber-400/50 text-amber-300 hover:bg-amber-400/10`}
-          >
-            <Play className="size-4" /> Simulate fund movement
-          </button>
-        )}
+        <button
+          onClick={simulate}
+          disabled={simBusy}
+          title="Push a SIMULATED alert for this case (replays a recorded fund movement when the engine is on)"
+          className={`${btn} border-amber-400/50 text-amber-300 enabled:hover:bg-amber-400/10`}
+        >
+          <Play className="size-4" />
+          {trace.summary.idle_funds > 0
+            ? "Simulate fund movement"
+            : "Simulate alert"}
+        </button>
         <button
           disabled={!trace.nearest_vasp}
           onClick={() => setNoticeOpen(true)}

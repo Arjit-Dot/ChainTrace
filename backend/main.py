@@ -7,22 +7,20 @@ Every route works today on fixtures, so the frontend can be built immediately.
 """
 import asyncio
 import json
-import time
 from contextlib import asynccontextmanager
 from typing import List
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from sse_starlette.sse import EventSourceResponse
 
 from paths import FIXTURES
-from product import alerts, engine_client, store
+from product import alerts, engine_client, integrations, store
 from product.notices import build_freeze_notice
 from product.reports import build_report, evidence_hash
 from contract.schemas import (
-    Alert, CaseSummary, DashboardStats, FreezeNotice, IntegrationAck, Network,
-    SahyogNoticeRequest, TraceRequest, TraceResponse, WalletRisk, CONTRACT_VERSION,
+    Alert, CaseSummary, DashboardStats, FreezeNotice, Network, TraceRequest, TraceResponse, WalletRisk,
+    CONTRACT_VERSION,
 )
 
 
@@ -50,9 +48,9 @@ def health():
 
 # ---- Core ----
 @app.post("/api/trace", response_model=TraceResponse)
-def trace(req: TraceRequest):
-    """Submit a complaint: run the engine, store the result as a new case, return it."""
-    return store.add_case(req, engine_client.trace(req))  # store adds B's recommendations
+async def trace(req: TraceRequest):
+    """Submit a complaint: run the engine, store the result as a new case, push alerts, return it."""
+    return await integrations.create_case(req)
 
 
 @app.get("/api/wallets/{address}/risk", response_model=WalletRisk)
@@ -111,34 +109,9 @@ def networks():
     return load("networks.json")
 
 
-# ---- Alerts (SSE) ----
-@app.get("/api/alerts", response_model=List[Alert])
-def alert_history():
-    return alerts.history()
-
-
-@app.get("/api/alerts/stream")
-async def alert_stream():
-    q = alerts.subscribe()
-
-    async def gen():
-        try:
-            while True:
-                yield {"event": "alert", "data": json.dumps(await q.get())}
-        finally:
-            alerts.unsubscribe(q)
-
-    return EventSourceResponse(gen())
-
-
-@app.post("/api/alerts/simulate", response_model=Alert)
-async def simulate_alert():
-    """Demo button: pushes the next fixture alert to every open stream."""
-    fixtures = load("alerts.json")
-    alert = dict(fixtures[int(time.time()) % len(fixtures)])
-    alert["timestamp"] = int(time.time())
-    await alerts.publish(Alert(**alert))
-    return alert
+# ---- Alerts (SSE) and mock integrations: see product/alerts.py and product/integrations.py ----
+app.include_router(alerts.router)
+app.include_router(integrations.router)
 
 
 @app.post("/api/cases/{case_id}/simulate-movement", response_model=List[Alert])
@@ -153,19 +126,3 @@ async def simulate_movement(case_id: str):
     for alert in new:
         await alerts.publish(alert)
     return new
-
-
-# ---- Mock integrations ----
-@app.post("/api/integrations/ncrp/complaints", response_model=IntegrationAck)
-def ncrp_complaint(req: TraceRequest):
-    result = store.add_case(req, engine_client.trace(req))  # TODO(B6): publish alerts
-    ack = load("ncrp_ack.json")
-    ack.update(case_id=result.case_id, received_at=int(time.time()))
-    return ack
-
-
-@app.post("/api/integrations/sahyog/notice", response_model=IntegrationAck)
-def sahyog_notice(req: SahyogNoticeRequest):
-    ack = load("sahyog_ack.json")
-    ack.update(case_id=req.case_id, received_at=int(time.time()))
-    return ack

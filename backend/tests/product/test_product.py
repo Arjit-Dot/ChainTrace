@@ -176,3 +176,68 @@ def test_graph_image_for_every_seed_trace():
     for t in TRACES.values():
         assert graph_png(t).startswith(b"\x89PNG")
     assert build_report(with_recommendations(TRACES["C-008"])).startswith(b"%PDF")
+
+
+# ---------- B6: alerts and mock integrations ----------
+@pytest.fixture
+def stream(client):
+    """Collect everything alerts.publish() pushes (what every open SSE tab receives)."""
+    from product import alerts
+    q = alerts.subscribe()
+    seen = []
+    yield lambda: seen.extend(q.get_nowait() for _ in range(q.qsize())) or seen
+    alerts.unsubscribe(q)
+
+
+def test_simulate_steps_through_the_hero_script(client, stream):
+    from product import alerts
+    alerts._script_step.clear()
+    types = [client.post("/api/alerts/simulate").json()["type"] for _ in range(5)]
+    assert types == ["FUNDS_MOVED", "REACHED_VASP", "ENTERED_MIXER", "HIGH_RISK_WALLET", "NEW_COMPLAINT_LINKED"]
+    assert client.post("/api/alerts/simulate").json()["type"] == "FUNDS_MOVED"  # wraps round
+    pushed = stream()
+    assert len(pushed) == 6 and all(a["case_id"] == "C-001" and "(simulated)" in a["message"] for a in pushed)
+    assert "3,720 USDT moved out of the Ethereum-side wallet" in pushed[0]["message"]
+    assert client.get("/api/alerts").json()[0]["id"] == pushed[-1]["id"]  # newest first in history
+
+
+def test_simulate_is_case_aware(client):
+    a6 = client.post("/api/alerts/simulate", params={"case_id": "C-006"}).json()
+    assert a6["case_id"] == "C-006" and a6["type"] != "REACHED_VASP"  # C-006 never reached an exchange
+    assert client.post("/api/alerts/simulate", params={"case_id": "C-999"}).status_code == 404
+
+
+def test_ncrp_complaint_creates_a_linked_case_and_alerts(client, stream):
+    before = len(client.get("/api/cases").json())
+    ack = client.post("/api/integrations/ncrp/complaints",
+                      json={"complaint_id": "NCRP-FEED-1", "wallet": HERO_WALLET, "amount": 9000}).json()
+    cases = client.get("/api/cases").json()
+    assert len(cases) == before + 1 and ack["case_id"] == cases[0]["case_id"] and ack["status"] == "queued"
+    pushed = {a["type"]: a for a in stream()}
+    assert "NET-1" in pushed["NEW_COMPLAINT_LINKED"]["message"] and "HIGH_RISK_WALLET" in pushed
+    assert all(a["case_id"] == ack["case_id"] for a in pushed.values())
+
+
+def test_new_complaint_form_also_alerts(client, stream):
+    t = client.post("/api/trace", json={"complaint_id": "X", "wallet": HERO_WALLET}).json()
+    assert any(a["type"] == "NEW_COMPLAINT_LINKED" and a["case_id"] == t["case_id"] for a in stream())
+
+
+def test_sahyog_send_marks_the_notice_sent(client):
+    n = client.get("/api/cases/C-001/freeze-notice").json()
+    assert n["status"] == "draft"
+    body = {k: n[k] for k in ("case_id", "to_vasp", "subject", "body")}
+    ack = client.post("/api/integrations/sahyog/notice", json=body).json()
+    assert ack["case_id"] == "C-001" and ack["status"] == "received"
+    assert next(c for c in client.get("/api/cases").json() if c["case_id"] == "C-001")["status"] == "notice_sent"
+    assert client.get("/api/cases/C-001/freeze-notice").json()["status"] == "sent"
+    assert client.post("/api/integrations/sahyog/notice", json={**body, "case_id": "C-006"}).status_code == 409
+    assert client.post("/api/integrations/sahyog/notice", json={**body, "case_id": "C-999"}).status_code == 404
+
+
+def test_openapi_lists_every_route():
+    import main
+    paths = main.app.openapi()["paths"]
+    for p in ("/api/alerts/stream", "/api/alerts/simulate", "/api/integrations/ncrp/complaints",
+              "/api/integrations/sahyog/notice", "/api/cases/{case_id}/report"):
+        assert p in paths

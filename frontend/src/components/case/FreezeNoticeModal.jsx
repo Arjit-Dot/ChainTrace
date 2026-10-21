@@ -1,7 +1,7 @@
-import { Check, Copy, Download, FileWarning, X } from 'lucide-react'
+import { Check, Copy, Download, FileWarning, Loader2, Send, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useFetch } from '../../hooks/useFetch'
-import { getFreezeNotice } from '../../lib/api'
+import { getFreezeNotice, sahyogSend } from '../../lib/api'
 import { ErrorState, Loading } from '../common/Status'
 
 const STATUS = {
@@ -22,12 +22,29 @@ function download(n) {
   URL.revokeObjectURL(url)
 }
 
-function NoticeBody({ notice }) {
+function NoticeBody({ notice, onSent }) {
   const [copied, setCopied] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [ack, setAck] = useState(null)
+  const [sendError, setSendError] = useState(null)
+  const sent = notice.status === 'sent'
   const copy = async () => {
     await navigator.clipboard.writeText(fullText(notice))
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
+  }
+  const send = async () => {
+    setSending(true)
+    setSendError(null)
+    try {
+      const { case_id, to_vasp, subject, body } = notice
+      setAck(await sahyogSend({ case_id, to_vasp, subject, body }))
+      onSent()
+    } catch (e) {
+      setSendError(e.message)
+    } finally {
+      setSending(false)
+    }
   }
 
   return (
@@ -53,7 +70,17 @@ function NoticeBody({ notice }) {
         {notice.body}
       </pre>
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-3">
-        <p className="text-xs text-muted">Fill in the [LEGAL SECTION] and officer placeholders before sending.</p>
+        <p className="text-xs text-muted">
+          {sendError ? (
+            <span className="text-red-300">Send failed: {sendError}</span>
+          ) : ack ? (
+            <span className="text-emerald-300">Sent via SAHYOG (simulated) · acknowledgement {ack.ack_id}</span>
+          ) : sent ? (
+            'Already sent via SAHYOG (simulated).'
+          ) : (
+            'Fill in the [LEGAL SECTION] and officer placeholders before sending.'
+          )}
+        </p>
         <div className="flex gap-2">
           <button onClick={copy} className={btn}>
             {copied ? <Check className="size-4 text-emerald-400" /> : <Copy className="size-4" />}
@@ -61,6 +88,15 @@ function NoticeBody({ notice }) {
           </button>
           <button onClick={() => download(notice)} className={btn}>
             <Download className="size-4" /> Download .txt
+          </button>
+          <button
+            onClick={send}
+            disabled={sending || sent}
+            title="Send to the exchange through SAHYOG (simulated integration)"
+            className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-bg hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+            {sent ? 'Sent' : sending ? 'Sending…' : 'Send via SAHYOG'}
           </button>
         </div>
       </div>
@@ -99,12 +135,12 @@ export default function FreezeNoticeModal({ caseId, onClose }) {
             <X className="size-5" />
           </button>
         </div>
-        {loading ? (
+        {loading && !data ? (
           <Loading label="Drafting notice…" />
-        ) : error ? (
+        ) : error && !data ? (
           <ErrorState error={error} onRetry={reload} />
         ) : (
-          <NoticeBody notice={data} />
+          <NoticeBody notice={data} onSent={reload} />
         )}
       </div>
     </div>

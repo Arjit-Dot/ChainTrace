@@ -51,7 +51,8 @@ export const getNetworks = () => request('/networks')
 // Alerts
 export const getAlerts = () => request('/alerts')
 export const alertStreamUrl = () => `${BASE}/api/alerts/stream`
-export const simulateAlert = () => post('/alerts/simulate')
+// Next scripted (SIMULATED) alert for a case; the backend defaults to the hero case C-001.
+export const simulateAlert = (caseId) => post(`/alerts/simulate${caseId ? `?case_id=${enc(caseId)}` : ''}`)
 
 // Mock integrations (simulated NCRP / SAHYOG)
 export const ncrpSubmit = (complaint) => post('/integrations/ncrp/complaints', complaint)
