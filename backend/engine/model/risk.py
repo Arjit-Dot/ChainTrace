@@ -23,6 +23,7 @@ LABELED = {
     "exchange_deposit": ("Low", 0.12, "Behaves like an exchange deposit address"),
     "bridge": ("Medium", 0.45, "Cross-chain bridge contract"),
     "mixer": ("Critical", 0.91, "Known mixing service"),
+    "dex": ("Medium", 0.40, "Decentralised exchange pool: funds were swapped, there is no account holder to ask or freeze"),
 }
 CARRIES_TYPOLOGY = {"High", "Critical"}
 # A wallet on another chain that received money crossing a bridge from the traced flow. Not the model (which only reads

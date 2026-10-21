@@ -60,6 +60,8 @@ export const traceComplaint = (id) => post(`/officer/complaints/${enc(id)}/trace
 export const getIdentifiers = (caseId) => request(`/officer/cases/${enc(caseId)}/identifiers`)
 export const addIdentifier = (caseId, body) => post(`/officer/cases/${enc(caseId)}/identifiers`, body)
 export const getLeads = (caseId) => request(`/officer/cases/${enc(caseId)}/leads`)
+export const getOutcomes = (caseId) => request(`/officer/cases/${enc(caseId)}/outcomes`)
+export const getMules = (caseId) => request(`/officer/cases/${enc(caseId)}/mules`)
 
 // Cases
 export const getCases = () => request('/cases')

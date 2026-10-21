@@ -20,8 +20,9 @@ from engine.chains.tron import Transfer, TronAdapter
 from paths import BRIDGE_LEGS, LABELS_CSV
 
 
-STOP_TYPES = {"exchange", "bridge", "mixer"}
-EDGE_TYPES = {"bridge": "bridge", "mixer": "mixer_in"}
+STOP_TYPES = {"exchange", "bridge", "mixer", "swap"}   # "swap" (a DEX pool) becomes the node type "dex"
+NODE_TYPE_OF = {"swap": "dex"}
+EDGE_TYPES = {"bridge": "bridge", "mixer": "mixer_in", "dex": "swap"}
 MAX_DEPTH = 5
 MIN_SHARE = 0.01          # ignore flows under 1% of the case value
 PASS_THROUGH_RATIO = 0.90
@@ -44,7 +45,7 @@ def load_labels(path: Path = LABELS_CSV) -> Dict[str, Tuple[str, str]]:
     with open(path, newline="") as f:
         for row in csv.DictReader(f):
             if row["type"] in STOP_TYPES:
-                out[row["address"]] = (row["entity"], row["type"])
+                out[row["address"]] = (row["entity"], NODE_TYPE_OF.get(row["type"], row["type"]))
     return out
 
 

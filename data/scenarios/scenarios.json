@@ -88,5 +88,15 @@
       "vasp": null,
       "terminal": "TXzK7i61kT3ck6kZ3VeGZjUnPVwDS46sKM"
     }
+  },
+  {
+    "key": "dex",
+    "title": "DEX terminal: the money is swapped on a DEX pool, which has no account holder",
+    "wallet": "TJYp7BbgZuBiEytM4gAn8jv42BFESS9PEf",
+    "amount": 4000.0,
+    "expect": {
+      "vasp": null,
+      "terminal": "TLKyq7eJ4YKbs3TGEvoBJWkAXWYQKWo2Nn"
+    }
   }
 ]

@@ -7,6 +7,7 @@ Rules, in priority order:
   nearest VASP, confidence >= 0.6 -> high   "Issue freeze and KYC request to {vasp}"
   nearest VASP, confidence < 0.6  -> normal "Corroborate attribution to {vasp}"
   a bridge reached               -> high    "Continue trace on {destination chain}"
+  a DEX reached                  -> high    "Follow the swap"
   a mixer reached                -> normal  "Preserve mixer evidence"
   no VASP found                  -> normal  "Monitor wallet; re-trace on movement"
 
@@ -80,6 +81,14 @@ def build_recommendations(trace: TraceResponse) -> List[Recommendation]:
         recs.append(Recommendation(
             priority="high", action=f"Continue trace on {chain}",
             detail=f"Funds crossed a bridge. Follow {follow} for onward movement."))
+
+    dexes = [n for n in nodes.values() if n.type == "dex"]
+    if dexes:
+        swapped = sum(e.amount for e in edges if e.target in {n.id for n in dexes})
+        recs.append(Recommendation(
+            priority="high", action="Follow the swap",
+            detail=f"{amount(swapped)} USDT was swapped on a decentralised exchange. A DEX has no account holder to ask or freeze: "
+                   f"follow the wallet that received the swapped tokens, and ask the token issuer to hold any USDT still in the flow."))
 
     mixers = {n.id for n in nodes.values() if n.type == "mixer"}
     if mixers:

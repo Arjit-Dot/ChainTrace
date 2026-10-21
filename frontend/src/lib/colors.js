@@ -50,6 +50,17 @@ export const REQUESTS = {
   platform_data_request: 'Platform data', registrant_request: 'Registrant details', developer_request: 'Developer details',
   takedown_request: 'Takedown', preservation_notice: 'Preservation notice', issuer_hold: 'Issuer hold',
 }
+// Where the money ended up, and how urgent each outcome is.
+export const ENDPOINT_KINDS = {
+  vasp: 'Exchange (VASP)', dex: 'DEX swap', bank_account: 'Bank account', mixer: 'Mixer', bridge: 'Bridge', idle_wallet: 'Funds still in a wallet', dead_end: 'Dead end',
+}
+export const OUTCOME_STATUS = {
+  action_needed: { label: 'Action needed', classes: 'bg-red-500/15 text-red-300 ring-red-500/40' },
+  in_progress: { label: 'In progress', classes: 'bg-violet-500/15 text-violet-300 ring-violet-500/40' },
+  info: { label: 'For information', classes: 'bg-sky-500/15 text-sky-300 ring-sky-500/40' },
+}
+export const ONWARD = { vasp: 'an exchange', dex: 'a DEX', mixer: 'a mixer', bridge: 'a bridge', bank_account: 'a bank account', wallet: 'another wallet' }
+
 export const IDENTIFIER_KINDS = {
   wallet: 'Wallet', bank_account: 'Bank account', upi_id: 'UPI ID', phone: 'Phone', email: 'Email', device: 'Device', ip_address: 'IP address',
   social_handle: 'Social handle', domain: 'Domain', app: 'App',

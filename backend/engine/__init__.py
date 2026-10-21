@@ -87,6 +87,7 @@ def _notes(wallet: str, adapter, stats, resp: TraceResponse, labels=None) -> Opt
         "exchange": f"The reported wallet is itself a known {entity} address, so the freeze request goes there directly.",
         "mixer": f"The reported wallet is a known mixing service ({entity}): funds cannot be followed through it.",
         "bridge": f"The reported wallet is a known cross-chain bridge ({entity}): follow the funds on the destination chain.",
+        "dex": f"The reported wallet is a decentralised exchange pool ({entity}): it has no account holder, so follow the swapped tokens.",
     }.get(kind) if kind else None
     if not is_tron_address(wallet):
         chain = detect_chain(wallet)

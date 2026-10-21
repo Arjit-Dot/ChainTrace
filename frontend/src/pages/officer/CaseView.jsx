@@ -7,6 +7,7 @@ import NearestVaspCard from "../../components/case/NearestVaspCard";
 import NodePanel from "../../components/case/NodePanel";
 import PageHeader from "../../components/common/PageHeader";
 import LeadsPanel from "../../components/case/LeadsPanel";
+import { MulesPanel, OutcomesPanel } from "../../components/case/OutcomesPanel";
 import RecommendationsPanel from "../../components/case/RecommendationsPanel";
 import { ErrorState, Loading } from "../../components/common/Status";
 import SummaryStrip from "../../components/case/SummaryStrip";
@@ -179,6 +180,8 @@ function CaseBody({ trace, reload }) {
         </div>
 
         <RecommendationsPanel items={trace.recommendations} />
+        <OutcomesPanel caseId={trace.case_id} />
+        <MulesPanel caseId={trace.case_id} />
         <LeadsPanel caseId={trace.case_id} />
       </div>
 

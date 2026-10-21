@@ -18,8 +18,9 @@ def types(g):
 def test_load_labels_types():
     labels = load_labels()
     assert labels[HERO_EXCHANGE] == ("Example Exchange A", "exchange")
-    assert {t for _, t in labels.values()} <= {"exchange", "bridge", "mixer"}
+    assert {t for _, t in labels.values()} <= {"exchange", "bridge", "mixer", "dex"}
     assert any(t == "bridge" for _, t in labels.values()) and any(t == "mixer" for _, t in labels.values())
+    assert labels["TLKyq7eJ4YKbs3TGEvoBJWkAXWYQKWo2Nn"] == ("SunSwap V2 (BTT-USDT)", "dex")                     # a DEX pool, not a VASP
 
 
 # ---- stop rules

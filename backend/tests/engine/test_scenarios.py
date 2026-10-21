@@ -30,6 +30,6 @@ def test_scenario(sc):
     if "idle" in exp:
         assert r.summary.idle_funds == exp["idle"]
     if "terminal" in exp:
-        assert ids[exp["terminal"]].type in ("mixer", "bridge")
+        assert ids[exp["terminal"]].type in ("mixer", "bridge", "dex")
         assert not any(e.source == exp["terminal"] for e in r.graph.edges)
     assert r.summary.idle_funds == pytest.approx(sum(n.idle_balance for n in r.graph.nodes))

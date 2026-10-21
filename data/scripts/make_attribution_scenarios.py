@@ -25,6 +25,7 @@ EXCHANGE_B = "TRtcU89W2N6MTT7DXvpzZUAvWQ8qPTAQhS"
 EXCHANGE_C = "TQyp1x1VvbeSnvwt3bdCATtLTjm4wTE3SY"
 MIXER = "TLhZTYvV5asB99Wz26sSandSaN1kZfFWbs"
 BRIDGE = "TXzK7i61kT3ck6kZ3VeGZjUnPVwDS46sKM"
+DEX = "TLKyq7eJ4YKbs3TGEvoBJWkAXWYQKWo2Nn"            # SunSwap pool, labeled "swap" in labels.csv
 
 
 class Scenario:
@@ -119,6 +120,13 @@ add(s)
 s = Scenario("bridge", "Bridge terminal: trace ends at a cross-chain bridge, no exchange", 4000, {"vasp": None, "terminal": BRIDGE})
 p = s.w("p1")
 s.send(s.w("victim"), s.wallet, 4000); s.send(s.wallet, p, 4000); s.send(p, BRIDGE, 3950)
+add(s)
+
+
+# 9. DEX terminal
+s = Scenario("dex", "DEX terminal: the money is swapped on a DEX pool, which has no account holder", 4000, {"vasp": None, "terminal": DEX})
+p = s.w("p1")
+s.send(s.w("victim"), s.wallet, 4000); s.send(s.wallet, p, 4000); s.send(p, DEX, 3950)
 add(s)
 
 

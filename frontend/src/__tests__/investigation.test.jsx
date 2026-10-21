@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
@@ -93,7 +93,7 @@ describe('the leads panel', () => {
     await user.selectOptions(form.getByLabelText('Kind'), 'phone')
     await user.type(form.getByLabelText('Value'), '+91 98000 12345')
     await user.click(form.getByRole('button', { name: /add/i }))
-    expect(await screen.findAllByTestId('lead')).toHaveLength(3)
+    await waitFor(() => expect(screen.getAllByTestId('lead')).toHaveLength(3))
     expect(calls.find((c) => c.method === 'POST').body).toEqual({ kind: 'phone', value: '+91 98000 12345' })
     expect(form.getByLabelText('Value')).toHaveValue('')
   })

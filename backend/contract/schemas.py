@@ -356,3 +356,39 @@ class Lead(BaseModel):
     requests: List[RequestKind]
     priority: Literal["urgent", "high", "normal"]
     rationale: str
+
+
+# ---------- Where the money went, and the mules on the way (investigation 4.2) ----------
+# Each kind of endpoint is handled differently: an exchange can be asked for KYC and told to freeze; a DEX pool has no
+# account holder at all; a bank account takes a freeze or lien request; a mixer cannot be followed; a wallet still
+# holding funds can be held by the token issuer.
+EndpointKind = Literal["vasp", "dex", "bank_account", "mixer", "bridge", "idle_wallet", "dead_end"]
+
+
+class Outcome(BaseModel):
+    outcome_id: str
+    case_id: str
+    kind: EndpointKind
+    title: str
+    subject: str                               # the address or account this is about
+    subject_label: Optional[str] = None
+    amount: Optional[float] = None
+    status: Literal["action_needed", "in_progress", "info"]
+    handling: List[str]                        # what an officer does about this kind of endpoint, in order
+    lead_ids: List[str] = []                   # the leads that carry out those steps
+
+
+class Mule(BaseModel):
+    """A suspected mule: a wallet that passed the money on, or a bank account the victim paid. Always 'suspected'."""
+    case_id: str
+    kind: Literal["wallet", "bank_account"]
+    value: str
+    label: Optional[str] = None
+    hop: Optional[int] = None
+    risk: Optional[RiskLevel] = None
+    risk_score: Optional[float] = None
+    reasons: List[str]
+    received: float = 0.0
+    forwarded: float = 0.0
+    onward: List[str] = []                     # where it sent the money: vasp, dex, mixer, bridge, wallet
+    identifier_id: Optional[str] = None
