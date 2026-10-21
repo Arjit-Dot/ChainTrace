@@ -1074,6 +1074,88 @@
         }
       }
     },
+    "/api/officer/cases/{case_id}/cease": {
+      "get": {
+        "tags": [
+          "officer: report and cease"
+        ],
+        "summary": "Get Status",
+        "operationId": "get_status_api_officer_cases__case_id__cease_get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CeaseStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "officer: report and cease"
+        ],
+        "summary": "Start",
+        "operationId": "start_api_officer_cases__case_id__cease_post",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CeaseStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/complaints": {
       "post": {
         "tags": [
@@ -1309,6 +1391,49 @@
         "summary": "Trigger Trace",
         "description": "Run the engine on the complaint's wallet, store the case, link it, and move the complaint to investigating.",
         "operationId": "trigger_trace_api_officer_complaints__complaint_id__trace_post",
+        "parameters": [
+          {
+            "name": "complaint_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Complaint Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Complaint"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/officer/complaints/{complaint_id}/close": {
+      "post": {
+        "tags": [
+          "officer: complaints"
+        ],
+        "summary": "Close Complaint",
+        "description": "The officer closes the complaint. The citizen is pointed to the helpline for details; nothing else is revealed.",
+        "operationId": "close_complaint_api_officer_complaints__complaint_id__close_post",
         "parameters": [
           {
             "name": "complaint_id",
@@ -1864,6 +1989,144 @@
           "reported_at"
         ],
         "title": "CaseSummary"
+      },
+      "CeaseItem": {
+        "properties": {
+          "lead_id": {
+            "type": "string",
+            "title": "Lead Id"
+          },
+          "choke_point": {
+            "type": "string",
+            "title": "Choke Point"
+          },
+          "holder": {
+            "type": "string",
+            "title": "Holder"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "not_drafted"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lead_id",
+          "choke_point",
+          "holder",
+          "kind",
+          "subject"
+        ],
+        "title": "CeaseItem",
+        "description": "One freeze, hold or takedown request that stopping this operation needs, and where it stands."
+      },
+      "CeaseStatus": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "complaint_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Complaint Id"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "received",
+                  "under_review",
+                  "investigating",
+                  "action_initiated",
+                  "closed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          },
+          "citizen_sees": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Citizen Sees"
+          },
+          "report_url": {
+            "type": "string",
+            "title": "Report Url"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CeaseItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "drafts_created": {
+            "type": "integer",
+            "title": "Drafts Created",
+            "default": 0
+          },
+          "started": {
+            "type": "boolean",
+            "title": "Started",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "report_url",
+          "items"
+        ],
+        "title": "CeaseStatus",
+        "description": "The state of 'report and cease' for a case. Officer view; the citizen only ever sees the complaint's stage."
       },
       "Complaint": {
         "properties": {

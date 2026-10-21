@@ -280,7 +280,7 @@
     "state": "Karnataka",
     "reporter_name": "Asha Verma",
     "reporter_mobile": "9808962340",
-    "description": "Waiting for an officer.",
+    "description": "Demo case 1 of 4, exchange (VASP): the money reaches an exchange deposit address.",
     "scammer_phone": "+91 90000 00101",
     "scammer_handle": "@alpha_returns_demo",
     "scammer_handle_platform": "telegram",
@@ -288,11 +288,11 @@
     "paid_to_upi": "alpha.returns@ybl",
     "stage": "received",
     "case_id": null,
-    "created_at": 1792523800,
-    "updated_at": 1792523800,
+    "created_at": 1792513000,
+    "updated_at": 1792513000,
     "history": [
       {
-        "at": 1792523800,
+        "at": 1792513000,
         "stage": "received",
         "note": "Complaint registered"
       }
@@ -307,7 +307,7 @@
     "state": "Delhi",
     "reporter_name": "Rohit Nair",
     "reporter_mobile": "9809045457",
-    "description": "Waiting for an officer.",
+    "description": "Demo case 3 of 4, mule bank account: the victim paid a bank account, and funds still sit in a wallet.",
     "scammer_handle": "@taskpay_demo",
     "scammer_handle_platform": "telegram",
     "scam_app": "TaskPay Earn",
@@ -315,11 +315,11 @@
     "paid_to_ifsc": "HDFC0000001",
     "stage": "received",
     "case_id": null,
-    "created_at": 1792529200,
-    "updated_at": 1792529200,
+    "created_at": 1792518400,
+    "updated_at": 1792518400,
     "history": [
       {
-        "at": 1792529200,
+        "at": 1792518400,
         "stage": "received",
         "note": "Complaint registered"
       }
@@ -337,6 +337,56 @@
     "description": "Waiting for an officer.",
     "scammer_phone": "+91 90000 00303",
     "scam_website": "secure-claims.example",
+    "stage": "received",
+    "case_id": null,
+    "created_at": 1792523800,
+    "updated_at": 1792523800,
+    "history": [
+      {
+        "at": 1792523800,
+        "stage": "received",
+        "note": "Complaint registered"
+      }
+    ]
+  },
+  {
+    "complaint_id": "NCRP-2026-470218",
+    "wallet": "TJYp7BbgZuBiEytM4gAn8jv42BFESS9PEf",
+    "chain": "tron",
+    "amount": 4000.0,
+    "fraud_type": "investment",
+    "state": "Telangana",
+    "reporter_name": "Karan Malhotra",
+    "reporter_mobile": "9809211691",
+    "description": "Demo case 2 of 4, DEX: the money is swapped on a decentralised exchange, which has no account holder.",
+    "scammer_handle": "@swapdesk_demo",
+    "scammer_handle_platform": "telegram",
+    "scam_website": "swap-desk.example",
+    "stage": "received",
+    "case_id": null,
+    "created_at": 1792529200,
+    "updated_at": 1792529200,
+    "history": [
+      {
+        "at": 1792529200,
+        "stage": "received",
+        "note": "Complaint registered"
+      }
+    ]
+  },
+  {
+    "complaint_id": "NCRP-2026-582904",
+    "wallet": "TPA2pH1ZJWxMFeyMDEup4JQg51kkcVUMKe",
+    "chain": "tron",
+    "amount": 4000.0,
+    "fraud_type": "ransomware",
+    "state": "Tamil Nadu",
+    "reporter_name": "Divya Reddy",
+    "reporter_mobile": "9809294808",
+    "description": "Demo case 4 of 4, stalled: the money goes into a mixer and cannot be followed.",
+    "scammer_handle": "@locker_support_demo",
+    "scammer_handle_platform": "telegram",
+    "scammer_phone": "+91 90000 00404",
     "stage": "received",
     "case_id": null,
     "created_at": 1792534600,

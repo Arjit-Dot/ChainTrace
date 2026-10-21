@@ -132,7 +132,16 @@ def advance(request_id: str, to: str) -> InstitutionRequest:
         raise Refused(f"This request is {req.status}: it cannot go to {to}.")
     now = int(time.time())
     extra = {"reference": ledger_ref(req)} if to == "sent" else {}
-    return store.update_request(request_id, status=to, updated_at=now, history=req.history + [RequestEvent(at=now, status=to, note=STATUS_NOTE[to])], **extra)
+    updated = store.update_request(request_id, status=to, updated_at=now, history=req.history + [RequestEvent(at=now, status=to, note=STATUS_NOTE[to])], **extra)
+    if to == "sent":
+        from product import cease          # lazy: cease imports this module
+        if req.kind in cease.CEASE_KINDS:
+            cease.on_sent(req.case_id, f"{outreach_label(req)} sent to {req.holder}")
+    return updated
+
+
+def outreach_label(req: InstitutionRequest) -> str:
+    return KIND_LABEL[req.kind]
 
 
 def ledger_ref(req: InstitutionRequest) -> str:

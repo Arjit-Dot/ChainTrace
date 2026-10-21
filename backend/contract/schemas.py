@@ -505,3 +505,28 @@ class Referral(BaseModel):
     referred_at: int
     dossier_sha256: str                        # of the dossier as it stood when referred
     status: Literal["referred"] = "referred"
+
+
+# ---------- Report and cease (stage 5) ----------
+class CeaseItem(BaseModel):
+    """One freeze, hold or takedown request that stopping this operation needs, and where it stands."""
+    lead_id: str
+    choke_point: str
+    holder: str
+    kind: str                                  # freeze_request | issuer_hold | takedown_request
+    subject: str                               # the identifier concerned
+    request_id: Optional[str] = None           # set once the draft exists
+    status: str = "not_drafted"                # not_drafted, or the request's own status (draft ... closed)
+    note: Optional[str] = None
+
+
+class CeaseStatus(BaseModel):
+    """The state of 'report and cease' for a case. Officer view; the citizen only ever sees the complaint's stage."""
+    case_id: str
+    complaint_id: Optional[str] = None
+    stage: Optional[ComplaintStage] = None
+    citizen_sees: Optional[str] = None         # the exact sentence the citizen's tracker shows now
+    report_url: str
+    items: List[CeaseItem]
+    drafts_created: int = 0
+    started: bool = False                      # at least one freeze/hold/takedown request has been sent

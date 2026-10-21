@@ -306,7 +306,7 @@ def test_the_ncrp_feed_is_idempotent_by_complaint_id(client, stream):
 
 # ---- the seed and persistence
 def test_the_seed_has_one_complaint_per_case_plus_waiting_ones(client):
-    assert len(SEED) == 11 and len(PENDING) == 3
+    assert len(SEED) == 13 and len(PENDING) == 5
     linked = {c["complaint_id"]: c["case_id"] for c in SEED if c["case_id"]}
     for case in client.get("/api/cases").json():
         if case["case_id"] in linked.values():

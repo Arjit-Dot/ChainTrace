@@ -39,6 +39,15 @@ PENDING_LURES = {
     "NCRP-2026-258846": {"scammer_handle": "@taskpay_demo", "scammer_handle_platform": "telegram", "scam_app": "TaskPay Earn",
                          "paid_to_bank_account": "000123450001", "paid_to_ifsc": "HDFC0000001"},
     "NCRP-2026-391502": {"scammer_phone": "+91 90000 00303", "scam_website": "secure-claims.example"},
+    "NCRP-2026-470218": {"scammer_handle": "@swapdesk_demo", "scammer_handle_platform": "telegram", "scam_website": "swap-desk.example"},
+    "NCRP-2026-582904": {"scammer_handle": "@locker_support_demo", "scammer_handle_platform": "telegram", "scammer_phone": "+91 90000 00404"},
+}
+# The four demo cases, one per way the money can end (see DEMO.md). Each is waiting in the inbox for an officer to trace.
+DEMO_CASES = {
+    "NCRP-2026-104317": "Demo case 1 of 4, exchange (VASP): the money reaches an exchange deposit address.",
+    "NCRP-2026-470218": "Demo case 2 of 4, DEX: the money is swapped on a decentralised exchange, which has no account holder.",
+    "NCRP-2026-258846": "Demo case 3 of 4, mule bank account: the victim paid a bank account, and funds still sit in a wallet.",
+    "NCRP-2026-582904": "Demo case 4 of 4, stalled: the money goes into a mixer and cannot be followed.",
 }
 
 
@@ -68,11 +77,13 @@ def main():
         ("NCRP-2026-104317", scenarios["sweep"]["wallet"], scenarios["sweep"]["amount"], "investment", "Karnataka", "Asha Verma"),
         ("NCRP-2026-258846", scenarios["idle"]["wallet"], scenarios["idle"]["amount"], "task", "Delhi", "Rohit Nair"),
         ("NCRP-2026-391502", real["wallet"], real["amount"], "phishing", "Maharashtra", "Meera Iyer"),
+        ("NCRP-2026-470218", scenarios["dex"]["wallet"], scenarios["dex"]["amount"], "investment", "Telangana", "Karan Malhotra"),
+        ("NCRP-2026-582904", scenarios["mixer"]["wallet"], scenarios["mixer"]["amount"], "ransomware", "Tamil Nadu", "Divya Reddy"),
     ]
     for j, (cid, wallet, amount, fraud, state, name) in enumerate(pending):
-        created = NOW - (3 - j) * 5400
+        created = NOW - (len(pending) - j) * 5400
         out.append({"complaint_id": cid, "wallet": wallet, "chain": "tron", "amount": amount, "fraud_type": fraud, "state": state,
-                    "reporter_name": name, "reporter_mobile": mobile(20 + j), "description": "Waiting for an officer.", **PENDING_LURES[cid],
+                    "reporter_name": name, "reporter_mobile": mobile(20 + j), "description": DEMO_CASES.get(cid, "Waiting for an officer."), **PENDING_LURES[cid],
                     "stage": "received", "case_id": None, "created_at": created, "updated_at": created,
                     "history": history(created, "received")})
     SEED_COMPLAINTS.write_text(json.dumps(out, indent=2) + "\n")

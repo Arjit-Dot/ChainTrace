@@ -7,6 +7,7 @@ import NearestVaspCard from "../../components/case/NearestVaspCard";
 import NodePanel from "../../components/case/NodePanel";
 import PageHeader from "../../components/common/PageHeader";
 import LeadsPanel from "../../components/case/LeadsPanel";
+import CeasePanel from "../../components/case/CeasePanel";
 import PeoplePanel from "../../components/case/PeoplePanel";
 import RequestsPanel from "../../components/case/RequestsPanel";
 import { MulesPanel, OutcomesPanel } from "../../components/case/OutcomesPanel";
@@ -189,6 +190,7 @@ function CaseBody({ trace, reload }) {
         <LeadsPanel caseId={trace.case_id} version={inv} onChange={bump} />
         <RequestsPanel caseId={trace.case_id} version={inv} onChange={bump} />
         <PeoplePanel caseId={trace.case_id} version={inv} />
+        <CeasePanel caseId={trace.case_id} version={inv} onChange={bump} />
       </div>
 
       {noticeOpen && (

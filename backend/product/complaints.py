@@ -129,6 +129,11 @@ def _advance(rec: Complaint, stage: ComplaintStage, note: str, **extra) -> Compl
     return store.update_complaint(rec.complaint_id, stage=stage, updated_at=now, history=rec.history + [_event(stage, note, now)], **extra)
 
 
+def advance_stage(rec: Complaint, stage: ComplaintStage, note: str) -> Complaint:
+    """Move a complaint to a later stage (used by report and cease)."""
+    return _advance(rec, stage, note)
+
+
 @officer.post("/complaints/{complaint_id}/review", response_model=Complaint)
 def start_review(complaint_id: str):
     rec = _get(complaint_id)
@@ -153,3 +158,13 @@ async def trigger_trace(complaint_id: str):
         return _advance(store.get_complaint(complaint_id), "investigating", f"Trace triggered: case {trace.case_id}", case_id=trace.case_id)
     finally:
         _tracing.discard(complaint_id)
+
+
+@officer.post("/complaints/{complaint_id}/close", response_model=Complaint)
+def close_complaint(complaint_id: str):
+    """The officer closes the complaint. The citizen is pointed to the helpline for details; nothing else is revealed."""
+    rec = _get(complaint_id)
+    if rec.stage not in ("investigating", "action_initiated"):
+        raise HTTPException(409, "Only a complaint that is being investigated can be closed." if rec.stage != "closed"
+                            else "This complaint is already closed.")
+    return _advance(rec, "closed", "Closed by an officer")

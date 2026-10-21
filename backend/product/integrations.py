@@ -52,6 +52,8 @@ def sahyog_notice(req: SahyogNoticeRequest):
     if trace.nearest_vasp is None:
         raise HTTPException(409, "No exchange identified for this case: nothing to send.")
     store.set_status(req.case_id, "notice_sent")
+    from product import cease              # lazy: cease imports complaints, which imports this module
+    cease.on_sent(req.case_id, f"Freeze notice sent to {trace.nearest_vasp.vasp}")
     now = int(time.time())
     return IntegrationAck(ack_id=f"SAH-ACK-{req.case_id}-{now}", status="received", received_at=now,
                           case_id=req.case_id)
