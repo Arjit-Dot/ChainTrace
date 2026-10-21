@@ -1,18 +1,20 @@
 import { Loader2, Send, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { trace } from '../../lib/api'
+import { fileComplaint } from '../../lib/api'
 import { humanize } from '../../lib/format'
 import { R } from '../../lib/routes'
 
-// The agreed hero case (C-001). The demo starts by clicking "Fill hero example".
-const HERO = {
+// A demo shortcut: the agreed hero case (fictional).
+const DEMO = {
+  reporter_name: 'Asha Verma',
+  reporter_mobile: '9876543210',
   wallet: 'TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo',
-  chain: 'tron',
   amount: '12000',
   tx_hash: 'a1c8122e234c54956ae4a5d543e7506ca7b92f7ba6eb99794062aa90a4a35f83',
   fraud_type: 'investment',
   state: 'Karnataka',
+  description: 'I paid into a fake trading app that promised daily returns.',
 }
 
 const CHAINS = ['tron', 'ethereum', 'bsc', 'polygon', 'bitcoin', 'solana']
@@ -22,7 +24,7 @@ const STATES = [
   'Punjab', 'Rajasthan', 'Tamil Nadu', 'Telangana', 'Uttar Pradesh', 'West Bengal',
 ]
 
-// Best guess from the address format; the engine re-checks it.
+// Best guess from the address format; the officer's system re-checks it.
 function detectChain(addr) {
   if (/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(addr)) return 'tron'
   if (/^0x[0-9a-fA-F]{40}$/.test(addr)) return 'ethereum'
@@ -31,9 +33,9 @@ function detectChain(addr) {
   return null
 }
 
-const newComplaintId = () => `NCRP-2026-${String(Math.floor(1000 + Math.random() * 9000))}`
-
-const blank = () => ({ complaint_id: newComplaintId(), wallet: '', chain: '', amount: '', tx_hash: '', fraud_type: '', state: '' })
+const blank = () => ({
+  reporter_name: '', reporter_mobile: '', chain: '', wallet: '', amount: '', tx_hash: '', fraud_type: '', state: '', description: '',
+})
 
 const input =
   'w-full rounded-md border border-line bg-bg px-3 py-2 text-sm text-ink placeholder:text-muted/60 focus:border-accent focus:outline-none'
@@ -57,23 +59,26 @@ export default function FileComplaint() {
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
   const wallet = form.wallet.trim()
   const detected = wallet && detectChain(wallet)
+  const mobileOk = /^\d{10}$/.test(form.reporter_mobile)
 
   async function submit(e) {
     e.preventDefault()
     setBusy(true)
     setError(null)
     try {
-      const res = await trace({
-        complaint_id: form.complaint_id.trim(),
+      const nz = (v) => (v.trim() === '' ? null : v.trim())
+      const receipt = await fileComplaint({
+        reporter_name: form.reporter_name.trim(),
+        reporter_mobile: form.reporter_mobile.trim(),
         wallet,
         chain: form.chain || detected || null,
         amount: form.amount === '' ? null : Number(form.amount),
-        tx_hash: form.tx_hash.trim() || null,
+        tx_hash: nz(form.tx_hash),
         fraud_type: form.fraud_type || null,
         state: form.state || null,
-        reported_at: Math.floor(Date.now() / 1000),
+        description: nz(form.description),
       })
-      navigate(R.submitted(res.complaint_id))
+      navigate(R.submitted(receipt.complaint_id))
     } catch (err) {
       setError(err)
       setBusy(false)
@@ -89,7 +94,7 @@ export default function FileComplaint() {
         </div>
         <button
           type="button"
-          onClick={() => setForm((f) => ({ ...f, ...HERO }))}
+          onClick={() => setForm((f) => ({ ...f, ...DEMO }))}
           className="inline-flex items-center gap-1.5 rounded-md border border-accent/50 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10"
         >
           <Sparkles className="size-4" /> Fill demo example
@@ -98,15 +103,19 @@ export default function FileComplaint() {
 
       <form onSubmit={submit} className="max-w-3xl space-y-5">
         <div className="grid gap-5 rounded-lg border border-line bg-panel p-5 sm:grid-cols-2">
-          <Field label="Network" hint={!form.chain && detected ? `Auto-detected: ${humanize(detected)}` : null}>
-            <select value={form.chain} onChange={set('chain')} className={input}>
-              <option value="">Auto-detect</option>
-              {CHAINS.map((c) => (
-                <option key={c} value={c}>
-                  {humanize(c)}
-                </option>
-              ))}
-            </select>
+          <Field label="Your name">
+            <input required maxLength={80} value={form.reporter_name} onChange={set('reporter_name')} autoComplete="name" className={input} />
+          </Field>
+          <Field label="Mobile number" hint={form.reporter_mobile && !mobileOk ? 'Enter a 10 digit mobile number.' : 'We use it only to contact you about this complaint.'}>
+            <input
+              required
+              inputMode="numeric"
+              maxLength={10}
+              value={form.reporter_mobile}
+              onChange={set('reporter_mobile')}
+              autoComplete="tel"
+              className={input}
+            />
           </Field>
 
           <div className="sm:col-span-2">
@@ -125,6 +134,16 @@ export default function FileComplaint() {
             </Field>
           </div>
 
+          <Field label="Network" hint={!form.chain && detected ? `Auto-detected: ${humanize(detected)}` : null}>
+            <select value={form.chain} onChange={set('chain')} className={input}>
+              <option value="">Auto-detect</option>
+              {CHAINS.map((c) => (
+                <option key={c} value={c}>
+                  {humanize(c)}
+                </option>
+              ))}
+            </select>
+          </Field>
           <Field label="Amount lost (USDT)">
             <input type="number" min="0" step="any" value={form.amount} onChange={set('amount')} className={input} />
           </Field>
@@ -138,25 +157,29 @@ export default function FileComplaint() {
               ))}
             </select>
           </Field>
+          <Field label="State">
+            <select value={form.state} onChange={set('state')} className={input}>
+              <option value="">Not sure</option>
+              {STATES.map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          </Field>
 
           <div className="sm:col-span-2">
             <Field label="Transaction ID (optional)">
               <input value={form.tx_hash} onChange={set('tx_hash')} spellCheck={false} className={`${input} font-mono`} />
             </Field>
           </div>
-
-          <Field label="State">
-            <select value={form.state} onChange={set('state')} className={input}>
-              <option value="">Unknown</option>
-              {STATES.map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>
-          </Field>
+          <div className="sm:col-span-2">
+            <Field label="What happened (optional)">
+              <textarea rows={4} maxLength={2000} value={form.description} onChange={set('description')} className={input} />
+            </Field>
+          </div>
         </div>
 
         {error && (
-          <p className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+          <p role="alert" className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
             Could not submit your complaint: {error.message}
           </p>
         )}
@@ -164,7 +187,7 @@ export default function FileComplaint() {
         <div className="flex items-center gap-3">
           <button
             type="submit"
-            disabled={busy || !wallet}
+            disabled={busy || !wallet || !form.reporter_name.trim() || !mobileOk}
             className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-bg hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}

@@ -1,16 +1,34 @@
-import { ArrowLeft, LayoutDashboard, Radar, Share2 } from 'lucide-react'
+import { ArrowLeft, Inbox, LayoutDashboard, Radar, Share2 } from 'lucide-react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { health } from '../../lib/api'
 import { useFetch } from '../../hooks/useFetch'
-import { AlertsProvider } from '../../hooks/useAlerts'
+import { AlertsProvider, useAlertListener } from '../../hooks/useAlerts'
+import { useEffect, useState } from 'react'
+import { listComplaints } from '../../lib/api'
 import { R } from '../../lib/routes'
 import AlertBell from '../common/AlertFeed'
 import Toasts from '../common/Toasts'
 
 const NAV = [
+  { to: R.officerInbox, label: 'Inbox', icon: Inbox, badge: true },
   { to: R.officer, label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: R.officerNetworks, label: 'Networks', icon: Share2 },
 ]
+
+// How many complaints are still waiting for an officer. Refreshes when a new one arrives.
+function NewCount() {
+  const [n, setN] = useState(0)
+  const load = () => listComplaints('received').then((c) => setN(c.length), () => {})
+  useEffect(() => {
+    load()
+  }, [])
+  useAlertListener((a) => a.type === 'COMPLAINT_RECEIVED' && load())
+  return n ? (
+    <span aria-label={`${n} new complaints`} className="ml-auto rounded-full bg-accent px-1.5 text-[11px] font-semibold text-bg">
+      {n}
+    </span>
+  ) : null
+}
 
 function ApiStatus() {
   const { data, error, loading } = useFetch(health)
@@ -34,7 +52,7 @@ export default function OfficerLayout() {
           </div>
           <p className="-mt-3 px-5 pb-3 text-[11px] tracking-wide text-muted uppercase">Officer console</p>
           <nav className="flex flex-col gap-1 px-3">
-            {NAV.map(({ to, label, icon: Icon, end }) => (
+            {NAV.map(({ to, label, icon: Icon, end, badge }) => (
               <NavLink
                 key={to}
                 to={to}
@@ -46,6 +64,7 @@ export default function OfficerLayout() {
                 }
               >
                 <Icon className="size-4" /> {label}
+                {badge && <NewCount />}
               </NavLink>
             ))}
           </nav>

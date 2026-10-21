@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "ChainTrace API",
-    "version": "1.1.0"
+    "version": "1.2.0"
   },
   "paths": {
     "/api/health": {
@@ -236,6 +236,276 @@
         }
       }
     },
+    "/api/complaints": {
+      "post": {
+        "tags": [
+          "complaints"
+        ],
+        "summary": "File Complaint",
+        "operationId": "file_complaint_api_complaints_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComplaintRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintReceipt"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/complaints/{complaint_id}/status": {
+      "get": {
+        "tags": [
+          "complaints"
+        ],
+        "summary": "Complaint Status",
+        "operationId": "complaint_status_api_complaints__complaint_id__status_get",
+        "parameters": [
+          {
+            "name": "complaint_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Complaint Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplaintStatusView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/officer/complaints": {
+      "get": {
+        "tags": [
+          "officer: complaints"
+        ],
+        "summary": "Inbox",
+        "operationId": "inbox_api_officer_complaints_get",
+        "parameters": [
+          {
+            "name": "stage",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "received",
+                    "under_review",
+                    "investigating",
+                    "action_initiated",
+                    "closed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stage"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Complaint"
+                  },
+                  "title": "Response Inbox Api Officer Complaints Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/officer/complaints/{complaint_id}": {
+      "get": {
+        "tags": [
+          "officer: complaints"
+        ],
+        "summary": "Complaint Detail",
+        "operationId": "complaint_detail_api_officer_complaints__complaint_id__get",
+        "parameters": [
+          {
+            "name": "complaint_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Complaint Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Complaint"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/officer/complaints/{complaint_id}/review": {
+      "post": {
+        "tags": [
+          "officer: complaints"
+        ],
+        "summary": "Start Review",
+        "operationId": "start_review_api_officer_complaints__complaint_id__review_post",
+        "parameters": [
+          {
+            "name": "complaint_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Complaint Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Complaint"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/officer/complaints/{complaint_id}/trace": {
+      "post": {
+        "tags": [
+          "officer: complaints"
+        ],
+        "summary": "Trigger Trace",
+        "description": "Run the engine on the complaint's wallet, store the case, link it, and move the complaint to investigating.",
+        "operationId": "trigger_trace_api_officer_complaints__complaint_id__trace_post",
+        "parameters": [
+          {
+            "name": "complaint_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Complaint Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Complaint"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/alerts": {
       "get": {
         "tags": [
@@ -336,6 +606,7 @@
           "integrations (simulated)"
         ],
         "summary": "Ncrp Complaint",
+        "description": "A complaint arrives from the NCRP feed: it joins the officer inbox. An officer reviews it and triggers the trace.",
         "operationId": "ncrp_complaint_api_integrations_ncrp_complaints_post",
         "requestBody": {
           "content": {
@@ -519,7 +790,8 @@
               "ENTERED_MIXER",
               "NEW_COMPLAINT_LINKED",
               "HIGH_RISK_WALLET",
-              "URGENCY_CHANGED"
+              "URGENCY_CHANGED",
+              "COMPLAINT_RECEIVED"
             ],
             "title": "Type"
           },
@@ -533,8 +805,26 @@
             "title": "Severity"
           },
           "case_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Case Id"
+          },
+          "complaint_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Complaint Id"
           },
           "message": {
             "type": "string",
@@ -550,7 +840,6 @@
           "id",
           "type",
           "severity",
-          "case_id",
           "message",
           "timestamp"
         ],
@@ -705,6 +994,413 @@
           "reported_at"
         ],
         "title": "CaseSummary"
+      },
+      "Complaint": {
+        "properties": {
+          "complaint_id": {
+            "type": "string",
+            "title": "Complaint Id"
+          },
+          "wallet": {
+            "type": "string",
+            "title": "Wallet"
+          },
+          "chain": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "tron",
+                  "ethereum",
+                  "bsc",
+                  "polygon",
+                  "bitcoin",
+                  "solana"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chain"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": "USDT"
+          },
+          "tx_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tx Hash"
+          },
+          "fraud_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fraud Type"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "reporter_name": {
+            "type": "string",
+            "title": "Reporter Name"
+          },
+          "reporter_mobile": {
+            "type": "string",
+            "title": "Reporter Mobile"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "received",
+              "under_review",
+              "investigating",
+              "action_initiated",
+              "closed"
+            ],
+            "title": "Stage",
+            "default": "received"
+          },
+          "case_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Id"
+          },
+          "created_at": {
+            "type": "integer",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "integer",
+            "title": "Updated At"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/ComplaintEvent"
+            },
+            "type": "array",
+            "title": "History",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "complaint_id",
+          "wallet",
+          "reporter_name",
+          "reporter_mobile",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "Complaint",
+        "description": "The stored complaint (officer view only)."
+      },
+      "ComplaintEvent": {
+        "properties": {
+          "at": {
+            "type": "integer",
+            "title": "At"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "received",
+              "under_review",
+              "investigating",
+              "action_initiated",
+              "closed"
+            ],
+            "title": "Stage"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "at",
+          "stage",
+          "note"
+        ],
+        "title": "ComplaintEvent"
+      },
+      "ComplaintReceipt": {
+        "properties": {
+          "complaint_id": {
+            "type": "string",
+            "title": "Complaint Id"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "received",
+              "under_review",
+              "investigating",
+              "action_initiated",
+              "closed"
+            ],
+            "title": "Stage"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "complaint_id",
+          "stage",
+          "message"
+        ],
+        "title": "ComplaintReceipt",
+        "description": "What the citizen gets back when filing."
+      },
+      "ComplaintRequest": {
+        "properties": {
+          "wallet": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Wallet"
+          },
+          "chain": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "tron",
+                  "ethereum",
+                  "bsc",
+                  "polygon",
+                  "bitcoin",
+                  "solana"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chain"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": "USDT"
+          },
+          "tx_hash": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tx Hash"
+          },
+          "fraud_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fraud Type"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "reporter_name": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Reporter Name"
+          },
+          "reporter_mobile": {
+            "type": "string",
+            "pattern": "^\\d{10}$",
+            "title": "Reporter Mobile"
+          }
+        },
+        "type": "object",
+        "required": [
+          "wallet",
+          "reporter_name",
+          "reporter_mobile"
+        ],
+        "title": "ComplaintRequest",
+        "description": "What a citizen submits."
+      },
+      "ComplaintStatusView": {
+        "properties": {
+          "complaint_id": {
+            "type": "string",
+            "title": "Complaint Id"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "received",
+              "under_review",
+              "investigating",
+              "action_initiated",
+              "closed"
+            ],
+            "title": "Stage"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "updated_at": {
+            "type": "integer",
+            "title": "Updated At"
+          },
+          "timeline": {
+            "items": {
+              "$ref": "#/components/schemas/ComplaintTimelineItem"
+            },
+            "type": "array",
+            "title": "Timeline"
+          }
+        },
+        "type": "object",
+        "required": [
+          "complaint_id",
+          "stage",
+          "label",
+          "message",
+          "updated_at",
+          "timeline"
+        ],
+        "title": "ComplaintStatusView",
+        "description": "The ONLY thing a citizen can see about a complaint: a coarse stage and generic messages."
+      },
+      "ComplaintTimelineItem": {
+        "properties": {
+          "stage": {
+            "type": "string",
+            "enum": [
+              "received",
+              "under_review",
+              "investigating",
+              "action_initiated",
+              "closed"
+            ],
+            "title": "Stage"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "at": {
+            "type": "integer",
+            "title": "At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stage",
+          "label",
+          "message",
+          "at"
+        ],
+        "title": "ComplaintTimelineItem"
       },
       "CountItem": {
         "properties": {
@@ -1468,7 +2164,7 @@
           "contract_version": {
             "type": "string",
             "title": "Contract Version",
-            "default": "1.1.0"
+            "default": "1.2.0"
           },
           "case_id": {
             "type": "string",

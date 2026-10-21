@@ -1,0 +1,329 @@
+[
+  {
+    "complaint_id": "NCRP-2026-0001",
+    "wallet": "TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo",
+    "chain": "tron",
+    "amount": 12000.0,
+    "fraud_type": "investment",
+    "state": "Karnataka",
+    "reporter_name": "Asha Verma",
+    "reporter_mobile": "9807300000",
+    "description": "Seeded demo complaint.",
+    "stage": "investigating",
+    "case_id": "C-001",
+    "created_at": 1792317200,
+    "updated_at": 1792320800,
+    "history": [
+      {
+        "at": 1792317200,
+        "stage": "received",
+        "note": "Complaint registered"
+      },
+      {
+        "at": 1792319000,
+        "stage": "under_review",
+        "note": "Opened for review by an officer"
+      },
+      {
+        "at": 1792320800,
+        "stage": "investigating",
+        "note": "Trace triggered"
+      }
+    ]
+  },
+  {
+    "complaint_id": "NCRP-2026-0002",
+    "wallet": "TWzZ2piQ5aRm6HphynRu8mBce25MoCaPa8",
+    "chain": "tron",
+    "amount": 4500.0,
+    "fraud_type": "task",
+    "state": "Maharashtra",
+    "reporter_name": "Rohit Nair",
+    "reporter_mobile": "9807383117",
+    "description": "Seeded demo complaint.",
+    "stage": "investigating",
+    "case_id": "C-002",
+    "created_at": 1792320800,
+    "updated_at": 1792324400,
+    "history": [
+      {
+        "at": 1792320800,
+        "stage": "received",
+        "note": "Complaint registered"
+      },
+      {
+        "at": 1792322600,
+        "stage": "under_review",
+        "note": "Opened for review by an officer"
+      },
+      {
+        "at": 1792324400,
+        "stage": "investigating",
+        "note": "Trace triggered"
+      }
+    ]
+  },
+  {
+    "complaint_id": "NCRP-2026-0003",
+    "wallet": "TEVhtEy1htd8G5M54VV9P39nRT9ydTeLgA",
+    "chain": "tron",
+    "amount": 9800.0,
+    "fraud_type": "investment",
+    "state": "Delhi",
+    "reporter_name": "Meera Iyer",
+    "reporter_mobile": "9807466234",
+    "description": "Seeded demo complaint.",
+    "stage": "action_initiated",
+    "case_id": "C-003",
+    "created_at": 1792324400,
+    "updated_at": 1792329800,
+    "history": [
+      {
+        "at": 1792324400,
+        "stage": "received",
+        "note": "Complaint registered"
+      },
+      {
+        "at": 1792326200,
+        "stage": "under_review",
+        "note": "Opened for review by an officer"
+      },
+      {
+        "at": 1792328000,
+        "stage": "investigating",
+        "note": "Trace triggered"
+      },
+      {
+        "at": 1792329800,
+        "stage": "action_initiated",
+        "note": "Report issued and freeze request sent"
+      }
+    ]
+  },
+  {
+    "complaint_id": "NCRP-2026-0004",
+    "wallet": "TR6UvFWLaT62EDbUCQuoghPuxhAsp344DJ",
+    "chain": "tron",
+    "amount": 2200.0,
+    "fraud_type": "sextortion",
+    "state": "Telangana",
+    "reporter_name": "Karan Malhotra",
+    "reporter_mobile": "9807549351",
+    "description": "Seeded demo complaint.",
+    "stage": "investigating",
+    "case_id": "C-004",
+    "created_at": 1792328000,
+    "updated_at": 1792331600,
+    "history": [
+      {
+        "at": 1792328000,
+        "stage": "received",
+        "note": "Complaint registered"
+      },
+      {
+        "at": 1792329800,
+        "stage": "under_review",
+        "note": "Opened for review by an officer"
+      },
+      {
+        "at": 1792331600,
+        "stage": "investigating",
+        "note": "Trace triggered"
+      }
+    ]
+  },
+  {
+    "complaint_id": "NCRP-2026-0005",
+    "wallet": "TMo5n3YtkRHEWs9iaguxmmh4vtwCQneA7Z",
+    "chain": "tron",
+    "amount": 1800.0,
+    "fraud_type": "sextortion",
+    "state": "Tamil Nadu",
+    "reporter_name": "Divya Reddy",
+    "reporter_mobile": "9807632468",
+    "description": "Seeded demo complaint.",
+    "stage": "investigating",
+    "case_id": "C-005",
+    "created_at": 1792331600,
+    "updated_at": 1792335200,
+    "history": [
+      {
+        "at": 1792331600,
+        "stage": "received",
+        "note": "Complaint registered"
+      },
+      {
+        "at": 1792333400,
+        "stage": "under_review",
+        "note": "Opened for review by an officer"
+      },
+      {
+        "at": 1792335200,
+        "stage": "investigating",
+        "note": "Trace triggered"
+      }
+    ]
+  },
+  {
+    "complaint_id": "NCRP-2026-0006",
+    "wallet": "TTzCWpZ69PgvNqDmJy6SnvprJTLBuw9bt4",
+    "chain": "tron",
+    "amount": 15500.0,
+    "fraud_type": "ransomware",
+    "state": "Uttar Pradesh",
+    "reporter_name": "Imran Sheikh",
+    "reporter_mobile": "9807715585",
+    "description": "Seeded demo complaint.",
+    "stage": "investigating",
+    "case_id": "C-006",
+    "created_at": 1792335200,
+    "updated_at": 1792338800,
+    "history": [
+      {
+        "at": 1792335200,
+        "stage": "received",
+        "note": "Complaint registered"
+      },
+      {
+        "at": 1792337000,
+        "stage": "under_review",
+        "note": "Opened for review by an officer"
+      },
+      {
+        "at": 1792338800,
+        "stage": "investigating",
+        "note": "Trace triggered"
+      }
+    ]
+  },
+  {
+    "complaint_id": "NCRP-2026-0007",
+    "wallet": "TCwHhzfktEHUNzWZshprTrdqaP7XquhWvm",
+    "chain": "tron",
+    "amount": 3100.0,
+    "fraud_type": "phishing",
+    "state": "Gujarat",
+    "reporter_name": "Neha Kulkarni",
+    "reporter_mobile": "9807798702",
+    "description": "Seeded demo complaint.",
+    "stage": "investigating",
+    "case_id": "C-007",
+    "created_at": 1792338800,
+    "updated_at": 1792342400,
+    "history": [
+      {
+        "at": 1792338800,
+        "stage": "received",
+        "note": "Complaint registered"
+      },
+      {
+        "at": 1792340600,
+        "stage": "under_review",
+        "note": "Opened for review by an officer"
+      },
+      {
+        "at": 1792342400,
+        "stage": "investigating",
+        "note": "Trace triggered"
+      }
+    ]
+  },
+  {
+    "complaint_id": "NCRP-2026-0008",
+    "wallet": "TPczvgGfrntR6ZxVXR8MoAV59D5k6HsUjL",
+    "chain": "tron",
+    "amount": 6400.0,
+    "fraud_type": "task",
+    "state": "West Bengal",
+    "reporter_name": "Suresh Babu",
+    "reporter_mobile": "9807881819",
+    "description": "Seeded demo complaint.",
+    "stage": "investigating",
+    "case_id": "C-008",
+    "created_at": 1792342400,
+    "updated_at": 1792346000,
+    "history": [
+      {
+        "at": 1792342400,
+        "stage": "received",
+        "note": "Complaint registered"
+      },
+      {
+        "at": 1792344200,
+        "stage": "under_review",
+        "note": "Opened for review by an officer"
+      },
+      {
+        "at": 1792346000,
+        "stage": "investigating",
+        "note": "Trace triggered"
+      }
+    ]
+  },
+  {
+    "complaint_id": "NCRP-2026-104317",
+    "wallet": "TDongf8XirZvCUFazHwM2FG7cukpnF9h9D",
+    "chain": "tron",
+    "amount": 5000.0,
+    "fraud_type": "investment",
+    "state": "Karnataka",
+    "reporter_name": "Asha Verma",
+    "reporter_mobile": "9808962340",
+    "description": "Waiting for an officer.",
+    "stage": "received",
+    "case_id": null,
+    "created_at": 1792523800,
+    "updated_at": 1792523800,
+    "history": [
+      {
+        "at": 1792523800,
+        "stage": "received",
+        "note": "Complaint registered"
+      }
+    ]
+  },
+  {
+    "complaint_id": "NCRP-2026-258846",
+    "wallet": "TJgNArE5dkoiDgHUjimdizwNaTZZwLh1Lg",
+    "chain": "tron",
+    "amount": 6000.0,
+    "fraud_type": "task",
+    "state": "Delhi",
+    "reporter_name": "Rohit Nair",
+    "reporter_mobile": "9809045457",
+    "description": "Waiting for an officer.",
+    "stage": "received",
+    "case_id": null,
+    "created_at": 1792529200,
+    "updated_at": 1792529200,
+    "history": [
+      {
+        "at": 1792529200,
+        "stage": "received",
+        "note": "Complaint registered"
+      }
+    ]
+  },
+  {
+    "complaint_id": "NCRP-2026-391502",
+    "wallet": "TVLHfdgpiMR2mRpjtAWm8YJ5hCj9iYWS2B",
+    "chain": "tron",
+    "amount": 2826.0,
+    "fraud_type": "phishing",
+    "state": "Maharashtra",
+    "reporter_name": "Meera Iyer",
+    "reporter_mobile": "9809128574",
+    "description": "Waiting for an officer.",
+    "stage": "received",
+    "case_id": null,
+    "created_at": 1792534600,
+    "updated_at": 1792534600,
+    "history": [
+      {
+        "at": 1792534600,
+        "stage": "received",
+        "note": "Complaint registered"
+      }
+    ]
+  }
+]

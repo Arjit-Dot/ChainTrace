@@ -1,4 +1,4 @@
-import { RISK_CLASSES, SOURCE_CLASSES, URGENCY } from "../../lib/colors";
+import { RISK_CLASSES, SOURCE_CLASSES, STAGES, URGENCY } from "../../lib/colors";
 
 const pill =
   "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset";
@@ -35,6 +35,11 @@ export function UrgencyBadge({ urgency, reasons = [] }) {
       {u.label}
     </span>
   );
+}
+
+export function StageBadge({ stage }) {
+  const s = STAGES[stage]
+  return s ? <span className={`${pill} ${s.classes}`}>{s.label}</span> : null
 }
 
 // Live monitoring: LIVE (checked recently), STALE (last check older than ~2 poll intervals), or OFF.

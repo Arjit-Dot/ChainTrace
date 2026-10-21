@@ -15,8 +15,8 @@ import time
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from contract.schemas import CaseSummary, Monitoring, TraceRequest, TraceResponse
-from paths import DATA, SEED_CASES, SEED_TRACES
+from contract.schemas import CaseSummary, Complaint, Monitoring, TraceRequest, TraceResponse
+from paths import DATA, SEED_CASES, SEED_COMPLAINTS, SEED_TRACES
 from product.linking import case_groups
 from product.recommendations import with_recommendations
 
@@ -57,6 +57,10 @@ def _connect() -> sqlite3.Connection:
         seq     INTEGER NOT NULL,
         summary TEXT NOT NULL,
         trace   TEXT NOT NULL)""")
+    con.execute("""CREATE TABLE IF NOT EXISTS complaints (
+        complaint_id TEXT PRIMARY KEY,
+        created_at   INTEGER NOT NULL,
+        record       TEXT NOT NULL)""")
     return con
 
 
@@ -73,6 +77,7 @@ def init(reset: bool = False) -> None:
     with _lock, _connect() as con:
         if reset:
             con.execute("DELETE FROM cases")
+            con.execute("DELETE FROM complaints")
         for c in cases:
             summary = CaseSummary(**c)
             linked = networks.count(summary.network_id) - 1 if summary.network_id else 0
@@ -84,6 +89,47 @@ def init(reset: bool = False) -> None:
             con.execute("INSERT OR REPLACE INTO cases VALUES (?, ?, ?, ?)",
                         (summary.case_id, _seq(summary.case_id),
                          summary.model_dump_json(), trace.model_dump_json()))
+        _seed_complaints(con)
+
+
+def _seed_complaints(con: sqlite3.Connection) -> None:
+    if not SEED_COMPLAINTS.exists():
+        return
+    for c in json.loads(SEED_COMPLAINTS.read_text()):
+        rec = Complaint(**c)
+        con.execute("INSERT OR IGNORE INTO complaints VALUES (?, ?, ?)", (rec.complaint_id, rec.created_at, rec.model_dump_json()))
+
+
+# ---------- complaints (portal intake) ----------
+def add_complaint(rec: Complaint) -> bool:
+    """Store a new complaint. False if that complaint ID already exists."""
+    with _lock, _connect() as con:
+        cur = con.execute("INSERT OR IGNORE INTO complaints VALUES (?, ?, ?)", (rec.complaint_id, rec.created_at, rec.model_dump_json()))
+        return cur.rowcount == 1
+
+
+def get_complaint(complaint_id: str) -> Optional[Complaint]:
+    with _connect() as con:
+        row = con.execute("SELECT record FROM complaints WHERE complaint_id = ?", (complaint_id,)).fetchone()
+    return Complaint.model_validate_json(row[0]) if row else None
+
+
+def list_complaints(stage: Optional[str] = None) -> List[Complaint]:
+    """Newest first."""
+    with _connect() as con:
+        rows = con.execute("SELECT record FROM complaints ORDER BY created_at DESC, complaint_id DESC").fetchall()
+    out = [Complaint.model_validate_json(r[0]) for r in rows]
+    return [c for c in out if stage is None or c.stage == stage]
+
+
+def update_complaint(complaint_id: str, **changes) -> Optional[Complaint]:
+    with _lock, _connect() as con:
+        row = con.execute("SELECT record FROM complaints WHERE complaint_id = ?", (complaint_id,)).fetchone()
+        if row is None:
+            return None
+        rec = Complaint.model_validate_json(row[0]).model_copy(update=changes)
+        con.execute("UPDATE complaints SET record = ? WHERE complaint_id = ?", (rec.model_dump_json(), complaint_id))
+    return rec
 
 
 # ---------- reads ----------

@@ -1,6 +1,18 @@
 // The only place the frontend talks HTTP. In dev, /api is proxied to :8000 (vite.config.js).
 const BASE = import.meta.env.VITE_API_BASE ?? ''
 
+// FastAPI sends a string for most errors and a list of {loc, msg} for a form that failed validation.
+const FIELDS = { reporter_name: 'Your name', reporter_mobile: 'Mobile number', wallet: 'Wallet', amount: 'Amount', description: 'Description' }
+export function describe(detail) {
+  if (!Array.isArray(detail)) return detail
+  return detail
+    .map((d) => {
+      const field = d.loc?.[d.loc.length - 1]
+      return `${FIELDS[field] ?? field}: ${d.msg}`
+    })
+    .join('. ')
+}
+
 async function send(path, options = {}) {
   const res = await fetch(`${BASE}/api${path}`, options)
   if (!res.ok) {
@@ -10,7 +22,7 @@ async function send(path, options = {}) {
     } catch {
       /* non-JSON error body */
     }
-    throw new Error(detail || `${res.status} ${res.statusText}`)
+    throw new Error(describe(detail) || `${res.status} ${res.statusText}`)
   }
   return res
 }
@@ -31,6 +43,14 @@ export const health = () => request('/health')
 // Core (engine)
 export const trace = (req) => post('/trace', req)
 export const getRisk = (address) => request(`/wallets/${enc(address)}/risk`)
+
+// Complaints: the citizen side (file, track by ID) and the officer inbox
+export const fileComplaint = (body) => post('/complaints', body)
+export const getComplaintStatus = (id) => request(`/complaints/${enc(id)}/status`)
+export const listComplaints = (stage) => request(`/officer/complaints${stage ? `?stage=${enc(stage)}` : ''}`)
+export const getComplaint = (id) => request(`/officer/complaints/${enc(id)}`)
+export const reviewComplaint = (id) => post(`/officer/complaints/${enc(id)}/review`)
+export const traceComplaint = (id) => post(`/officer/complaints/${enc(id)}/trace`)
 
 // Cases
 export const getCases = () => request('/cases')

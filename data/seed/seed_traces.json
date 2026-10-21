@@ -1,6 +1,6 @@
 {
   "C-001": {
-    "contract_version": "1.1.0",
+    "contract_version": "1.2.0",
     "case_id": "C-001",
     "complaint_id": "NCRP-2026-0001",
     "wallet": "TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo",
@@ -317,7 +317,7 @@
     "notes": "FICTIONAL demo data. Names and addresses are placeholders."
   },
   "C-002": {
-    "contract_version": "1.1.0",
+    "contract_version": "1.2.0",
     "case_id": "C-002",
     "complaint_id": "NCRP-2026-0002",
     "wallet": "TWzZ2piQ5aRm6HphynRu8mBce25MoCaPa8",
@@ -492,7 +492,7 @@
     "notes": "FICTIONAL seed trace. Names and addresses are placeholders."
   },
   "C-003": {
-    "contract_version": "1.1.0",
+    "contract_version": "1.2.0",
     "case_id": "C-003",
     "complaint_id": "NCRP-2026-0003",
     "wallet": "TEVhtEy1htd8G5M54VV9P39nRT9ydTeLgA",
@@ -700,7 +700,7 @@
     "notes": "FICTIONAL seed trace. Names and addresses are placeholders."
   },
   "C-004": {
-    "contract_version": "1.1.0",
+    "contract_version": "1.2.0",
     "case_id": "C-004",
     "complaint_id": "NCRP-2026-0004",
     "wallet": "TR6UvFWLaT62EDbUCQuoghPuxhAsp344DJ",
@@ -829,7 +829,7 @@
     "notes": "FICTIONAL seed trace. Names and addresses are placeholders."
   },
   "C-005": {
-    "contract_version": "1.1.0",
+    "contract_version": "1.2.0",
     "case_id": "C-005",
     "complaint_id": "NCRP-2026-0005",
     "wallet": "TMo5n3YtkRHEWs9iaguxmmh4vtwCQneA7Z",
@@ -1003,7 +1003,7 @@
     "notes": "FICTIONAL seed trace. Names and addresses are placeholders."
   },
   "C-006": {
-    "contract_version": "1.1.0",
+    "contract_version": "1.2.0",
     "case_id": "C-006",
     "complaint_id": "NCRP-2026-0006",
     "wallet": "TTzCWpZ69PgvNqDmJy6SnvprJTLBuw9bt4",
@@ -1153,7 +1153,7 @@
     "notes": "FICTIONAL seed trace. Funds entered a mixer; no exchange reached."
   },
   "C-007": {
-    "contract_version": "1.1.0",
+    "contract_version": "1.2.0",
     "case_id": "C-007",
     "complaint_id": "NCRP-2026-0007",
     "wallet": "TCwHhzfktEHUNzWZshprTrdqaP7XquhWvm",
@@ -1282,7 +1282,7 @@
     "notes": "FICTIONAL seed trace. Names and addresses are placeholders."
   },
   "C-008": {
-    "contract_version": "1.1.0",
+    "contract_version": "1.2.0",
     "case_id": "C-008",
     "complaint_id": "NCRP-2026-0008",
     "wallet": "TPczvgGfrntR6ZxVXR8MoAV59D5k6HsUjL",

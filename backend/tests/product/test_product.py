@@ -207,15 +207,25 @@ def test_simulate_is_case_aware(client):
     assert client.post("/api/alerts/simulate", params={"case_id": "C-999"}).status_code == 404
 
 
-def test_ncrp_complaint_creates_a_linked_case_and_alerts(client, stream):
+def ncrp_then_trace(client, payload):
+    """The NCRP feed puts a complaint in the officer inbox; an officer then triggers the trace, which makes the case."""
+    ack = client.post("/api/integrations/ncrp/complaints", json=payload).json()
+    done = client.post(f"/api/officer/complaints/{payload['complaint_id']}/trace").json()
+    return ack, done
+
+
+def test_ncrp_complaint_waits_in_the_inbox_until_an_officer_triggers_the_trace(client, stream):
     before = len(client.get("/api/cases").json())
     ack = client.post("/api/integrations/ncrp/complaints",
                       json={"complaint_id": "NCRP-FEED-1", "wallet": HERO_WALLET, "amount": 9000}).json()
+    assert len(client.get("/api/cases").json()) == before and ack["case_id"] is None and ack["status"] == "queued"
+    assert [a["type"] for a in stream()] == ["COMPLAINT_RECEIVED"]                # officers are told; nothing is traced yet
+    done = client.post("/api/officer/complaints/NCRP-FEED-1/trace").json()
     cases = client.get("/api/cases").json()
-    assert len(cases) == before + 1 and ack["case_id"] == cases[0]["case_id"] and ack["status"] == "queued"
+    assert len(cases) == before + 1 and done["case_id"] == cases[0]["case_id"] and done["stage"] == "investigating"
     pushed = {a["type"]: a for a in stream()}
     assert "NET-1" in pushed["NEW_COMPLAINT_LINKED"]["message"] and "HIGH_RISK_WALLET" in pushed
-    assert all(a["case_id"] == ack["case_id"] for a in pushed.values())
+    assert all(a["case_id"] == done["case_id"] for t, a in pushed.items() if t != "COMPLAINT_RECEIVED")
 
 
 def test_new_complaint_form_also_alerts(client, stream):
@@ -257,8 +267,10 @@ def test_dashboard_is_computed_from_the_store(client):
 
 def test_dashboard_changes_after_an_ncrp_complaint(client):
     before = client.get("/api/dashboard").json()
-    client.post("/api/integrations/ncrp/complaints",
-                json={"complaint_id": "NCRP-FEED-2", "wallet": HERO_WALLET, "amount": 5000, "state": "Kerala"})
+    payload = {"complaint_id": "NCRP-FEED-2", "wallet": HERO_WALLET, "amount": 5000, "state": "Kerala"}
+    client.post("/api/integrations/ncrp/complaints", json=payload)
+    assert client.get("/api/dashboard").json()["total_cases"] == before["total_cases"]        # still only in the inbox
+    client.post("/api/officer/complaints/NCRP-FEED-2/trace")
     after = client.get("/api/dashboard").json()
     assert after["total_cases"] == before["total_cases"] + 1
     assert after["total_amount_lost"] == before["total_amount_lost"] + 5000
@@ -280,6 +292,6 @@ def test_networks_come_from_shared_wallets(client):
 
 
 def test_ncrp_case_on_a_known_wallet_joins_the_network(client):
-    ack = client.post("/api/integrations/ncrp/complaints", json={"complaint_id": "NCRP-FEED-3", "wallet": HERO_WALLET}).json()
+    _, done = ncrp_then_trace(client, {"complaint_id": "NCRP-FEED-3", "wallet": HERO_WALLET})
     n1 = next(n for n in client.get("/api/networks").json() if n["network_id"] == "NET-1")
-    assert ack["case_id"] in n1["complaint_ids"] and n1["victim_count"] == 4
+    assert done["case_id"] in n1["complaint_ids"] and n1["victim_count"] == 4

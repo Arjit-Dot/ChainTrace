@@ -53,6 +53,12 @@ Regenerate fixtures after a contract change: `python data/scripts/gen_fixtures.p
 | GET | `/api/networks` | `Network[]` | B |
 | GET | `/api/alerts` | `Alert[]` (history) | B |
 | GET | `/api/alerts/stream` | SSE, event name `alert`, data = `Alert` JSON | B |
+| POST | `/api/complaints` | `ComplaintReceipt` (201). A citizen files a complaint: a random complaint ID is issued and nothing is traced | B |
+| GET | `/api/complaints/{id}/status` | `ComplaintStatusView`: the coarse stage and generic messages only; rate limited; 404 for an unknown ID | B |
+| GET | `/api/officer/complaints[?stage=]` | `Complaint[]`: the officer inbox, newest first | B |
+| GET | `/api/officer/complaints/{id}` | `Complaint` (full, with the officers-only history) | B |
+| POST | `/api/officer/complaints/{id}/review` | `Complaint`: received to under review (409 if not received) | B |
+| POST | `/api/officer/complaints/{id}/trace` | `Complaint`: triggers the trace, creates the case, links `case_id`, stage to investigating (409 if already traced) | B |
 | POST | `/api/alerts/simulate` | pushes a demo alert to open streams | B |
 | POST | `/api/cases/{case_id}/simulate-movement` | `Alert[]`: replays a recorded movement of the case's idle funds (SIMULATED), re-checks the case now; 404 if there is none | B |
 | POST | `/api/integrations/ncrp/complaints` | `IntegrationAck` (mock NCRP feed) | B |
@@ -72,6 +78,8 @@ Full request and response shapes are in `backend/contract/schemas.py` and in the
 - **Hop:** `-1` for victims, `0` for the reported wallet, increasing downstream.
 - **`idle_balance`:** funds still sitting in a leaf wallet. `summary.idle_funds` must equal the sum over nodes (tested).
 - **Every `nearest_vasp` has `evidence[]`** and its `deposit_address` must exist in the graph (tested).
+
+> **Contract v1.2.0 (in progress):** adds the complaint models (`ComplaintRequest`, `Complaint`, `ComplaintEvent`, `ComplaintReceipt`, `ComplaintStatusView`, `ComplaintTimelineItem`, stages `received`, `under_review`, `investigating`, `action_initiated`, `closed`) and the alert type `COMPLAINT_RECEIVED`; `Alert.case_id` is now optional and `Alert.complaint_id` is new. **What a citizen may see is only `ComplaintStatusView`**: the stage, a fixed sentence per stage and the stage times. Never the wallet, amount, exchange, case or how the complaint is handled. Later stages add the node types `dex` and `bank_account` under the same version.
 
 > **Contract v1.1.0 (applied):** `urgency` (`act_now | act_soon | preserve`, nullable) and `urgency_reasons[]` are on `TraceResponse` and `CaseSummary`; the reported wallet's `risk` / `risk_score` are nullable on `Node`, `TraceResponse` and `CaseSummary`. Live monitoring adds `urgency_as_of` and `monitoring` (`Monitoring`) to the same two models and alert type `URGENCY_CHANGED`. `schemas.py`, `data/scripts/gen_fixtures.py`, the fixtures and the seed traces are regenerated, and the tests cover it. "Linked to 2 or more complaints" counts the *other* complaints in the case's network.
 

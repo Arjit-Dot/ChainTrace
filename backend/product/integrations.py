@@ -11,7 +11,7 @@ import time
 
 from fastapi import APIRouter, HTTPException
 
-from contract.schemas import IntegrationAck, SahyogNoticeRequest, TraceRequest
+from contract.schemas import ComplaintRequest, IntegrationAck, SahyogNoticeRequest, TraceRequest
 from product import alerts, engine_client, store
 
 router = APIRouter(prefix="/api/integrations", tags=["integrations (simulated)"])
@@ -31,9 +31,16 @@ async def create_case(req: TraceRequest):
 
 @router.post("/ncrp/complaints", response_model=IntegrationAck)
 async def ncrp_complaint(req: TraceRequest):
-    trace = await create_case(req)
-    now = int(time.time())
-    return IntegrationAck(ack_id=f"NCRP-ACK-{trace.case_id}", status="queued", received_at=now, case_id=trace.case_id)
+    """A complaint arrives from the NCRP feed: it joins the officer inbox. An officer reviews it and triggers the trace."""
+    from product import complaints
+    rec = store.get_complaint(req.complaint_id)
+    if rec is None:                                                       # a new complaint: join the inbox and tell the officers
+        rec = complaints.create(
+            ComplaintRequest(wallet=req.wallet, chain=req.chain, amount=req.amount, currency=req.currency or "USDT", tx_hash=req.tx_hash,
+                             fraud_type=req.fraud_type, state=req.state, reporter_name="NCRP feed", reporter_mobile="0000000000"),
+            complaint_id=req.complaint_id, source="NCRP feed")
+        await alerts.publish(alerts.complaint_received(rec.complaint_id, rec.state))
+    return IntegrationAck(ack_id=f"NCRP-ACK-{rec.complaint_id}", status="queued", received_at=int(time.time()), case_id=rec.case_id)
 
 
 @router.post("/sahyog/notice", response_model=IntegrationAck)

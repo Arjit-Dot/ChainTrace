@@ -12,6 +12,7 @@ CONTACTS_CSV = REFERENCE / "vasp_contacts.csv"
 SEED = DATA / "seed"                      # the 8 seeded demo cases (B)
 SEED_CASES = SEED / "seed_cases.json"
 SEED_TRACES = SEED / "seed_traces.json"
+SEED_COMPLAINTS = SEED / "seed_complaints.json"
 
 FIXTURES = DATA / "fixtures"              # one example response per endpoint
 SCENARIOS = DATA / "scenarios"            # attribution test scenarios + the live-monitoring replay

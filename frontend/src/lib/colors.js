@@ -36,6 +36,15 @@ export const URGENCY = {
   preserve: { label: 'Preserve', classes: 'bg-sky-500/15 text-sky-300 ring-sky-500/40' },
 }
 
+// A complaint's stage (the citizen sees the same five, in plainer words).
+export const STAGES = {
+  received: { label: 'Received', classes: 'bg-sky-500/15 text-sky-300 ring-sky-500/40' },
+  under_review: { label: 'Under review', classes: 'bg-amber-500/15 text-amber-300 ring-amber-500/40' },
+  investigating: { label: 'Investigating', classes: 'bg-violet-500/15 text-violet-300 ring-violet-500/40' },
+  action_initiated: { label: 'Action initiated', classes: 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/40' },
+  closed: { label: 'Closed', classes: 'bg-slate-500/15 text-slate-300 ring-slate-500/40' },
+}
+
 export const SOURCE_CLASSES = {
   live: 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/40',
   cached: 'bg-sky-500/15 text-sky-300 ring-sky-500/40',

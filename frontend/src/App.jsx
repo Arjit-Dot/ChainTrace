@@ -6,6 +6,8 @@ import FileComplaint from './pages/citizen/FileComplaint'
 import Submitted from './pages/citizen/Submitted'
 import TrackComplaint from './pages/citizen/TrackComplaint'
 import CaseView from './pages/officer/CaseView'
+import ComplaintDetail from './pages/officer/ComplaintDetail'
+import Inbox from './pages/officer/Inbox'
 import Dashboard from './pages/officer/Dashboard'
 import NetworkView from './pages/officer/NetworkView'
 import { R } from './lib/routes'
@@ -41,6 +43,8 @@ export function AppRoutes() {
 
       <Route path="officer" element={<OfficerLayout />}>
         <Route index element={<Dashboard />} />
+        <Route path="inbox" element={<Inbox />} />
+        <Route path="complaints/:id" element={<ComplaintDetail />} />
         <Route path="cases/:id" element={<CaseView />} />
         <Route path="networks" element={<NetworkView />} />
       </Route>

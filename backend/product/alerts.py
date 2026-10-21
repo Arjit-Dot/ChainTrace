@@ -60,13 +60,21 @@ async def publish(alert: Alert) -> None:
         await q.put(alert.model_dump())
 
 
-def _alert(type_: str, severity: str, case_id: str, message: str, now: float) -> Alert:
+def _alert(type_: str, severity: str, case_id: Optional[str], message: str, now: float,
+           complaint_id: Optional[str] = None) -> Alert:
     global _counter
     _counter += 1
-    alert = Alert(id=f"L-{_counter}", type=type_, severity=severity, case_id=case_id, message=message,
-                  timestamp=int(now))
+    alert = Alert(id=f"L-{_counter}", type=type_, severity=severity, case_id=case_id, complaint_id=complaint_id,
+                  message=message, timestamp=int(now))
     _live.insert(0, alert)
     return alert
+
+
+def complaint_received(complaint_id: str, state: Optional[str], now: Optional[float] = None) -> Alert:
+    """A citizen filed a complaint: tell the officers (no case exists yet)."""
+    where = f" from {state}" if state else ""
+    return _alert("COMPLAINT_RECEIVED", "info", None, f"New complaint {complaint_id}{where} is waiting for review",
+                  time.time() if now is None else now, complaint_id=complaint_id)
 
 
 # ---------- watching ----------

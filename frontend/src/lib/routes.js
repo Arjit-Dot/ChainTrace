@@ -7,6 +7,8 @@ export const R = {
   submitted: (id) => `/citizen/submitted/${encodeURIComponent(id)}`,
   track: '/citizen/track',
   officer: '/officer',
+  officerInbox: '/officer/inbox',
+  officerComplaint: (id) => `/officer/complaints/${encodeURIComponent(id)}`,
   officerCase: (id) => `/officer/cases/${encodeURIComponent(id)}`,
   officerNetworks: '/officer/networks',
   officerNetwork: (id) => `/officer/networks?id=${encodeURIComponent(id)}`,

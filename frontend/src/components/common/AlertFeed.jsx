@@ -1,4 +1,4 @@
-import { ArrowRightLeft, Bell, Landmark, Link2, ShieldAlert, Shuffle, Siren } from 'lucide-react'
+import { ArrowRightLeft, Bell, FilePlus2, Landmark, Link2, ShieldAlert, Shuffle, Siren } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAlerts } from '../../hooks/useAlerts'
@@ -12,6 +12,7 @@ export const ALERT_ICONS = {
   NEW_COMPLAINT_LINKED: Link2,
   HIGH_RISK_WALLET: ShieldAlert,
   URGENCY_CHANGED: Siren,
+  COMPLAINT_RECEIVED: FilePlus2,
 }
 
 export const SEVERITY = {
@@ -30,8 +31,12 @@ export function AlertLine({ alert, onOpen }) {
         <p className={`text-[11px] font-semibold tracking-wide uppercase ${sev.text}`}>{humanize(alert.type.toLowerCase())}</p>
         <p className="text-sm text-ink">{alert.message}</p>
         <p className="text-xs text-muted">
-          <Link to={R.officerCase(alert.case_id)} onClick={onOpen} className="text-accent hover:underline">
-            {alert.case_id}
+          <Link
+            to={alert.case_id ? R.officerCase(alert.case_id) : R.officerComplaint(alert.complaint_id)}
+            onClick={onOpen}
+            className="text-accent hover:underline"
+          >
+            {alert.case_id ?? alert.complaint_id}
           </Link>{' '}
           · {timeAgo(alert.timestamp)}
         </p>

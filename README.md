@@ -131,7 +131,7 @@ Open <http://localhost:5173>. You land on the **gateway**, which stands in for t
 - **Citizens** (`/citizen/...`): file a complaint and track it. No officer navigation.
 - **Officers** (`/officer/...`): the console with the dashboard, cases and networks. It opens in a separate browser tab from the gateway. There is no login in this demo.
 
-First thing to try: **File a complaint**, click **Fill demo example** (wallet `TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo`, amount 12000) and submit; then open the **officer console** in the other tab and find the case on the dashboard. (In this version submitting still traces straight away; the officer-triggered trace arrives in a later stage.)
+First thing to try: **File a complaint**, click **Fill demo example** and submit; you get a complaint ID. Then open the **officer console** in the other tab: the complaint is in the **Inbox** (a count shows on the Inbox link, and an alert pops up). Open it, click **Start review** and **Trigger trace**: the case is created and you land on it. Three complaints are already waiting in the inbox (a sweep to an exchange, funds still idle, and the real Binance flow). Filing never traces: only an officer does. The citizen's **Track a complaint** page arrives in the next stage.
 
 ### 4.4 Engine modes
 
@@ -243,7 +243,12 @@ All routes live in `main.py`; interactive docs are at <http://localhost:8000/doc
 | GET | `/api/alerts`, `/api/alerts/stream` | Alert history and the live stream |
 | GET | `/api/dashboard`, `/api/networks` | Figures and linked-complaint groups computed from the stored cases |
 | POST | `/api/alerts/simulate` | Push the next scripted alert for a case (SIMULATED) |
-| POST | `/api/integrations/ncrp/complaints`, `/api/integrations/sahyog/notice` | Mock NCRP and SAHYOG connectors: NCRP creates a case; SAHYOG marks the notice sent |
+| POST | `/api/complaints` | A citizen files a complaint: returns a random complaint ID; nothing is traced |
+| GET | `/api/complaints/{id}/status` | What the citizen may see: the stage and a generic message (rate limited) |
+| GET | `/api/officer/complaints` | The officer inbox (`?stage=received` for new ones) |
+| GET | `/api/officer/complaints/{id}` | One complaint in full |
+| POST | `/api/officer/complaints/{id}/review`, `/trace` | Start the review; trigger the trace (creates the case) |
+| POST | `/api/integrations/ncrp/complaints`, `/api/integrations/sahyog/notice` | Mock connectors: NCRP puts a complaint in the officer inbox; SAHYOG marks the notice sent |
 | GET | `/api/health` | Status, contract version and engine mode |
 
 ### 5.5 The data folder

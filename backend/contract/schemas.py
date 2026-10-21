@@ -8,7 +8,7 @@ Conventions: timestamps = Unix epoch SECONDS (UTC); amounts = token units (e.g. 
 from typing import List, Literal, Optional
 from pydantic import BaseModel, Field
 
-CONTRACT_VERSION = "1.1.0"
+CONTRACT_VERSION = "1.2.0"
 
 NodeType = Literal["victim", "scam_wallet", "intermediary", "bridge", "mixer", "exchange", "unknown"]
 RiskLevel = Literal["Low", "Medium", "High", "Critical"]
@@ -192,11 +192,83 @@ class Network(BaseModel):
 # ---------- Alerts ----------
 class Alert(BaseModel):
     id: str
-    type: Literal["FUNDS_MOVED", "REACHED_VASP", "ENTERED_MIXER", "NEW_COMPLAINT_LINKED", "HIGH_RISK_WALLET", "URGENCY_CHANGED"]
+    type: Literal["FUNDS_MOVED", "REACHED_VASP", "ENTERED_MIXER", "NEW_COMPLAINT_LINKED", "HIGH_RISK_WALLET", "URGENCY_CHANGED",
+                  "COMPLAINT_RECEIVED"]
     severity: Literal["info", "warning", "critical"]
-    case_id: str
+    case_id: Optional[str] = None             # None for an alert about a complaint that has no case yet
+    complaint_id: Optional[str] = None
     message: str
     timestamp: int
+
+
+# ---------- Complaints (portal intake) ----------
+# A citizen files a complaint; an officer reviews it and triggers the trace, which creates the case. The citizen can
+# follow only a coarse stage by complaint ID (ComplaintStatusView): never the wallet, the exchange or how it is handled.
+ComplaintStage = Literal["received", "under_review", "investigating", "action_initiated", "closed"]
+
+
+class ComplaintRequest(BaseModel):
+    """What a citizen submits."""
+    wallet: str = Field(min_length=1, max_length=120)
+    chain: Optional[Chain] = None
+    amount: Optional[float] = Field(default=None, ge=0)
+    currency: str = "USDT"
+    tx_hash: Optional[str] = Field(default=None, max_length=120)
+    fraud_type: Optional[str] = Field(default=None, max_length=40)
+    state: Optional[str] = Field(default=None, max_length=60)
+    description: Optional[str] = Field(default=None, max_length=2000)
+    reporter_name: str = Field(min_length=1, max_length=80)
+    reporter_mobile: str = Field(pattern=r"^\d{10}$")
+
+
+class ComplaintEvent(BaseModel):
+    at: int
+    stage: ComplaintStage
+    note: str                                  # the officer's view of what happened
+
+
+class Complaint(BaseModel):
+    """The stored complaint (officer view only)."""
+    complaint_id: str
+    wallet: str
+    chain: Optional[Chain] = None
+    amount: Optional[float] = None
+    currency: str = "USDT"
+    tx_hash: Optional[str] = None
+    fraud_type: Optional[str] = None
+    state: Optional[str] = None
+    description: Optional[str] = None
+    reporter_name: str
+    reporter_mobile: str
+    stage: ComplaintStage = "received"
+    case_id: Optional[str] = None              # set once an officer has triggered the trace
+    created_at: int
+    updated_at: int
+    history: List[ComplaintEvent] = []
+
+
+class ComplaintReceipt(BaseModel):
+    """What the citizen gets back when filing."""
+    complaint_id: str
+    stage: ComplaintStage
+    message: str
+
+
+class ComplaintTimelineItem(BaseModel):
+    stage: ComplaintStage
+    label: str
+    message: str
+    at: int
+
+
+class ComplaintStatusView(BaseModel):
+    """The ONLY thing a citizen can see about a complaint: a coarse stage and generic messages."""
+    complaint_id: str
+    stage: ComplaintStage
+    label: str
+    message: str
+    updated_at: int
+    timeline: List[ComplaintTimelineItem]
 
 
 # ---------- Notices and integrations ----------
