@@ -1,11 +1,14 @@
 import cytoscape from 'cytoscape'
 import dagre from 'cytoscape-dagre'
-import { Maximize2 } from 'lucide-react'
+import { Maximize2, Play } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { nodeColor } from '../../lib/colors'
 import { formatAmount, shortAddr } from '../../lib/format'
 
 cytoscape.use(dagre)
+
+const HOP_MS = 400 // one hop revealed every 400 ms
+const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
 const SHAPES = {
   victim: 'ellipse',
@@ -74,6 +77,7 @@ function toElements(graph, wallet) {
     data: {
       id: n.id,
       type: n.type,
+      hop: n.hop,
       color: nodeColor(n.type),
       shape: SHAPES[n.type] ?? 'ellipse',
       idle: n.idle_balance > 0,
@@ -94,13 +98,50 @@ function toElements(graph, wallet) {
   return [...nodes, ...edges]
 }
 
+// Reveal the graph hop by hop (victims, reported wallet, hop 1, ...); an edge appears with its later end.
+function revealByHop(cy, onDone = () => {}) {
+  const hops = [...new Set(cy.nodes().map((n) => n.data('hop')))].sort((a, b) => a - b)
+  const stepOf = (ele) =>
+    ele.isNode() ? ele.data('hop') : Math.max(ele.source().data('hop'), ele.target().data('hop'))
+  cy.elements().style('opacity', 0)
+  const timers = hops.map((h, i) =>
+    setTimeout(() => {
+      cy.elements()
+        .filter((ele) => stepOf(ele) === h)
+        .animate({ style: { opacity: 1 } }, { duration: HOP_MS * 0.75 })
+    }, i * HOP_MS),
+  )
+  // Drop the opacity bypass once everything is in, so the stylesheet is in charge again.
+  timers.push(
+    setTimeout(() => {
+      cy.elements().removeStyle('opacity')
+      onDone()
+    }, hops.length * HOP_MS + HOP_MS),
+  )
+  return () => {
+    timers.forEach(clearTimeout)
+    cy.elements().stop().removeStyle('opacity')
+  }
+}
+
 // Fund-flow graph: left-to-right by hop, colored by node type, edge width by amount,
 // green path from the reported wallet to the Nearest VASP deposit address.
+// The first time a case is shown, the trace builds up hop by hop.
 export default function TraceGraph({ trace, selected, onSelect }) {
   const box = useRef(null)
   const cyRef = useRef(null)
+  const stopReveal = useRef(() => {})
+  const animatedCase = useRef(null)
+  const revealDone = useRef(true)
   const onSelectRef = useRef(onSelect)
   onSelectRef.current = onSelect
+
+  const replay = () => {
+    const cy = cyRef.current
+    if (!cy) return
+    stopReveal.current()
+    stopReveal.current = revealByHop(cy)
+  }
 
   useEffect(() => {
     const cy = cytoscape({
@@ -125,7 +166,17 @@ export default function TraceGraph({ trace, selected, onSelect }) {
     cy.on('tap', 'node', (e) => onSelectRef.current(e.target.id()))
     cy.on('tap', (e) => e.target === cy && onSelectRef.current(null))
     cyRef.current = cy
-    return () => cy.destroy()
+    if (animatedCase.current !== trace.case_id && !reducedMotion()) {
+      animatedCase.current = trace.case_id // live refreshes of the same case don't replay it
+      revealDone.current = false
+      stopReveal.current = revealByHop(cy, () => (revealDone.current = true))
+    }
+    return () => {
+      if (!revealDone.current) animatedCase.current = null // interrupted (e.g. StrictMode remount): play it again
+      stopReveal.current()
+      stopReveal.current = () => {}
+      cy.destroy()
+    }
   }, [trace])
 
   useEffect(() => {
@@ -138,13 +189,22 @@ export default function TraceGraph({ trace, selected, onSelect }) {
   return (
     <div className="relative h-full w-full">
       <div ref={box} className="h-full w-full" />
-      <button
-        onClick={() => cyRef.current?.fit(undefined, 30)}
-        title="Fit graph"
-        className="absolute top-2 right-2 rounded-md border border-line bg-panel-2/80 p-1.5 text-muted hover:text-ink"
-      >
-        <Maximize2 className="size-4" />
-      </button>
+      <div className="absolute top-2 right-2 flex gap-1.5">
+        <button
+          onClick={replay}
+          title="Replay the trace hop by hop"
+          className="rounded-md border border-line bg-panel-2/80 p-1.5 text-muted hover:text-ink"
+        >
+          <Play className="size-4" />
+        </button>
+        <button
+          onClick={() => cyRef.current?.fit(undefined, 30)}
+          title="Fit graph"
+          className="rounded-md border border-line bg-panel-2/80 p-1.5 text-muted hover:text-ink"
+        >
+          <Maximize2 className="size-4" />
+        </button>
+      </div>
     </div>
   )
 }
