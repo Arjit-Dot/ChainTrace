@@ -3,10 +3,9 @@ ChainTrace API (Person B owns the routes; Person A owns the engine package).
 
 Run:  uvicorn main:app --reload --port 8000     (from the backend/ folder)
 Docs: http://localhost:8000/docs
-Every route works today on fixtures, so the frontend can be built immediately.
+Routes read the case store (seeded from data/seed/); traces come through product/engine_client.py.
 """
 import asyncio
-import json
 from contextlib import asynccontextmanager
 from typing import List
 
@@ -14,19 +13,13 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
-from paths import FIXTURES
-from product import alerts, engine_client, integrations, store
+from product import alerts, analytics, engine_client, integrations, store
 from product.notices import build_freeze_notice
 from product.reports import build_report, evidence_hash
 from contract.schemas import (
-    Alert, CaseSummary, DashboardStats, FreezeNotice, Network, TraceRequest, TraceResponse, WalletRisk,
-    CONTRACT_VERSION,
+    Alert, CaseSummary, FreezeNotice, TraceRequest, TraceResponse, WalletRisk, CONTRACT_VERSION,
 )
 
-
-
-def load(name: str):
-    return json.loads((FIXTURES / name).read_text())
 
 
 @asynccontextmanager
@@ -98,20 +91,10 @@ def report(case_id: str):
     })
 
 
-# ---- Analytics ----
-@app.get("/api/dashboard", response_model=DashboardStats)
-def dashboard():
-    return load("dashboard.json")
-
-
-@app.get("/api/networks", response_model=List[Network])
-def networks():
-    return load("networks.json")
-
-
 # ---- Alerts (SSE) and mock integrations: see product/alerts.py and product/integrations.py ----
 app.include_router(alerts.router)
 app.include_router(integrations.router)
+app.include_router(analytics.router)        # /api/dashboard, /api/networks: product/analytics.py
 
 
 @app.post("/api/cases/{case_id}/simulate-movement", response_model=List[Alert])

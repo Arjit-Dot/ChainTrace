@@ -241,3 +241,45 @@ def test_openapi_lists_every_route():
     for p in ("/api/alerts/stream", "/api/alerts/simulate", "/api/integrations/ncrp/complaints",
               "/api/integrations/sahyog/notice", "/api/cases/{case_id}/report"):
         assert p in paths
+
+
+# ---------- B7: dashboard and networks from the store ----------
+def test_dashboard_is_computed_from_the_store(client):
+    d = client.get("/api/dashboard").json()
+    assert d["total_cases"] == len(CASES)
+    assert d["total_amount_lost"] == pytest.approx(sum(c.amount_lost for c in CASES))
+    assert d["total_amount_traced"] == pytest.approx(sum(t.summary.total_traced for t in TRACES.values()))
+    assert d["idle_funds_flagged"] == pytest.approx(sum(t.summary.idle_funds for t in TRACES.values()))
+    assert d["vasp_identified_pct"] == pytest.approx(100 * sum(c.vasp is not None for c in CASES) / len(CASES), abs=0.1)
+    assert sum(x["count"] for x in d["by_fraud_type"]) == len(CASES)
+    assert d["top_vasps"][0] == {"name": "Example Exchange A", "count": 3, "amount": 26300.0}
+
+
+def test_dashboard_changes_after_an_ncrp_complaint(client):
+    before = client.get("/api/dashboard").json()
+    client.post("/api/integrations/ncrp/complaints",
+                json={"complaint_id": "NCRP-FEED-2", "wallet": HERO_WALLET, "amount": 5000, "state": "Kerala"})
+    after = client.get("/api/dashboard").json()
+    assert after["total_cases"] == before["total_cases"] + 1
+    assert after["total_amount_lost"] == before["total_amount_lost"] + 5000
+    assert {"name": "Kerala", "count": 1, "amount": 5000.0} in after["by_state"]
+    assert after["top_vasps"][0]["count"] == 4
+
+
+def test_networks_come_from_shared_wallets(client):
+    nets = {n["network_id"]: n for n in client.get("/api/networks").json()}
+    assert set(nets) == {"NET-1", "NET-2"}
+    n1 = nets["NET-1"]
+    assert n1["complaint_ids"] == ["C-001", "C-002", "C-003"] and n1["vasp"] == "Example Exchange A"
+    assert n1["total_amount"] == 26300.0 and n1["victim_count"] == 3
+    ids = {x["id"] for x in n1["nodes"]}
+    assert all(e["source"] in ids and e["target"] in ids for e in n1["edges"])
+    deposit = TRACES["C-001"].nearest_vasp.deposit_address
+    assert {"source": "C-002", "target": deposit} in n1["edges"]
+    assert {x["type"] for x in n1["nodes"]} == {"complaint", "wallet", "exchange"}
+
+
+def test_ncrp_case_on_a_known_wallet_joins_the_network(client):
+    ack = client.post("/api/integrations/ncrp/complaints", json={"complaint_id": "NCRP-FEED-3", "wallet": HERO_WALLET}).json()
+    n1 = next(n for n in client.get("/api/networks").json() if n["network_id"] == "NET-1")
+    assert ack["case_id"] in n1["complaint_ids"] and n1["victim_count"] == 4

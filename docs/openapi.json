@@ -236,46 +236,6 @@
         }
       }
     },
-    "/api/dashboard": {
-      "get": {
-        "summary": "Dashboard",
-        "operationId": "dashboard_api_dashboard_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DashboardStats"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/networks": {
-      "get": {
-        "summary": "Networks",
-        "operationId": "networks_api_networks_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/Network"
-                  },
-                  "type": "array",
-                  "title": "Response Networks Api Networks Get"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/alerts": {
       "get": {
         "tags": [
@@ -445,6 +405,52 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dashboard": {
+      "get": {
+        "tags": [
+          "analytics"
+        ],
+        "summary": "Dashboard",
+        "operationId": "dashboard_api_dashboard_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardStats"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/networks": {
+      "get": {
+        "tags": [
+          "analytics"
+        ],
+        "summary": "Networks",
+        "operationId": "networks_api_networks_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Network"
+                  },
+                  "type": "array",
+                  "title": "Response Networks Api Networks Get"
                 }
               }
             }
