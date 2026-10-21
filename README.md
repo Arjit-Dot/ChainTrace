@@ -131,7 +131,7 @@ Open <http://localhost:5173>. You land on the **gateway**, which stands in for t
 - **Citizens** (`/citizen/...`): file a complaint and track it. No officer navigation.
 - **Officers** (`/officer/...`): the console with the dashboard, cases and networks. It opens in a separate browser tab from the gateway. There is no login in this demo.
 
-First thing to try: **File a complaint**, click **Fill demo example** and submit; you get a complaint ID. Then open the **officer console** in the other tab: the complaint is in the **Inbox** (a count shows on the Inbox link, and an alert pops up). Open it, click **Start review** and **Trigger trace**: the case is created and you land on it. Three complaints are already waiting in the inbox (a sweep to an exchange, funds still idle, and the real Binance flow). Filing never traces: only an officer does. The citizen's **Track a complaint** page arrives in the next stage.
+First thing to try: **File a complaint**, click **Fill demo example** and submit; you get a complaint ID. Then open the **officer console** in the other tab: the complaint is in the **Inbox** (a count shows on the Inbox link, and an alert pops up). Open it, click **Start review** and **Trigger trace**: the case is created and you land on it. Three complaints are already waiting in the inbox (a sweep to an exchange, funds still idle, and the real Binance flow). Filing never traces: only an officer does. The citizen can then follow it on **Track a complaint** with the complaint ID: a progress bar, one plain sentence for the current stage and the times each stage began, and nothing else (the page reads only those fields, the server never sends more, and the lookup is rate limited and never cached).
 
 ### 4.4 Engine modes
 

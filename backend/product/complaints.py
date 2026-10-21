@@ -22,7 +22,7 @@ import time
 from collections import defaultdict, deque
 from typing import Deque, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 
 from contract.schemas import (Complaint, ComplaintEvent, ComplaintReceipt, ComplaintRequest, ComplaintStage,
                               ComplaintStatusView, ComplaintTimelineItem, TraceRequest)
@@ -90,7 +90,8 @@ async def file_complaint(req: ComplaintRequest):
 
 
 @router.get("/complaints/{complaint_id}/status", response_model=ComplaintStatusView)
-def complaint_status(complaint_id: str, request: Request):
+def complaint_status(complaint_id: str, request: Request, response: Response):
+    response.headers["Cache-Control"] = "no-store"          # a status must never be kept by a proxy or the browser history
     client = request.client.host if request.client else "unknown"
     window = _lookups[client]
     now = time.time()

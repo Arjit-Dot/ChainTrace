@@ -124,6 +124,11 @@ def test_the_status_has_only_the_stage_and_generic_messages(client):
         assert word.lower() not in low, word
 
 
+def test_the_status_is_never_cached(client):
+    cid = file(client).json()["complaint_id"]
+    assert client.get(f"/api/complaints/{cid}/status").headers["cache-control"] == "no-store"
+
+
 def test_the_status_follows_the_officers_steps_without_revealing_them(client):
     cid = file(client).json()["complaint_id"]
     stages = []

@@ -45,6 +45,9 @@ export const STAGES = {
   closed: { label: 'Closed', classes: 'bg-slate-500/15 text-slate-300 ring-slate-500/40' },
 }
 
+// The five stages in order, as the citizen's progress bar shows them.
+export const STAGE_ORDER = ['received', 'under_review', 'investigating', 'action_initiated', 'closed']
+
 export const SOURCE_CLASSES = {
   live: 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/40',
   cached: 'bg-sky-500/15 text-sky-300 ring-sky-500/40',
