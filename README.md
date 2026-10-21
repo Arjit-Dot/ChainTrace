@@ -72,7 +72,7 @@ complaint ──► 1. Trace ──► 2. Attribute ──► 3. Score risk ─�
 | **2. Attribute** | Names the exchange. A **direct match** means the trace reached an address in the label list (`deterministic`, confidence 0.95). The **sweep heuristic** treats a wallet with many different senders that forwards its balance to a labeled hot wallet as a customer deposit address (`heuristic`, confidence capped below 0.90). | `backend/engine/trace/attribution.py` | Done |
 | **3. Score risk** | Risk level (Low to Critical), reasons and fraud type for each downstream wallet. The reported wallet is not scored: a victim already named it. | `backend/engine/model/` | Done in traces (the standalone risk endpoint is Step 6.7); see [section 7](#7-the-risk-model-features-selection-training) |
 | **4. Rank urgency** | Case-level rule set, first match wins (see [section 8](#82-urgency-the-badge-that-matters-most)). | `backend/product/recommendations.py` | Done |
-| **5. Act** | Recommendations panel and a freeze-notice draft built from a template. The PDF evidence report is a sample file for now. | `backend/product/` | Notice done; PDF report not built |
+| **5. Act** | Recommendations panel and a freeze-notice draft built from a template. A PDF evidence report is generated from the stored case. | `backend/product/` | Done (freeze notice, recommendations, PDF report) |
 | **6. Monitor** | A watcher polls the leaf and idle wallets every 30 seconds. When one moves it re-traces, re-runs attribution and urgency, updates the "as of" time and pushes an alert. | `backend/product/alerts.py` | Done (demo feed is a recorded replay) |
 
 **Why deterministic first, AI second.** Tracing and attribution are rules and label lookups. That keeps them explainable. AI is used where rules are weakest: scoring how suspicious a wallet looks and classifying the fraud type.
@@ -189,7 +189,11 @@ backend/
     recommendations.py   action list and case urgency
     linking.py       groups complaints that share wallets into networks
     notices.py       freeze notice, from a Jinja template in product/templates/
-    alerts.py        live-monitoring watcher and the alert stream
+    reports.py       PDF evidence report with a SHA-256 hash of the case data
+    analytics.py     dashboard and network figures, computed from the stored cases
+    integrations.py  mock NCRP and SAHYOG endpoints (simulated)
+    alerts.py        live-monitoring watcher, alert stream, scripted demo alerts
+    export_openapi.py  writes docs/openapi.json
   tests/           contract/, engine/, product/
 ```
 
@@ -230,12 +234,13 @@ All routes live in `main.py`; interactive docs are at <http://localhost:8000/doc
 | GET | `/api/cases` | All cases, newest first |
 | GET | `/api/cases/{id}` | One case, full trace |
 | GET | `/api/cases/{id}/freeze-notice` | Draft the freeze notice (404 when no exchange was found) |
-| GET | `/api/cases/{id}/report` | Sample PDF (the real report is not built yet) |
+| GET | `/api/cases/{id}/report` | The PDF evidence report for the case |
 | POST | `/api/cases/{id}/simulate-movement` | Demo: replay a recorded movement of the idle funds |
-| GET | `/api/wallets/{address}/risk` | Risk of one wallet (still a fixture until the model lands) |
+| GET | `/api/wallets/{address}/risk` | Risk of one wallet (still a fixture; the real one is Step 6.7). Traced wallets are already scored inside `/api/trace` |
 | GET | `/api/alerts`, `/api/alerts/stream` | Alert history and the live stream |
-| GET | `/api/dashboard`, `/api/networks` | Static sample data for now |
-| POST | `/api/integrations/ncrp/complaints`, `/api/integrations/sahyog/notice` | Mock NCRP and SAHYOG connectors |
+| GET | `/api/dashboard`, `/api/networks` | Figures and linked-complaint groups computed from the stored cases |
+| POST | `/api/alerts/simulate` | Push the next scripted alert for a case (SIMULATED) |
+| POST | `/api/integrations/ncrp/complaints`, `/api/integrations/sahyog/notice` | Mock NCRP and SAHYOG connectors: NCRP creates a case; SAHYOG marks the notice sent |
 | GET | `/api/health` | Status, contract version and engine mode |
 
 ### 5.5 The data folder
@@ -260,10 +265,12 @@ React with Vite, Tailwind CSS for styling and Cytoscape for the graph.
 frontend/src/
   pages/        Dashboard, NewComplaint, CaseView, NetworkView
   components/
-    common/     Layout (sidebar, health check), Badges, PageHeader, Status, CopyButton
-    case/       TraceGraph, NodePanel, NearestVaspCard, SummaryStrip,
+    common/     Layout (sidebar, health check), Badges, PageHeader, Status, CopyButton, AlertFeed, Toasts
+    case/       TraceGraph (with the hop-by-hop animation), NodePanel, NearestVaspCard, SummaryStrip,
                 RecommendationsPanel, FreezeNoticeModal, Legend
-  hooks/        useFetch (loading, error and reload for one API call)
+    dashboard/  BarBreakdown (the breakdown charts)
+    network/    NetworkGraph (one linked group of complaints)
+  hooks/        useFetch (loading, error and reload for one API call), useAlerts (the live alert stream)
   lib/          api.js (the only place that talks HTTP), colors.js, format.js
 ```
 
@@ -274,7 +281,7 @@ Design rules that explain how it behaves:
 - Every screen has a loading, error and empty state, so nothing is ever blank.
 - The case page re-reads the case every 30 seconds and instantly when an alert for that case arrives.
 
-Not built yet: the dashboard charts and KPI tiles, the Networks page (a placeholder), and the Demo Mode toggle (disabled in the sidebar).
+Not built yet: the Demo Mode toggle (disabled in the sidebar). The trace graph animates hop by hop when a case opens (a button replays it), and alerts arrive as toasts and in a feed in the top bar.
 
 ---
 
@@ -342,10 +349,10 @@ Results (our own scenarios and labels): the scorer passes 98% of the DEV scenari
 
 | Page | What it shows |
 |---|---|
-| **Dashboard** | A table of all cases, newest first: case, complaint, wallet, amount lost, fraud type, state, **urgency**, exchange, time to attribution, status. Click a case to open it. (KPI tiles and charts are not built yet.) |
+| **Dashboard** | KPI tiles (cases, amount lost, amount traced, share with an exchange identified, average time to attribution, idle funds flagged), breakdown charts by fraud type, receiving exchange and state, and a table of recent cases: case, complaint, wallet, amount lost, fraud type, state, **urgency**, exchange, time to attribution, status. Click a case to open it. |
 | **New Complaint** | The form that starts a trace. "Fill hero example" loads the demo case. The chain is detected from the address. |
 | **Case View** | One case in full. See below. |
-| **Networks** | Placeholder for the linked-complaints view. |
+| **Networks** | Groups of complaints that share a scammer wallet. Each group shows its victims, total lost, states, receiving exchange and what links them, with a graph of how the complaints connect. |
 
 ### 8.2 Urgency: the badge that matters most
 
@@ -391,8 +398,8 @@ The answer to "which exchange got the money":
 - **Data source badge:** `LIVE` (fetched from TronGrid), `CACHED` (read from saved responses), `SIMULATED` (fictional demo data).
 - **Recommendations panel:** ordered actions such as "Act on idle funds", "Issue freeze and KYC request to X", "Continue trace on Ethereum" (after a bridge) or "Preserve mixer evidence".
 - **Freeze Notice button:** opens a draft addressed to the exchange, citing the transaction path, and asking for a freeze plus preservation of KYC, bank, phone and IP data. Legal references are placeholders.
-- **Download Report:** currently returns a sample PDF.
-- **Alert list:** when the watcher raises an alert for this case it appears under the summary and the page refreshes.
+- **Download Report:** a PDF evidence report: summary, the fund-flow graph, transaction table, attribution evidence, wallet risk, recommendations, and methodology and limits. Every page footer carries a SHA-256 hash of the case data it was built from.
+- **Alerts:** when the watcher raises an alert for this case it appears under the summary and the page refreshes; all alerts also appear as toasts and in the alert feed in the top bar. The Simulate button replays a recorded movement when the engine is on, and otherwise steps through a scripted sequence built from the case (always labeled simulated).
 
 ### 8.7 A two-minute tour (with live monitoring)
 
@@ -433,7 +440,7 @@ pytest -q
 |---|---|
 | `backend/tests/contract/` | Engine output matches the contract (graph shape, exchange in graph, idle funds add up) |
 | `backend/tests/engine/` | TRON adapter, tracing rules, attribution, the 8 attribution scenarios end to end, the model features, rules, training, scoring, and the scenario batteries |
-| `backend/tests/product/` | Seed cases and traces, the case store and API, urgency rules, live monitoring, alerts and replay |
+| `backend/tests/product/` | Seed cases and traces, the case store and API, urgency rules, live monitoring, alerts and replay, the PDF report, dashboard and network analytics, the mock NCRP and SAHYOG endpoints |
 
 To check the frontend compiles: `cd frontend && npm run build`.
 
@@ -448,8 +455,10 @@ To check the frontend compiles: `cd frontend && npm run build`.
 | 5: attribution | Done |
 | Live monitoring, urgency, contract v1.1.0 | Done |
 | 6: risk model and typology | In progress: scoring is wired into traces; the standalone risk endpoint and final checks are left |
-| 7: PDF report | Not built (freeze notice and recommendations are done) |
-| 8 and 9: dashboard charts, Networks page, Demo Mode | Not built |
+| 7: PDF report, freeze notice, recommendations | Done |
+| 8: alerts, mock NCRP and SAHYOG, API spec (`docs/openapi.json`) | Done |
+| 9: dashboard, Network View, trace animation | Done |
+| Demo Mode toggle, a clean-start run of the 5-minute script, hardening, slides | Not done |
 
 Documents in this repo:
 
