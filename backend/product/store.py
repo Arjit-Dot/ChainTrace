@@ -15,7 +15,7 @@ import time
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from contract.schemas import (CaseSummary, Complaint, Identifier, InstitutionRequest, Monitoring, Reply, TraceRequest,
+from contract.schemas import (CaseSummary, Complaint, Identifier, InstitutionRequest, Monitoring, Referral, Reply, TraceRequest,
                               TraceResponse)
 from paths import DATA, SEED_CASES, SEED_COMPLAINTS, SEED_TRACES
 from product.linking import case_groups
@@ -72,6 +72,9 @@ def _connect() -> sqlite3.Connection:
         kind       TEXT NOT NULL,
         record     TEXT NOT NULL,
         UNIQUE (case_id, lead_id, kind))""")
+    con.execute("""CREATE TABLE IF NOT EXISTS referrals (
+        case_id TEXT PRIMARY KEY,
+        record  TEXT NOT NULL)""")
     con.execute("""CREATE TABLE IF NOT EXISTS replies (
         reply_id   TEXT PRIMARY KEY,
         request_id TEXT NOT NULL UNIQUE,
@@ -101,6 +104,7 @@ def init(reset: bool = False) -> None:
             con.execute("DELETE FROM identifiers")
             con.execute("DELETE FROM requests")
             con.execute("DELETE FROM replies")
+            con.execute("DELETE FROM referrals")
         for c in cases:
             summary = CaseSummary(**c)
             linked = networks.count(summary.network_id) - 1 if summary.network_id else 0
@@ -165,6 +169,17 @@ def update_request(request_id: str, **changes) -> Optional[InstitutionRequest]:
         rec = InstitutionRequest.model_validate_json(row[0]).model_copy(update=changes)
         con.execute("UPDATE requests SET record = ? WHERE request_id = ?", (rec.model_dump_json(), request_id))
     return rec
+
+
+def add_referral(rec: Referral) -> bool:
+    with _lock, _connect() as con:
+        return con.execute("INSERT OR IGNORE INTO referrals VALUES (?, ?)", (rec.case_id, rec.model_dump_json())).rowcount == 1
+
+
+def get_referral(case_id: str) -> Optional[Referral]:
+    with _connect() as con:
+        row = con.execute("SELECT record FROM referrals WHERE case_id = ?", (case_id,)).fetchone()
+    return Referral.model_validate_json(row[0]) if row else None
 
 
 def add_reply(rec: Reply) -> bool:

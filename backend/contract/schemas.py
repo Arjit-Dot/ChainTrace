@@ -443,3 +443,65 @@ class Reply(BaseModel):
     fields: List[ReplyField]
     new_identifier_ids: List[str] = []         # what this reply added to the case's ledger
     fictional: bool = True                     # always true in this demo
+
+
+# ---------- Linking cases and people; the referral (investigation 4.4) ----------
+# Cases that share an identifier (a phone, email, device, handle, domain, UPI ID, bank account or wallet) may be the same
+# operation. Names come ONLY from institutions' replies. Everything here is an inference for an officer to check,
+# never a finding: people who hold mule accounts are often victims too.
+class SharedIdentifier(BaseModel):
+    kind: IdentifierKind
+    value: str
+    strength: Literal["strong", "moderate", "weak"]
+    case_ids: List[str]
+
+
+class PersonEvidence(BaseModel):
+    institution: str                           # who supplied it
+    case_id: str
+    request_id: str
+    field: str                                 # the label in the reply, for example "Subscriber name"
+    value: str
+
+
+class SuspectPerson(BaseModel):
+    name: str
+    role: Literal["operator_suspected", "mule_holder"]
+    confidence: float = Field(ge=0, le=1)
+    basis: str                                 # why we think so, in plain words
+    evidence: List[PersonEvidence]
+    identifiers: List[str] = []                # for example "phone: 9000000503", taken from the same replies
+    case_ids: List[str]
+
+
+class PersonCluster(BaseModel):
+    cluster_id: str
+    case_ids: List[str]
+    complaint_ids: List[str]
+    total_lost: float = 0.0
+    states: List[str] = []
+    shared: List[SharedIdentifier]
+    people: List[SuspectPerson] = []
+    summary: str
+    caution: str
+
+
+class CasePeople(BaseModel):
+    case_id: str
+    cluster: Optional[PersonCluster] = None    # the linked cases, if this case shares identifiers with others
+    people: List[SuspectPerson]                # who this case's own replies name
+
+
+class ReferralRequest(BaseModel):
+    agency: str = Field(min_length=1, max_length=120)
+    note: Optional[str] = Field(default=None, max_length=1000)
+
+
+class Referral(BaseModel):
+    """An officer's record that the case was referred to an investigating agency. The arrest and any legal action are theirs."""
+    case_id: str
+    agency: str
+    note: Optional[str] = None
+    referred_at: int
+    dossier_sha256: str                        # of the dossier as it stood when referred
+    status: Literal["referred"] = "referred"

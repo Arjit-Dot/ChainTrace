@@ -92,7 +92,9 @@ def outcomes(case_id: str) -> List[Outcome]:
     for i in idents:
         if i.kind == "bank_account":
             bank = i.label if i.label and not i.label.startswith("IFSC") else None
-            add("bank_account", f"The victim paid a bank account{f' at {bank}' if bank else ''}", i.value, i.label, None, "action_needed",
+            where = f" at {bank}" if bank else ""
+            title = f"The victim paid a bank account{where}" if i.source == "complaint" else f"A suspected mule account{where} appears in a reply"
+            add("bank_account", title, i.value, i.label, None, "action_needed",
                 [f"Send a freeze or lien request to {bank or 'the bank (identify it from the IFSC code)'}",
                  "Ask for the account holder's KYC, statements and linked mobile number",
                  "Ask the bank to preserve its records, including any cash withdrawal and CCTV",

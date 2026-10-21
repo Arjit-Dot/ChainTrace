@@ -94,6 +94,7 @@ def report(case_id: str):
 
 # ---- Alerts (SSE) and mock integrations: see product/alerts.py and product/integrations.py ----
 app.include_router(investigation.router)
+app.include_router(investigation.clusters_router)
 app.include_router(outreach_routes.router)
 app.include_router(complaints.router)
 app.include_router(complaints.officer)

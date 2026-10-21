@@ -67,6 +67,12 @@ export const sendRequest = (id) => post(`/officer/requests/${enc(id)}/send`)
 export const simulateRequest = (id) => post(`/officer/requests/${enc(id)}/simulate`)
 export const closeRequest = (id) => post(`/officer/requests/${enc(id)}/close`)
 export const getReply = (id) => request(`/officer/requests/${enc(id)}/reply`)
+export const getPeople = (caseId) => request(`/officer/cases/${enc(caseId)}/people`)
+export const getClusters = () => request('/officer/clusters')
+export const demoRun = (caseId, rounds = 2) => post(`/officer/cases/${enc(caseId)}/demo-run?rounds=${rounds}`)
+export const dossierUrl = (caseId) => `${BASE}/api/officer/cases/${enc(caseId)}/dossier`
+export const getReferral = (caseId) => request(`/officer/cases/${enc(caseId)}/referral`)
+export const referCase = (caseId, body) => post(`/officer/cases/${enc(caseId)}/referral`, body)
 export const getOutcomes = (caseId) => request(`/officer/cases/${enc(caseId)}/outcomes`)
 export const getMules = (caseId) => request(`/officer/cases/${enc(caseId)}/mules`)
 

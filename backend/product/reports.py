@@ -30,10 +30,10 @@ from product.recommendations import CHAIN_NAMES, amount
 
 # Same legend as frontend/src/lib/colors.js. Unknown is white there; on paper it gets a dark outline.
 NODE_COLORS = {"victim": "#9ca3af", "scam_wallet": "#ef4444", "intermediary": "#f97316", "bridge": "#3b82f6",
-               "mixer": "#a855f7", "exchange": "#22c55e", "unknown": "#f8fafc"}
+               "mixer": "#a855f7", "exchange": "#22c55e", "dex": "#14b8a6", "bank_account": "#eab308", "unknown": "#f8fafc"}
 NODE_LABELS = {"victim": "Victim", "scam_wallet": "Scam wallet", "intermediary": "Intermediary", "bridge": "Bridge",
-               "mixer": "Mixer", "exchange": "Exchange", "unknown": "Unknown"}
-NODE_SHAPES = {"exchange": "s", "bridge": "D", "mixer": "h"}
+               "mixer": "Mixer", "exchange": "Exchange", "dex": "DEX (swap)", "bank_account": "Bank account", "unknown": "Unknown"}
+NODE_SHAPES = {"exchange": "s", "bridge": "D", "mixer": "h", "dex": "p", "bank_account": "s"}
 PATH_GREEN, IDLE_AMBER = "#16a34a", "#f59e0b"
 RISK_COLORS = {"Low": "#16a34a", "Medium": "#d97706", "High": "#ea580c", "Critical": "#dc2626"}
 SOURCE_TEXT = {

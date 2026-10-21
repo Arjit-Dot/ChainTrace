@@ -470,6 +470,74 @@
         }
       }
     },
+    "/api/officer/cases/{case_id}/people": {
+      "get": {
+        "tags": [
+          "officer: investigation"
+        ],
+        "summary": "Case People",
+        "description": "The linked cases (if any) and the people this case's own replies name. Inferences, never findings.",
+        "operationId": "case_people_api_officer_cases__case_id__people_get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CasePeople"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/officer/clusters": {
+      "get": {
+        "tags": [
+          "officer: investigation"
+        ],
+        "summary": "All Clusters",
+        "operationId": "all_clusters_api_officer_clusters_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PersonCluster"
+                  },
+                  "type": "array",
+                  "title": "Response All Clusters Api Officer Clusters Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/officer/cases/{case_id}/requests": {
       "get": {
         "tags": [
@@ -802,6 +870,193 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Reply"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/officer/cases/{case_id}/demo-run": {
+      "post": {
+        "tags": [
+          "officer: requests"
+        ],
+        "summary": "Demo Run",
+        "description": "DEMO: draft, approve, send and simulate replies for every lead at once (SIMULATED, fictional).",
+        "operationId": "demo_run_api_officer_cases__case_id__demo_run_post",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "rounds",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 3,
+              "minimum": 1,
+              "default": 1,
+              "title": "Rounds"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/officer/cases/{case_id}/dossier": {
+      "get": {
+        "tags": [
+          "officer: requests"
+        ],
+        "summary": "Get Dossier",
+        "description": "The referral dossier as a PDF. It says what is a record, what is an inference and what is missing.",
+        "operationId": "get_dossier_api_officer_cases__case_id__dossier_get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/officer/cases/{case_id}/referral": {
+      "get": {
+        "tags": [
+          "officer: requests"
+        ],
+        "summary": "Get Referral",
+        "operationId": "get_referral_api_officer_cases__case_id__referral_get",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Referral"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "officer: requests"
+        ],
+        "summary": "Refer",
+        "description": "An officer records that the case was referred to an investigating agency, with the hash of the dossier as it stood.",
+        "operationId": "refer_api_officer_cases__case_id__referral_post",
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReferralRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Referral"
                 }
               }
             }
@@ -1428,6 +1683,37 @@
           "timestamp"
         ],
         "title": "Alert"
+      },
+      "CasePeople": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "cluster": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonCluster"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/SuspectPerson"
+            },
+            "type": "array",
+            "title": "People"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "people"
+        ],
+        "title": "CasePeople"
       },
       "CaseSummary": {
         "properties": {
@@ -3360,6 +3646,107 @@
         ],
         "title": "Outcome"
       },
+      "PersonCluster": {
+        "properties": {
+          "cluster_id": {
+            "type": "string",
+            "title": "Cluster Id"
+          },
+          "case_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Case Ids"
+          },
+          "complaint_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Complaint Ids"
+          },
+          "total_lost": {
+            "type": "number",
+            "title": "Total Lost",
+            "default": 0.0
+          },
+          "states": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "States",
+            "default": []
+          },
+          "shared": {
+            "items": {
+              "$ref": "#/components/schemas/SharedIdentifier"
+            },
+            "type": "array",
+            "title": "Shared"
+          },
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/SuspectPerson"
+            },
+            "type": "array",
+            "title": "People",
+            "default": []
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "caution": {
+            "type": "string",
+            "title": "Caution"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cluster_id",
+          "case_ids",
+          "complaint_ids",
+          "shared",
+          "summary",
+          "caution"
+        ],
+        "title": "PersonCluster"
+      },
+      "PersonEvidence": {
+        "properties": {
+          "institution": {
+            "type": "string",
+            "title": "Institution"
+          },
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "institution",
+          "case_id",
+          "request_id",
+          "field",
+          "value"
+        ],
+        "title": "PersonEvidence"
+      },
       "Recommendation": {
         "properties": {
           "priority": {
@@ -3387,6 +3774,79 @@
           "detail"
         ],
         "title": "Recommendation"
+      },
+      "Referral": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "agency": {
+            "type": "string",
+            "title": "Agency"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "referred_at": {
+            "type": "integer",
+            "title": "Referred At"
+          },
+          "dossier_sha256": {
+            "type": "string",
+            "title": "Dossier Sha256"
+          },
+          "status": {
+            "type": "string",
+            "const": "referred",
+            "title": "Status",
+            "default": "referred"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "agency",
+          "referred_at",
+          "dossier_sha256"
+        ],
+        "title": "Referral",
+        "description": "An officer's record that the case was referred to an investigating agency. The arrest and any legal action are theirs."
+      },
+      "ReferralRequest": {
+        "properties": {
+          "agency": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Agency"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "agency"
+        ],
+        "title": "ReferralRequest"
       },
       "Reply": {
         "properties": {
@@ -3548,6 +4008,112 @@
           "body"
         ],
         "title": "SahyogNoticeRequest"
+      },
+      "SharedIdentifier": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "wallet",
+              "bank_account",
+              "upi_id",
+              "phone",
+              "email",
+              "device",
+              "ip_address",
+              "social_handle",
+              "domain",
+              "app"
+            ],
+            "title": "Kind"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "strength": {
+            "type": "string",
+            "enum": [
+              "strong",
+              "moderate",
+              "weak"
+            ],
+            "title": "Strength"
+          },
+          "case_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Case Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "value",
+          "strength",
+          "case_ids"
+        ],
+        "title": "SharedIdentifier"
+      },
+      "SuspectPerson": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "operator_suspected",
+              "mule_holder"
+            ],
+            "title": "Role"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence"
+          },
+          "basis": {
+            "type": "string",
+            "title": "Basis"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/PersonEvidence"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "identifiers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Identifiers",
+            "default": []
+          },
+          "case_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Case Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "role",
+          "confidence",
+          "basis",
+          "evidence",
+          "case_ids"
+        ],
+        "title": "SuspectPerson"
       },
       "TraceRequest": {
         "properties": {

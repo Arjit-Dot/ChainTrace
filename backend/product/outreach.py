@@ -163,6 +163,20 @@ def simulate_step(request_id: str) -> Tuple[InstitutionRequest, Optional[Reply]]
 
 
 # ---------- fictional replies ----------
+MAX_BANK_HOPS = 2          # how many accounts deep a bank's reply keeps naming "money moved on to"; after that it left as cash
+
+
+def bank_depth(req: InstitutionRequest) -> int:
+    """1 for an account an exchange named, 2 for the account a bank said money moved on to, and so on."""
+    depth, current = 1, req
+    for _ in range(MAX_BANK_HOPS + 2):
+        ident = next((i for i in store.list_identifiers(current.case_id) if i.identifier_id == current.identifier_id), None)
+        origin = store.get_request(ident.source_ref) if ident and ident.source == "reply" and ident.source_ref else None
+        if origin is None or origin.choke_point != "bank":
+            return depth
+        depth, current = depth + 1, origin
+    return depth
+
 def build_reply(req: InstitutionRequest) -> Reply:
     case_id, now = req.case_id, int(time.time())
     idents = store.list_identifiers(case_id)
@@ -197,11 +211,14 @@ def build_reply(req: InstitutionRequest) -> Reply:
     elif point == "bank":
         holder = f"Kiran Pillai (demo {int(mule['account'][-3:]) % 100:02d})"
         onward = personas.mule_account(f"onward:{mule['account']}")
+        last = bank_depth(req) >= MAX_BANK_HOPS
         summary = f"{req.holder} supplies the account's details (fictional)."
         fields = [("Account holder", holder), ("ID document", "Aadhaar ending 2040"), ("Registered mobile", persona["alt_phone"]),
                   ("Account opened", "27 days before the first credit"), ("Credits in the period", f"{amount(held or 1000)} USDT equivalent, in few large payments"),
-                  ("Money moved on to", f"{onward['bank']} {onward['account']}"), ("Reference", ref)]
-        new = [("phone", persona["alt_phone"], "other", "Registered on the mule account"), ("bank_account", onward["account"], "mule_suspect", onward["bank"])]
+                  ("Money moved on to", "Withdrawn in cash at ATMs (locations to follow)" if last else f"{onward['bank']} {onward['account']}"), ("Reference", ref)]
+        new = [("phone", persona["alt_phone"], "other", "Registered on the mule account")]
+        if not last:
+            new.append(("bank_account", onward["account"], "mule_suspect", onward["bank"]))
     elif point == "payment_app":
         summary = f"{req.holder} supplies the registered details (fictional)."
         fields = [("Registered name", f"Kiran Pillai (demo {int(mule['account'][-3:]) % 100:02d})"), ("Linked bank account", mule["account"]),
@@ -240,3 +257,36 @@ def build_reply(req: InstitutionRequest) -> Reply:
                 fields=[ReplyField(label=a, value=b) for a, b in fields], new_identifier_ids=added, fictional=True)
     store.add_reply(rec)
     return rec
+
+
+# ---------- demo: run the whole first round at once ----------
+PRIMARY = {"exchange": "kyc_request", "bank": "account_details_request", "payment_app": "account_details_request", "telecom": "subscriber_request",
+           "messaging_platform": "platform_data_request", "domain_host": "registrant_request", "app_store": "developer_request",
+           "issuer": "issuer_hold", "p2p_desk": "kyc_request"}
+MAX_ROUNDS = 3
+
+
+def demo_run(case_id: str, rounds: int = 1) -> Dict[str, int]:
+    """DEMO: for every lead without a request, draft the main request, approve, send, and simulate the acknowledgement and
+    reply; repeat for the leads those replies open. A shortcut for showing the investigation; everything is simulated."""
+    done = {"requests": 0, "replies": 0, "new_identifiers": 0}
+    for _ in range(max(1, min(rounds, MAX_ROUNDS))):
+        progressed = False
+        for lead in ledger.leads(case_id):
+            kind = PRIMARY.get(lead.choke_point)
+            if kind not in lead.requests:
+                continue
+            req = create(case_id, RequestCreate(lead_id=lead.lead_id, kind=kind))
+            if req is None:
+                continue
+            for to in ("approved", "sent"):
+                advance(req.request_id, to)
+            simulate_step(req.request_id)
+            _, reply = simulate_step(req.request_id)
+            done["requests"] += 1
+            done["replies"] += 1
+            done["new_identifiers"] += len(reply.new_identifier_ids)
+            progressed = True
+        if not progressed:
+            break
+    return done

@@ -11,8 +11,8 @@ from typing import List
 
 from fastapi import APIRouter, HTTPException
 
-from contract.schemas import Identifier, IdentifierRequest, Lead, Mule, Outcome
-from product import ledger, outcomes, store
+from contract.schemas import CasePeople, Identifier, IdentifierRequest, Lead, Mule, Outcome, PersonCluster
+from product import ledger, outcomes, people, store
 
 router = APIRouter(prefix="/api/officer/cases", tags=["officer: investigation"])
 
@@ -56,3 +56,18 @@ def case_outcomes(case_id: str):
 def case_mules(case_id: str):
     _require(case_id)
     return outcomes.mules(case_id)
+
+
+@router.get("/{case_id}/people", response_model=CasePeople)
+def case_people(case_id: str):
+    """The linked cases (if any) and the people this case's own replies name. Inferences, never findings."""
+    _require(case_id)
+    return people.case_people(case_id)
+
+
+clusters_router = APIRouter(prefix="/api/officer", tags=["officer: investigation"])
+
+
+@clusters_router.get("/clusters", response_model=List[PersonCluster])
+def all_clusters():
+    return people.clusters()

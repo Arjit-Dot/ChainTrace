@@ -1,7 +1,7 @@
 import { Check, Circle, FileText, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { useFetch } from '../../hooks/useFetch'
-import { approveRequest, closeRequest, getReply, getRequests, sendRequest, simulateRequest } from '../../lib/api'
+import { approveRequest, closeRequest, demoRun, getReply, getRequests, sendRequest, simulateRequest } from '../../lib/api'
 import { CHOKE_POINTS, REQUEST_STAGES, REQUEST_STATUS, REQUESTS } from '../../lib/colors'
 import { formatTime } from '../../lib/format'
 
@@ -122,9 +122,24 @@ function RequestCard({ r, onChange }) {
 // nothing is ever transmitted (the acknowledgement and the reply are simulated, and the replies are fictional).
 export default function RequestsPanel({ caseId, version = 0, onChange = () => {} }) {
   const { data, error, reload } = useFetch(() => getRequests(caseId), [caseId, version])
+  const [running, setRunning] = useState(false)
+  const [ran, setRan] = useState(null)
+  const [runError, setRunError] = useState(null)
   const changed = () => {
     reload()
     onChange()
+  }
+  const run = async () => {
+    setRunning(true)
+    setRunError(null)
+    try {
+      setRan(await demoRun(caseId, 2))
+      changed()
+    } catch (e) {
+      setRunError(e)
+    } finally {
+      setRunning(false)
+    }
   }
   return (
     <section className="space-y-3 rounded-lg border border-line bg-panel p-5" aria-label="Requests to institutions">
@@ -134,6 +149,14 @@ export default function RequestsPanel({ caseId, version = 0, onChange = () => {}
           Draft a request from a lead below, review the letter, approve it, then send. Nothing is transmitted in this demo: the acknowledgement
           and reply are simulated, and every reply is fictional.
         </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="button" onClick={run} disabled={running} className={`${btn} border-amber-400/50 text-amber-200 hover:bg-amber-400/10`}>
+          {running && <Loader2 className="size-3.5 animate-spin" />} Demo: simulate the whole investigation
+        </button>
+        <span className="text-xs text-muted">Drafts, approves and sends the main request for every lead and simulates the replies (two rounds). Everything is simulated.</span>
+        {ran && <span className="text-xs text-emerald-300" role="status">{ran.requests} requests answered, {ran.new_identifiers} new identifiers added.</span>}
+        {runError && <span role="alert" className="text-xs text-red-300">{runError.message}</span>}
       </div>
       {error && !data ? (
         <p role="alert" className="text-sm text-red-300">Could not load requests: {error.message}</p>

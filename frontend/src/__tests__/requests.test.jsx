@@ -193,4 +193,12 @@ describe('drafting from a lead', () => {
     rerender(<LeadsPanel caseId="C-009" version={1} />)
     await waitFor(() => expect(calls.filter((c) => c.path.endsWith('/leads')).length).toBe(n + 1))
   })
+
+  it('runs the whole demo investigation and says how much it did', async () => {
+    const backend = setup('draft', { 'POST /api/officer/cases/C-009/demo-run': { requests: 4, replies: 4, new_identifiers: 7 } })
+    await card()
+    await userEvent.click(screen.getByRole('button', { name: /simulate the whole investigation/i }))
+    expect(await screen.findByRole('status')).toHaveTextContent('4 requests answered, 7 new identifiers added.')
+    expect(backend.calls.find((c) => c.path.endsWith('/demo-run')).url).toMatch(/rounds=2/)
+  })
 })
