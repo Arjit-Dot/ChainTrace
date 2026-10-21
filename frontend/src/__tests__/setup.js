@@ -1,6 +1,11 @@
 import '@testing-library/jest-dom/vitest'
-import { afterEach, vi } from 'vitest'
+import { afterEach, beforeEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
+
+// jsdom has no canvas or matchMedia: answer "no canvas" and "no reduced-motion preference".
+HTMLCanvasElement.prototype.getContext = () => null
+if (!window.matchMedia) window.matchMedia = (q) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {} })
+beforeEach(() => localStorage.clear())
 
 afterEach(() => {
   cleanup()

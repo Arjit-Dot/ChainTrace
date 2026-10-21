@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { AppRoutes } from '../App'
@@ -15,33 +16,104 @@ const at = (path) =>
 beforeEach(() => installBackend())
 
 describe('gateway', () => {
-  it('shows the simulated hand-off, a demo notice and both sides', () => {
+  it('puts the message in the middle with the simulated hand-off and a demo notice', () => {
     at('/')
-    expect(screen.getByText(/Simulated hand-off from an official cybercrime reporting website/i)).toBeInTheDocument()
+    const main = screen.getByRole('main')
+    expect(within(main).getByRole('heading', { name: /crypto fraud reporting and response/i })).toBeInTheDocument()
+    expect(within(main).getByText(/simulated hand-off from an official cybercrime reporting website/i)).toBeInTheDocument()
     expect(screen.getByRole('note')).toHaveTextContent(/not an official government website/i)
-    expect(screen.getByRole('region', { name: /for citizens/i })).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: /for officers/i })).toBeInTheDocument()
   })
 
-  it('links citizens to filing and tracking in this tab', () => {
+  it('offers filing and tracking as the main actions', () => {
     at('/')
-    const citizens = within(screen.getByRole('region', { name: /for citizens/i }))
-    expect(citizens.getByRole('link', { name: /file a complaint/i })).toHaveAttribute('href', R.file)
-    expect(citizens.getByRole('link', { name: /track a complaint/i })).toHaveAttribute('href', R.track)
+    const main = within(screen.getByRole('main'))
+    expect(main.getByRole('link', { name: /file a complaint/i })).toHaveAttribute('href', R.file)
+    expect(main.getByRole('link', { name: /track a complaint/i })).toHaveAttribute('href', R.track)
+  })
+
+  it('shows a three-step overview with no technical detail', () => {
+    at('/')
+    const steps = within(screen.getByRole('list', { name: /what happens after you report/i })).getAllByRole('listitem')
+    expect(steps.map((s) => s.textContent)).toEqual([expect.stringMatching(/Register/), expect.stringMatching(/Review/), expect.stringMatching(/Action/)])
+    expect(document.body.textContent).toMatch(/details of how a complaint is handled are not shown/i)
+    expect(document.body.textContent).not.toMatch(/trace|wallet graph|exchange|blockchain analysis|VASP/i)
+  })
+
+  it('has a moving graph behind it, hidden from assistive technology', () => {
+    at('/')
+    expect(screen.getByTestId('network-background')).toHaveAttribute('aria-hidden', 'true')
+  })
+})
+
+describe('gateway side panel', () => {
+  const sidebar = () => screen.getByRole('complementary', { name: /portal menu/i })
+
+  it('is open by default, with the complaint tracker and the other doors', () => {
+    at('/')
+    expect(screen.getByRole('button', { name: /collapse menu/i })).toHaveAttribute('aria-expanded', 'true')
+    const panel = within(sidebar())
+    expect(panel.getByLabelText(/complaint id/i)).toBeInTheDocument()
+    expect(panel.getByRole('button', { name: /^track$/i })).toBeInTheDocument()
+    expect(panel.getByRole('link', { name: /file a complaint/i })).toHaveAttribute('href', R.file)
+    expect(panel.getByText(/1930/)).toBeInTheDocument()
   })
 
   it('opens the officer console in a separate tab', () => {
     at('/')
-    const link = within(screen.getByRole('region', { name: /for officers/i })).getByRole('link', { name: /officer console/i })
+    const link = within(sidebar()).getByRole('link', { name: /officer console/i })
     expect(link).toHaveAttribute('href', R.officer)
     expect(link).toHaveAttribute('target', '_blank')
     expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'))
   })
 
-  it('does not reveal how complaints are handled', () => {
+  it('collapses to a slim rail that keeps every door reachable', async () => {
+    const user = userEvent.setup()
     at('/')
-    expect(document.body.textContent).toMatch(/details of how it is handled are not shown/i)
-    expect(document.body.textContent).not.toMatch(/trace|wallet graph|exchange|blockchain analysis/i)
+    await user.click(screen.getByRole('button', { name: /collapse menu/i }))
+    expect(sidebar()).toHaveAttribute('data-collapsed', 'true')
+    expect(screen.getByRole('button', { name: /expand menu/i })).toHaveAttribute('aria-expanded', 'false')
+    const rail = within(sidebar())
+    expect(rail.queryByLabelText(/complaint id/i)).toBeNull()
+    expect(rail.getByRole('link', { name: /track a complaint/i })).toHaveAttribute('href', R.track)
+    expect(rail.getByRole('link', { name: /file a complaint/i })).toHaveAttribute('href', R.file)
+    expect(rail.getByRole('link', { name: /officer console/i })).toHaveAttribute('target', '_blank')
+  })
+
+  it('opens again and remembers the choice', async () => {
+    const user = userEvent.setup()
+    const first = at('/')
+    await user.click(screen.getByRole('button', { name: /collapse menu/i }))
+    first.unmount()
+    at('/')
+    expect(sidebar()).toHaveAttribute('data-collapsed', 'true')              // remembered
+    await user.click(screen.getByRole('button', { name: /expand menu/i }))
+    expect(sidebar()).toHaveAttribute('data-collapsed', 'false')
+    expect(localStorage.getItem('gateway.sidebar')).toBe('expanded')
+  })
+
+  it('starts collapsed on a narrow screen unless the visitor chose otherwise', () => {
+    const width = window.innerWidth
+    window.innerWidth = 500
+    at('/')
+    expect(sidebar()).toHaveAttribute('data-collapsed', 'true')
+    window.innerWidth = width
+  })
+
+  it('takes a complaint ID to the tracking page', async () => {
+    const user = userEvent.setup()
+    at('/')
+    await user.type(within(sidebar()).getByLabelText(/complaint id/i), '  NCRP-2026-1234 ')
+    await user.click(within(sidebar()).getByRole('button', { name: /^track$/i }))
+    expect(await screen.findByRole('heading', { name: /track a complaint/i })).toBeInTheDocument()
+    expect(screen.getByLabelText(/complaint id/i)).toHaveValue('NCRP-2026-1234')
+  })
+
+  it('takes an empty submit to the tracking page without an ID', async () => {
+    const user = userEvent.setup()
+    at('/')
+    await user.click(within(sidebar()).getByRole('button', { name: /^track$/i }))
+    expect(await screen.findByRole('heading', { name: /track a complaint/i })).toBeInTheDocument()
+    expect(screen.getByLabelText(/complaint id/i)).toHaveValue('')
   })
 })
 

@@ -126,7 +126,7 @@ cd frontend
 npm run dev
 ```
 
-Open <http://localhost:5173>. You land on the **gateway**, which stands in for the hand-off from an official government website, with two sides:
+Open <http://localhost:5173>. You land on the **gateway**, which stands in for the hand-off from an official government website: the message in the middle over a moving fund-flow graph (nodes drift, links form, payments pulse along them, and the cursor nudges nodes aside; it draws one still frame if your system prefers reduced motion), and a side panel that is open by default and can be collapsed to a slim rail (your choice is remembered) holding the complaint tracker, a link to file, and the officer console. It leads to two sides:
 
 - **Citizens** (`/citizen/...`): file a complaint and track it. No officer navigation.
 - **Officers** (`/officer/...`): the console with the dashboard, cases and networks. It opens in a separate browser tab from the gateway. There is no login in this demo.

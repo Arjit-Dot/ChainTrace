@@ -39,3 +39,47 @@ body {
 .toast-in {
   animation: toast-in 0.25s ease-out;
 }
+
+/* Landing page: moving gradient headline, floating card, pulsing call to action. */
+@keyframes gradient-pan {
+  to {
+    background-position: 200% 50%;
+  }
+}
+
+.gradient-text {
+  background-image: linear-gradient(90deg, #38bdf8, #a78bfa, #22c55e, #f97316, #38bdf8);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradient-pan 9s linear infinite;
+}
+
+@keyframes float-y {
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.float-slow {
+  animation: float-y 7s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+  50% {
+    box-shadow: 0 0 30px 4px rgba(56, 189, 248, 0.4);
+  }
+}
+
+.cta-glow {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gradient-text,
+  .float-slow,
+  .cta-glow {
+    animation: none;
+  }
+}
