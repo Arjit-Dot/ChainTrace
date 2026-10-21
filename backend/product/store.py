@@ -15,7 +15,8 @@ import time
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from contract.schemas import CaseSummary, Complaint, Identifier, Monitoring, TraceRequest, TraceResponse
+from contract.schemas import (CaseSummary, Complaint, Identifier, InstitutionRequest, Monitoring, Reply, TraceRequest,
+                              TraceResponse)
 from paths import DATA, SEED_CASES, SEED_COMPLAINTS, SEED_TRACES
 from product.linking import case_groups
 from product.recommendations import with_recommendations
@@ -64,6 +65,18 @@ def _connect() -> sqlite3.Connection:
         value         TEXT NOT NULL,
         record        TEXT NOT NULL,
         UNIQUE (case_id, kind, value))""")
+    con.execute("""CREATE TABLE IF NOT EXISTS requests (
+        request_id TEXT PRIMARY KEY,
+        case_id    TEXT NOT NULL,
+        lead_id    TEXT NOT NULL,
+        kind       TEXT NOT NULL,
+        record     TEXT NOT NULL,
+        UNIQUE (case_id, lead_id, kind))""")
+    con.execute("""CREATE TABLE IF NOT EXISTS replies (
+        reply_id   TEXT PRIMARY KEY,
+        request_id TEXT NOT NULL UNIQUE,
+        case_id    TEXT NOT NULL,
+        record     TEXT NOT NULL)""")
     con.execute("""CREATE TABLE IF NOT EXISTS complaints (
         complaint_id TEXT PRIMARY KEY,
         created_at   INTEGER NOT NULL,
@@ -86,6 +99,8 @@ def init(reset: bool = False) -> None:
             con.execute("DELETE FROM cases")
             con.execute("DELETE FROM complaints")
             con.execute("DELETE FROM identifiers")
+            con.execute("DELETE FROM requests")
+            con.execute("DELETE FROM replies")
         for c in cases:
             summary = CaseSummary(**c)
             linked = networks.count(summary.network_id) - 1 if summary.network_id else 0
@@ -116,6 +131,52 @@ def list_identifiers(case_id: str) -> List[Identifier]:
     with _connect() as con:
         rows = con.execute("SELECT record FROM identifiers WHERE case_id = ? ORDER BY rowid", (case_id,)).fetchall()
     return [Identifier.model_validate_json(r[0]) for r in rows]
+
+
+# ---------- requests to institutions and their replies ----------
+def add_request(case_id: str, lead_id: str, kind: str, make) -> Optional[InstitutionRequest]:
+    """Insert a request built by make(n). None if this lead already has a request of this kind."""
+    with _lock, _connect() as con:
+        if con.execute("SELECT 1 FROM requests WHERE case_id = ? AND lead_id = ? AND kind = ?", (case_id, lead_id, kind)).fetchone():
+            return None
+        n = con.execute("SELECT COUNT(*) FROM requests WHERE case_id = ?", (case_id,)).fetchone()[0] + 1
+        rec = make(n)
+        con.execute("INSERT INTO requests VALUES (?, ?, ?, ?, ?)", (rec.request_id, case_id, lead_id, kind, rec.model_dump_json()))
+        return rec
+
+
+def get_request(request_id: str) -> Optional[InstitutionRequest]:
+    with _connect() as con:
+        row = con.execute("SELECT record FROM requests WHERE request_id = ?", (request_id,)).fetchone()
+    return InstitutionRequest.model_validate_json(row[0]) if row else None
+
+
+def list_requests(case_id: str) -> List[InstitutionRequest]:
+    with _connect() as con:
+        rows = con.execute("SELECT record FROM requests WHERE case_id = ? ORDER BY rowid", (case_id,)).fetchall()
+    return [InstitutionRequest.model_validate_json(r[0]) for r in rows]
+
+
+def update_request(request_id: str, **changes) -> Optional[InstitutionRequest]:
+    with _lock, _connect() as con:
+        row = con.execute("SELECT record FROM requests WHERE request_id = ?", (request_id,)).fetchone()
+        if row is None:
+            return None
+        rec = InstitutionRequest.model_validate_json(row[0]).model_copy(update=changes)
+        con.execute("UPDATE requests SET record = ? WHERE request_id = ?", (rec.model_dump_json(), request_id))
+    return rec
+
+
+def add_reply(rec: Reply) -> bool:
+    with _lock, _connect() as con:
+        cur = con.execute("INSERT OR IGNORE INTO replies VALUES (?, ?, ?, ?)", (rec.reply_id, rec.request_id, rec.case_id, rec.model_dump_json()))
+        return cur.rowcount == 1
+
+
+def get_reply(request_id: str) -> Optional[Reply]:
+    with _connect() as con:
+        row = con.execute("SELECT record FROM replies WHERE request_id = ?", (request_id,)).fetchone()
+    return Reply.model_validate_json(row[0]) if row else None
 
 
 def _seed_complaints(con: sqlite3.Connection) -> None:

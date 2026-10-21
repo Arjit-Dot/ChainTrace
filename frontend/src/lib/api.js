@@ -60,6 +60,13 @@ export const traceComplaint = (id) => post(`/officer/complaints/${enc(id)}/trace
 export const getIdentifiers = (caseId) => request(`/officer/cases/${enc(caseId)}/identifiers`)
 export const addIdentifier = (caseId, body) => post(`/officer/cases/${enc(caseId)}/identifiers`, body)
 export const getLeads = (caseId) => request(`/officer/cases/${enc(caseId)}/leads`)
+export const getRequests = (caseId) => request(`/officer/cases/${enc(caseId)}/requests`)
+export const createRequest = (caseId, body) => post(`/officer/cases/${enc(caseId)}/requests`, body)
+export const approveRequest = (id) => post(`/officer/requests/${enc(id)}/approve`)
+export const sendRequest = (id) => post(`/officer/requests/${enc(id)}/send`)
+export const simulateRequest = (id) => post(`/officer/requests/${enc(id)}/simulate`)
+export const closeRequest = (id) => post(`/officer/requests/${enc(id)}/close`)
+export const getReply = (id) => request(`/officer/requests/${enc(id)}/reply`)
 export const getOutcomes = (caseId) => request(`/officer/cases/${enc(caseId)}/outcomes`)
 export const getMules = (caseId) => request(`/officer/cases/${enc(caseId)}/mules`)
 

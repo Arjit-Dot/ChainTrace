@@ -33,8 +33,8 @@ function OutcomeCard({ o }) {
   )
 }
 
-export function OutcomesPanel({ caseId }) {
-  const { data, error } = useFetch(() => getOutcomes(caseId), [caseId])
+export function OutcomesPanel({ caseId, version = 0 }) {
+  const { data, error } = useFetch(() => getOutcomes(caseId), [caseId, version])
   return (
     <section className="space-y-3 rounded-lg border border-line bg-panel p-5" aria-label="Where the money went">
       <div>
@@ -56,8 +56,8 @@ export function OutcomesPanel({ caseId }) {
   )
 }
 
-export function MulesPanel({ caseId }) {
-  const { data, error } = useFetch(() => getMules(caseId), [caseId])
+export function MulesPanel({ caseId, version = 0 }) {
+  const { data, error } = useFetch(() => getMules(caseId), [caseId, version])
   return (
     <section className="space-y-3 rounded-lg border border-line bg-panel p-5" aria-label="Suspected mules">
       <div>

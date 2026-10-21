@@ -77,6 +77,13 @@ def complaint_received(complaint_id: str, state: Optional[str], now: Optional[fl
                   time.time() if now is None else now, complaint_id=complaint_id)
 
 
+def reply_received(req, new_identifiers: int, now=None) -> Alert:
+    """An institution answered a request (SIMULATED in the demo)."""
+    more = f"; {new_identifiers} new identifier(s) added to the case" if new_identifiers else ""
+    return _alert("REPLY_RECEIVED", "info", req.case_id, f"Reply from {req.holder} to the {req.kind.replace('_', ' ')}{more} (simulated)",
+                  time.time() if now is None else now)
+
+
 # ---------- watching ----------
 def watchlist(trace: TraceResponse) -> List[str]:
     """Leaf wallets and any wallet still holding funds. Only these are polled, to stay inside API rate limits."""

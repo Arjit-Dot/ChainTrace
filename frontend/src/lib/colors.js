@@ -61,6 +61,12 @@ export const OUTCOME_STATUS = {
 }
 export const ONWARD = { vasp: 'an exchange', dex: 'a DEX', mixer: 'a mixer', bridge: 'a bridge', bank_account: 'a bank account', wallet: 'another wallet' }
 
+// A request to an institution moves draft, approved, sent, acknowledged, replied, closed.
+export const REQUEST_STAGES = ['draft', 'approved', 'sent', 'acknowledged', 'replied', 'closed']
+export const REQUEST_STATUS = {
+  draft: 'Draft', approved: 'Approved', sent: 'Sent', acknowledged: 'Acknowledged', replied: 'Replied', closed: 'Closed',
+}
+
 export const IDENTIFIER_KINDS = {
   wallet: 'Wallet', bank_account: 'Bank account', upi_id: 'UPI ID', phone: 'Phone', email: 'Email', device: 'Device', ip_address: 'IP address',
   social_handle: 'Social handle', domain: 'Domain', app: 'App',

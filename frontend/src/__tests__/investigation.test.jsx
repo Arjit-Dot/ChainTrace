@@ -33,7 +33,7 @@ const LEADS = [
 ]
 
 const panel = (routes = {}) => {
-  const backend = installBackend({ '/api/officer/cases/C-009/identifiers': IDS, '/api/officer/cases/C-009/leads': LEADS, ...routes })
+  const backend = installBackend({ '/api/officer/cases/C-009/identifiers': IDS, '/api/officer/cases/C-009/leads': LEADS, '/api/officer/cases/C-009/requests': [], ...routes })
   render(<LeadsPanel caseId="C-009" />)
   return backend
 }
@@ -48,7 +48,9 @@ describe('the leads panel', () => {
     expect(first.getByText('Bank')).toBeInTheDocument()
     expect(first.getByText(/HDFC Bank/)).toBeInTheDocument()
     expect(first.getByText(/account holder, kyc documents and statements/i)).toBeInTheDocument()
-    for (const label of ['Account details', 'Freeze request', 'Preservation notice']) expect(first.getByText(label)).toBeInTheDocument()
+    for (const label of ['Account details', 'Freeze request', 'Preservation notice']) {
+      expect(first.getByRole('button', { name: `Draft: ${label}` })).toBeInTheDocument()        // a request an officer can draft
+    }
     expect(first.getByText(/bank account 000123450001/i)).toBeInTheDocument()          // names the identifier it is about
     expect(within(leads[1]).getByText('Messaging or social platform')).toBeInTheDocument()
   })

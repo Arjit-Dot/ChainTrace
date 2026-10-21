@@ -1,13 +1,22 @@
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useFetch } from '../../hooks/useFetch'
-import { addIdentifier, getIdentifiers, getLeads } from '../../lib/api'
-import { CHOKE_POINTS, IDENTIFIER_KINDS, PRIORITY_CLASSES, REQUESTS, ROLES } from '../../lib/colors'
+import { addIdentifier, createRequest, getIdentifiers, getLeads, getRequests } from '../../lib/api'
+import { CHOKE_POINTS, IDENTIFIER_KINDS, PRIORITY_CLASSES, REQUEST_STATUS, REQUESTS, ROLES } from '../../lib/colors'
 import { formatTime } from '../../lib/format'
 
 const pill = 'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset'
 
-function LeadCard({ lead, identifier }) {
+function LeadCard({ lead, identifier, drafted, onDraft }) {
+  const [error, setError] = useState(null)
+  const draft = async (kind) => {
+    setError(null)
+    try {
+      await onDraft(lead, kind)
+    } catch (e) {
+      setError(e)
+    }
+  }
   return (
     <li className="space-y-2 rounded-lg border border-line bg-panel-2/40 p-3" data-testid="lead">
       <div className="flex flex-wrap items-center gap-2">
@@ -25,12 +34,29 @@ function LeadCard({ lead, identifier }) {
         {lead.what_it_identifies}
       </p>
       <p className="flex flex-wrap gap-1.5">
-        {lead.requests.map((r) => (
-          <span key={r} className="rounded bg-line/60 px-1.5 py-0.5 text-[11px] text-ink/90">
-            {REQUESTS[r] ?? r}
-          </span>
-        ))}
+        {lead.requests.map((r) =>
+          drafted[`${lead.lead_id}:${r}`] ? (
+            <span key={r} className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[11px] text-emerald-300">
+              {REQUESTS[r] ?? r} · {drafted[`${lead.lead_id}:${r}`]}
+            </span>
+          ) : (
+            <button
+              key={r}
+              type="button"
+              onClick={() => draft(r)}
+              title={`Draft a ${(REQUESTS[r] ?? r).toLowerCase()} for an officer to review`}
+              className="rounded border border-line bg-line/40 px-1.5 py-0.5 text-[11px] text-ink/90 hover:border-accent/60 hover:text-accent"
+            >
+              Draft: {REQUESTS[r] ?? r}
+            </button>
+          ),
+        )}
       </p>
+      {error && (
+        <p role="alert" className="text-[11px] text-red-300">
+          {error.message}
+        </p>
+      )}
     </li>
   )
 }
@@ -79,12 +105,20 @@ function AddForm({ caseId, onAdded }) {
 }
 
 // Who and what is involved in a case, and which institution to ask next. Suggestions only: nothing is sent from here.
-export default function LeadsPanel({ caseId }) {
-  const ids = useFetch(() => getIdentifiers(caseId), [caseId])
-  const leads = useFetch(() => getLeads(caseId), [caseId])
+export default function LeadsPanel({ caseId, version = 0, onChange = () => {} }) {
+  const ids = useFetch(() => getIdentifiers(caseId), [caseId, version])
+  const leads = useFetch(() => getLeads(caseId), [caseId, version])
+  const requests = useFetch(() => getRequests(caseId), [caseId, version])
+  const drafted = Object.fromEntries((requests.data ?? []).map((r) => [`${r.lead_id}:${r.kind}`, REQUEST_STATUS[r.status]]))
   const reload = () => {
     ids.reload()
     leads.reload()
+    onChange()
+  }
+  const onDraft = async (lead, kind) => {
+    await createRequest(caseId, { lead_id: lead.lead_id, kind })
+    requests.reload()
+    onChange()
   }
   const byId = Object.fromEntries((ids.data ?? []).map((i) => [i.identifier_id, i]))
 
@@ -103,7 +137,7 @@ export default function LeadsPanel({ caseId }) {
       ) : (
         <ul className="grid gap-3 lg:grid-cols-2">
           {leads.data.map((l) => (
-            <LeadCard key={l.lead_id} lead={l} identifier={byId[l.identifier_id]} />
+            <LeadCard key={l.lead_id} lead={l} identifier={byId[l.identifier_id]} drafted={drafted} onDraft={onDraft} />
           ))}
         </ul>
       )}

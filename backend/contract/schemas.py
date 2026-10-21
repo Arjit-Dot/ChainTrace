@@ -193,7 +193,7 @@ class Network(BaseModel):
 class Alert(BaseModel):
     id: str
     type: Literal["FUNDS_MOVED", "REACHED_VASP", "ENTERED_MIXER", "NEW_COMPLAINT_LINKED", "HIGH_RISK_WALLET", "URGENCY_CHANGED",
-                  "COMPLAINT_RECEIVED"]
+                  "COMPLAINT_RECEIVED", "REPLY_RECEIVED"]
     severity: Literal["info", "warning", "critical"]
     case_id: Optional[str] = None             # None for an alert about a complaint that has no case yet
     complaint_id: Optional[str] = None
@@ -392,3 +392,54 @@ class Mule(BaseModel):
     forwarded: float = 0.0
     onward: List[str] = []                     # where it sent the money: vasp, dex, mixer, bridge, wallet
     identifier_id: Optional[str] = None
+
+
+# ---------- Requests to institutions, and their replies (investigation 4.3) ----------
+# An officer turns a lead into a request: a draft letter, approved by an officer, then sent. A reply brings facts and NEW
+# identifiers, which open new leads. In this demo nothing is sent anywhere and every reply is FICTIONAL.
+RequestStatus = Literal["draft", "approved", "sent", "acknowledged", "replied", "closed"]
+
+
+class RequestCreate(BaseModel):
+    lead_id: str
+    kind: RequestKind
+
+
+class RequestEvent(BaseModel):
+    at: int
+    status: RequestStatus
+    note: str
+
+
+class InstitutionRequest(BaseModel):
+    request_id: str
+    case_id: str
+    lead_id: str
+    identifier_id: str
+    choke_point: ChokePoint
+    holder: str
+    kind: RequestKind
+    subject: str                               # the identifier the request is about
+    status: RequestStatus = "draft"
+    letter_subject: str
+    letter_body: str                           # a DRAFT: legal references are placeholders for the officer
+    created_at: int
+    updated_at: int
+    reference: Optional[str] = None            # the acknowledgement reference once sent (simulated)
+    history: List[RequestEvent] = []
+
+
+class ReplyField(BaseModel):
+    label: str
+    value: str
+
+
+class Reply(BaseModel):
+    reply_id: str
+    request_id: str
+    case_id: str
+    received_at: int
+    summary: str
+    fields: List[ReplyField]
+    new_identifier_ids: List[str] = []         # what this reply added to the case's ledger
+    fictional: bool = True                     # always true in this demo

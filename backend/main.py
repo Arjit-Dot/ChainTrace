@@ -13,7 +13,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
-from product import alerts, analytics, complaints, engine_client, integrations, investigation, ledger, store
+from product import alerts, analytics, complaints, engine_client, integrations, investigation, ledger, outreach_routes, store
 from product.notices import build_freeze_notice
 from product.reports import build_report, evidence_hash
 from contract.schemas import (
@@ -94,6 +94,7 @@ def report(case_id: str):
 
 # ---- Alerts (SSE) and mock integrations: see product/alerts.py and product/integrations.py ----
 app.include_router(investigation.router)
+app.include_router(outreach_routes.router)
 app.include_router(complaints.router)
 app.include_router(complaints.officer)
 app.include_router(alerts.router)

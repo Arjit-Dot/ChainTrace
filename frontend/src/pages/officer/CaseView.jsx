@@ -7,6 +7,7 @@ import NearestVaspCard from "../../components/case/NearestVaspCard";
 import NodePanel from "../../components/case/NodePanel";
 import PageHeader from "../../components/common/PageHeader";
 import LeadsPanel from "../../components/case/LeadsPanel";
+import RequestsPanel from "../../components/case/RequestsPanel";
 import { MulesPanel, OutcomesPanel } from "../../components/case/OutcomesPanel";
 import RecommendationsPanel from "../../components/case/RecommendationsPanel";
 import { ErrorState, Loading } from "../../components/common/Status";
@@ -27,7 +28,9 @@ const btn =
 
 function CaseBody({ trace, reload }) {
   const [selected, setSelected] = useState(null);
-  const [noticeOpen, setNoticeOpen] = useState(false);
+  const [noticeOpen, setNoticeOpen] = useState(false)
+  const [inv, setInv] = useState(0) // bumped when the investigation changes (a request moved, a reply arrived)
+  const bump = () => setInv((n) => n + 1);
   const [alerts, setAlerts] = useState([]);
   const [simMsg, setSimMsg] = useState(null);
   const [reportBusy, setReportBusy] = useState(false);
@@ -180,9 +183,10 @@ function CaseBody({ trace, reload }) {
         </div>
 
         <RecommendationsPanel items={trace.recommendations} />
-        <OutcomesPanel caseId={trace.case_id} />
-        <MulesPanel caseId={trace.case_id} />
-        <LeadsPanel caseId={trace.case_id} />
+        <OutcomesPanel caseId={trace.case_id} version={inv} />
+        <MulesPanel caseId={trace.case_id} version={inv} />
+        <LeadsPanel caseId={trace.case_id} version={inv} onChange={bump} />
+        <RequestsPanel caseId={trace.case_id} version={inv} onChange={bump} />
       </div>
 
       {noticeOpen && (
