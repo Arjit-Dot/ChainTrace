@@ -21,3 +21,15 @@ Files with `"origin": "scripted-hero"` are written by `data/scripts/make_hero_ca
 ## Attribution scenarios (fictional)
 
 Files with `"origin": "scripted-scenario"` are written by `data/scripts/make_attribution_scenarios.py` (expected results in `data/scenarios/scenarios.json`, checked by `backend/tests/test_scenarios.py`). They use the fictional exchange, bridge and mixer labels from `labels.csv`.
+
+## Real flow to a labeled exchange (A7.4)
+
+Seven more **real** wallets (`"origin": "trongrid"`), fetched live without an API key on 2026-10-21 by `data/scripts/make_real_case.py`; the chosen case is in `data/scenarios/real_case.json`.
+
+```
+payer TC5r2Tbb..  ->  reported wallet TVLHfdgp..  ->  deposit address TBoQtXFB..  ->  Binance hot wallet TDqSquXB..
+```
+
+- `TDqSquXB...` is the row labeled Binance in `labels.csv` (a Dune query; **not independently verified**). It is a very busy wallet, so only its newest 200 transfers are cached and the file is marked `"truncated": true`.
+- `TBoQtXFB...` is a real address that 7 different wallets paid and that sent 100% of what it received to the hot wallet in 36 transfers: the shape of an exchange deposit address. The engine attributes it by the sweep heuristic (0.68, `heuristic`). Reported from this address itself, the same flow is a direct label match (0.95, `deterministic`).
+- `TVLHfdgp...` is one of its payers with a small, complete history. **It is not claimed to be a scam wallet**: we cannot know that. The case shows the engine reaching a real labeled exchange through real wallets, not a real fraud.

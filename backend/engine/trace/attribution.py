@@ -90,7 +90,10 @@ def attribute(graph: Graph, adapter, labels: Dict[str, Tuple[str, str]],
                 continue
             conf = confidence(1.0, min(stats["senders"] / SENDER_CAP, 1.0), stats["unrelated"] / stats["senders"])
             evidence = [
-                f"Deposit address received funds from {stats['senders']} different wallets over {stats['span_hours']} hours",
+                f"Deposit address received funds from {stats['senders']} different wallets over "
+                f"{stats['span_hours']} hours" if stats["span_hours"] < 72 else
+                f"Deposit address received funds from {stats['senders']} different wallets over "
+                f"{round(stats['span_hours'] / 24)} days",
                 f"It forwarded {stats['ratio']:.0%} of what it received to the labeled hot wallet "
                 f"in {stats['swept_txs']} transfers",
                 f"Hot wallet {hot.id[:8]}... is labeled {vasp}",

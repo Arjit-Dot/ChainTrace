@@ -1,0 +1,20 @@
+{
+  "key": "real-exchange-flow",
+  "wallet": "TVLHfdgpiMR2mRpjtAWm8YJ5hCj9iYWS2B",
+  "amount": 2826.0,
+  "hot_wallet": "TDqSquXBgUCLYvYC4XZgrprLK589dkhSCf",
+  "exchange": "Binance",
+  "deposit_address": "TBoQtXFBhBwQwyazeNVhajEBR2umNMLUps",
+  "payer": "TC5r2Tbba6XRrRt8LkvyMscVsmUXacAarK",
+  "cached_wallets": [
+    "TB3fZCTY54jrjoACwcdVGmM2GxRpQMZ82Q",
+    "TBoQtXFBhBwQwyazeNVhajEBR2umNMLUps",
+    "TC5r2Tbba6XRrRt8LkvyMscVsmUXacAarK",
+    "TDqSquXBgUCLYvYC4XZgrprLK589dkhSCf",
+    "TNQQHuofWLxqTJ1nMBhhVA7BU1PgpFDQpv",
+    "TP9EoQnMxahN1xEmZ7vAigFN3WnnpJ2Kro",
+    "TVLHfdgpiMR2mRpjtAWm8YJ5hCj9iYWS2B"
+  ],
+  "note": "REAL wallets. The exchange label is unverified (Dune) and the reported wallet is not claimed to be fraud.",
+  "fetched_at": 1792575874
+}

@@ -411,6 +411,8 @@ The answer to "which exchange got the money":
 4. Three alerts appear (funds moved, reached an exchange, urgency changed). The graph extends, the Nearest VASP card names Example Exchange B at 0.95 (`deterministic`) and the badge drops to **Act soon**.
 5. Open **Freeze Notice** to see the draft request.
 
+A real flow: wallet `TVLHfdgpiMR2mRpjtAWm8YJ5hCj9iYWS2B` (amount `2826`) is a real TRON wallet whose money went through a real deposit address into a wallet labeled Binance; the engine attributes it to Binance by the sweep rule. It is not claimed to be fraud, and the Binance label is unverified (see `data/cache/SOURCES.md`).
+
 Other wallets worth trying (all fictional): `TXCFXFx5tuZ1ky3HgTEHZpoLxXmJ32XLvj` (direct match, 8000), `TDongf8XirZvCUFazHwM2FG7cukpnF9h9D` (sweep heuristic, 5000), `TPA2pH1ZJWxMFeyMDEup4JQg51kkcVUMKe` (ends at a mixer, 4000), `TMmiNnkHcoyUuNbK7TPwwTfr8ofi82Kohz` (ends at a bridge, 4000). All 8 scenarios are listed in `data/scenarios/scenarios.json`.
 
 The seeded cases on the dashboard (C-001 to C-008) show the other situations: shared deposit addresses across complaints, a case ending in a mixer, an isolated case, and a case that left TRON through a bridge with idle funds.
