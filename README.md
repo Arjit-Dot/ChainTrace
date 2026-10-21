@@ -441,7 +441,7 @@ pytest -q
 | Folder | Covers |
 |---|---|
 | `backend/tests/contract/` | Engine output matches the contract (graph shape, exchange in graph, idle funds add up) |
-| `backend/tests/engine/` | TRON adapter, tracing rules, attribution, the 8 attribution scenarios end to end, the model features, rules, training, scoring, and the scenario batteries |
+| `backend/tests/engine/` | TRON adapter, tracing rules, attribution, the 8 attribution scenarios end to end, the model features, rules, training, scoring, the scenario batteries, resilience and edge cases, and a contract-and-speed check of every cached wallet |
 | `backend/tests/product/` | Seed cases and traces, the case store and API, urgency rules, live monitoring, alerts and replay, the PDF report, dashboard and network analytics, the mock NCRP and SAHYOG endpoints |
 
 To check the frontend compiles: `cd frontend && npm run build`.
