@@ -66,7 +66,7 @@ def trace_complaint(req: TraceRequest) -> TraceResponse:
         resp.graph, resp.typology = score_graph(resp.graph, adapter, resp.wallet)
         if resp.nearest_vasp:
             resp.summary.time_to_attribution_sec = round(time.time() - started, 2)
-        resp.notes = _notes(req.wallet, adapter, stats, resp)
+        resp.notes = _notes(req.wallet, adapter, stats, resp, load_labels())
         return resp
     data = _load("trace_hero.json")
     data["complaint_id"] = req.complaint_id
@@ -79,9 +79,15 @@ def trace_complaint(req: TraceRequest) -> TraceResponse:
     return TraceResponse(**data)
 
 
-def _notes(wallet: str, adapter, stats, resp: TraceResponse) -> Optional[str]:
+def _notes(wallet: str, adapter, stats, resp: TraceResponse, labels=None) -> Optional[str]:
     """What an officer should know about how complete this trace is (shown on the case)."""
     notes: List[str] = []
+    entity, kind = (labels or {}).get(wallet, (None, None))
+    wallet_label = {
+        "exchange": f"The reported wallet is itself a known {entity} address, so the freeze request goes there directly.",
+        "mixer": f"The reported wallet is a known mixing service ({entity}): funds cannot be followed through it.",
+        "bridge": f"The reported wallet is a known cross-chain bridge ({entity}): follow the funds on the destination chain.",
+    }.get(kind) if kind else None
     if not is_tron_address(wallet):
         chain = detect_chain(wallet)
         notes.append(f"{chain.capitalize()} wallets are not traced yet: only TRON is." if chain
@@ -98,6 +104,11 @@ def _notes(wallet: str, adapter, stats, resp: TraceResponse) -> Optional[str]:
                      "smaller flows beyond that were not followed.")
     if stats.unchecked_leaves:
         notes.append(f"Idle balances were not checked for {stats.unchecked_leaves} wallet(s) (time ran out).")
+    root = next((n for n in resp.graph.nodes if n.hop == 0), None)
+    if root and not notes and len(resp.graph.nodes) == 1:
+        notes.append("No USDT transfers worth following were found for this wallet.")
+    if root and wallet_label:
+        notes.append(wallet_label)
     if not resp.nearest_vasp and not notes:
         notes.append("No exchange found in the traced flow.")
     return " ".join(notes) or None

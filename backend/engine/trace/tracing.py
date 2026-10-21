@@ -65,7 +65,7 @@ def trace(wallet: str, adapter: TronAdapter, case_value: Optional[float] = None,
           max_depth: int = MAX_DEPTH, min_share: float = MIN_SHARE,
           labels: Optional[Dict[str, Tuple[str, str]]] = None, max_expanded: int = MAX_EXPANDED,
           time_budget: float = TIME_BUDGET_SEC, stats: Optional[TraceStats] = None,
-          clock: Callable[[], float] = time.monotonic) -> Graph:
+          clock: Callable[[], float] = time.monotonic, payment_tx: Optional[str] = None) -> Graph:
     labels = load_labels() if labels is None else labels
     stats = TraceStats() if stats is None else stats
     started = clock()
@@ -76,14 +76,17 @@ def trace(wallet: str, adapter: TronAdapter, case_value: Optional[float] = None,
         except (LookupError, ValueError):  # uncached offline or not a TRON address: no history, do not crash
             return []
 
-    root_hist = history(wallet)
-    if case_value is None:
+    root_hist = [t for t in history(wallet) if t.from_addr != t.to_addr]      # a transfer to oneself moves nothing
+    if case_value is None or case_value <= 0:
         case_value = sum(t.amount for t in root_hist if t.to_addr == wallet)
     floor = min_share * case_value
+    # Follow only what left the reported wallet AFTER the victim paid it: an old wallet has unrelated earlier history.
+    paid = [t for t in root_hist if t.to_addr == wallet and t.amount >= floor]
+    start = next((t.timestamp for t in paid if payment_tx and t.tx_hash == payment_tx), min((t.timestamp for t in paid), default=0))
 
     nodes: Dict[str, Node] = {}
     edges: Dict[str, Edge] = {}
-    arrival: Dict[str, Tuple[int, float]] = {wallet: (0, 0.0)}  # addr -> (first arrival ts, amount that arrived)
+    arrival: Dict[str, Tuple[int, float]] = {wallet: (start, 0.0)}  # addr -> (first arrival ts, amount that arrived)
     expanded = set()
 
     def add_edge(t: Transfer, target_type: Optional[str]):
@@ -117,7 +120,7 @@ def trace(wallet: str, adapter: TronAdapter, case_value: Optional[float] = None,
                 stats.stopped = "time budget"
                 break
             stats.expanded += 1
-        hist = history(addr) if addr != wallet else root_hist
+        hist = [t for t in history(addr) if t.from_addr != t.to_addr] if addr != wallet else root_hist
         since, arrived = arrival[addr]
         outgoing = [t for t in hist if t.from_addr == addr and t.timestamp >= since and t.amount >= floor]
         if addr != wallet and not is_pass_through(hist, addr, since, arrived):
@@ -136,11 +139,11 @@ def trace(wallet: str, adapter: TronAdapter, case_value: Optional[float] = None,
     # leaves that still hold funds get an idle-funds flag
     sources = {e.source for e in edges.values()}
     for addr, node in nodes.items():
-        if node.type in ("unknown", "intermediary") and addr not in sources:
+        if (node.type in ("unknown", "intermediary") or (addr == wallet and addr not in labels)) and addr not in sources:
             if clock() - started > time_budget:
                 stats.unchecked_leaves += 1
                 continue
-            node.idle_balance = idle_balance(history(addr), addr)
+            node.idle_balance = idle_balance(root_hist if addr == wallet else history(addr), addr)
 
     ordered = sorted(nodes.values(), key=lambda n: (n.hop, n.id))
     return Graph(nodes=ordered, edges=sorted(edges.values(), key=lambda e: (e.timestamp, e.tx_hash)))
@@ -163,10 +166,10 @@ def build_response(req: TraceRequest, adapter: Optional[TronAdapter] = None,
     """Full contract response: downstream risk is a placeholder until A6, the reported wallet and the case have no risk, urgency is B's."""
     adapter = adapter or TronAdapter()
     started = time.time()
-    graph = trace(req.wallet, adapter, case_value=req.amount, stats=stats)
+    graph = trace(req.wallet, adapter, case_value=req.amount, stats=stats, payment_tx=req.tx_hash)
     return TraceResponse(
         case_id=f"CASE-{req.complaint_id}", complaint_id=req.complaint_id, wallet=req.wallet, chain="tron",
-        fraud_type=req.fraud_type, amount_lost=req.amount, risk=None, risk_score=None,
+        fraud_type=req.fraud_type, amount_lost=req.amount if req.amount and req.amount > 0 else None, risk=None, risk_score=None,
         graph=graph, summary=summarize(graph), source="cached" if adapter.offline else "live",
         generated_at=int(started),
     )

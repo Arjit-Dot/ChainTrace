@@ -10,6 +10,10 @@ class FakeAdapter:
 
     def __init__(self, transfers):
         self.all = transfers
+        self.unavailable = {}
+
+    def history_truncated(self, addr):
+        return False
 
     def transfers(self, addr):
         mine = [t for t in self.all if addr in (t.from_addr, t.to_addr)]

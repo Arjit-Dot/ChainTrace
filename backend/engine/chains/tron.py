@@ -217,8 +217,14 @@ class TronAdapter:
             doc = self.write_cache(address, raw, truncated=truncated)
             source = "live"
         items = [t for t in (normalize(r) for r in doc["data"]) if t]
-        items.sort(key=lambda t: (t.timestamp, t.tx_hash))
-        return items, source
+        seen, unique = set(), []
+        for t in items:                                    # the same transfer listed twice (a paging overlap) counts once
+            key = (t.tx_hash, t.from_addr, t.to_addr, t.amount)
+            if key not in seen:
+                seen.add(key)
+                unique.append(t)
+        unique.sort(key=lambda t: (t.timestamp, t.tx_hash))
+        return unique, source
 
     def history_truncated(self, address: str) -> bool:
         """True if the cached history is only the newest part of the wallet's transfers (age and transfer count are

@@ -73,7 +73,7 @@ def attribute(graph: Graph, adapter, labels: Dict[str, Tuple[str, str]],
     ids = {n.id for n in graph.nodes}
     by_id = {n.id: n for n in graph.nodes}
     exchanges = sorted((n for n in graph.nodes if n.hop >= 0 and labels.get(n.id, ("", ""))[1] == "exchange"),
-                       key=lambda n: n.hop)
+                       key=lambda n: (n.hop, -(getattr(_inbound(graph, n.id), "amount", 0.0)), n.id))   # nearest, then biggest
     for hot in exchanges:
         vasp = labels[hot.id][0]
         # sweep heuristic: a predecessor of the hot wallet that looks like a deposit address
