@@ -142,3 +142,37 @@ def test_freeze_notice_status_and_missing_vasp(client):
     assert client.get("/api/cases/C-003/freeze-notice").json()["status"] == "sent"
     client.get("/api/cases/C-002/freeze-notice")  # drafting moves an attributed case on
     assert next(c for c in client.get("/api/cases").json() if c["case_id"] == "C-002")["status"] == "notice_drafted"
+
+
+# ---------- B5: PDF evidence report ----------
+def _sha(case_json: dict) -> str:
+    import hashlib
+    return hashlib.sha256(json.dumps(case_json, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def test_report_is_a_real_pdf_with_graph_and_hash(client):
+    r = client.get("/api/cases/C-001/report")
+    assert r.status_code == 200 and r.headers["content-type"] == "application/pdf"
+    assert 'filename="C-001_evidence_report.pdf"' in r.headers["content-disposition"]
+    pdf = r.content
+    assert pdf.startswith(b"%PDF") and b"/Subtype /Image" in pdf  # the fund-flow graph
+    digest = r.headers["x-evidence-sha256"]
+    assert digest == _sha(client.get("/api/cases/C-001").json())  # anyone with the case record can check it
+    assert f"sha256:{digest}".encode() in pdf
+
+
+def test_report_per_case_and_missing(client):
+    h1 = client.get("/api/cases/C-001/report").headers["x-evidence-sha256"]
+    r6 = client.get("/api/cases/C-006/report")  # no exchange: still a report
+    assert r6.status_code == 200 and r6.content.startswith(b"%PDF") and r6.headers["x-evidence-sha256"] != h1
+    new = client.post("/api/trace", json={"complaint_id": "X", "wallet": HERO_WALLET}).json()
+    assert client.get(f"/api/cases/{new['case_id']}/report").content.startswith(b"%PDF")
+    assert client.get("/api/cases/C-999/report").status_code == 404
+
+
+def test_graph_image_for_every_seed_trace():
+    from product.recommendations import with_recommendations
+    from product.reports import build_report, graph_png
+    for t in TRACES.values():
+        assert graph_png(t).startswith(b"\x89PNG")
+    assert build_report(with_recommendations(TRACES["C-008"])).startswith(b"%PDF")

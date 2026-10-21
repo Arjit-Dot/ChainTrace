@@ -13,12 +13,13 @@ from typing import List
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 from sse_starlette.sse import EventSourceResponse
 
 from paths import FIXTURES
 from product import alerts, engine_client, store
 from product.notices import build_freeze_notice
+from product.reports import build_report, evidence_hash
 from contract.schemas import (
     Alert, CaseSummary, DashboardStats, FreezeNotice, IntegrationAck, Network,
     SahyogNoticeRequest, TraceRequest, TraceResponse, WalletRisk, CONTRACT_VERSION,
@@ -85,10 +86,18 @@ def freeze_notice(case_id: str):
     return build_freeze_notice(trace, case)
 
 
-@app.get("/api/cases/{case_id}/report")
+@app.get("/api/cases/{case_id}/report", response_class=Response,
+         responses={200: {"content": {"application/pdf": {}}}})
 def report(case_id: str):
-    return FileResponse(FIXTURES / "report_sample.pdf", media_type="application/pdf",
-                        filename=f"{case_id}_evidence_report.pdf")  # TODO(B): real PDF
+    """PDF evidence report built from the stored trace. The footer hash is also sent as X-Evidence-SHA256."""
+    trace = store.get_trace(case_id)
+    if trace is None:
+        raise HTTPException(404, "Case not found")
+    pdf = build_report(trace, store.get_case(case_id))
+    return Response(pdf, media_type="application/pdf", headers={
+        "Content-Disposition": f'attachment; filename="{case_id}_evidence_report.pdf"',
+        "X-Evidence-SHA256": evidence_hash(trace),
+    })
 
 
 # ---- Analytics ----

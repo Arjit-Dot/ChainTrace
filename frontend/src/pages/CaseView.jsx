@@ -1,4 +1,4 @@
-import { FileDown, FileWarning, Info, Play } from "lucide-react";
+import { FileDown, FileWarning, Info, Loader2, Play } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import FreezeNoticeModal from "../components/case/FreezeNoticeModal";
@@ -14,7 +14,7 @@ import { useFetch } from "../hooks/useFetch";
 import {
   alertStreamUrl,
   getCase,
-  reportUrl,
+  getReport,
   simulateMovement,
 } from "../lib/api";
 import { humanize, shortAddr } from "../lib/format";
@@ -27,6 +27,7 @@ function CaseBody({ trace, reload }) {
   const [noticeOpen, setNoticeOpen] = useState(false);
   const [alerts, setAlerts] = useState([]);
   const [simMsg, setSimMsg] = useState(null);
+  const [reportBusy, setReportBusy] = useState(false);
 
   // Live monitoring: re-read the case every 30 s, and straight away when an alert for it arrives.
   useEffect(() => {
@@ -49,6 +50,23 @@ function CaseBody({ trace, reload }) {
       () => setSimMsg(null),
       (e) => setSimMsg(e.message),
     );
+  const downloadReport = async () => {
+    setReportBusy(true);
+    setSimMsg(null);
+    try {
+      const { blob } = await getReport(trace.case_id);
+      const url = URL.createObjectURL(blob);
+      Object.assign(document.createElement("a"), {
+        href: url,
+        download: `${trace.case_id}_evidence_report.pdf`,
+      }).click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      setSimMsg(`Report failed: ${e.message}`);
+    } finally {
+      setReportBusy(false);
+    }
+  };
   const node = selected && trace.graph.nodes.find((n) => n.id === selected);
 
   return (
@@ -78,12 +96,19 @@ function CaseBody({ trace, reload }) {
         >
           <FileWarning className="size-4" /> Freeze Notice
         </button>
-        <a
-          href={reportUrl(trace.case_id)}
-          className={`${btn} border-line text-ink hover:bg-panel-2`}
+        <button
+          onClick={downloadReport}
+          disabled={reportBusy}
+          title="PDF evidence report: summary, graph, transactions, attribution, risk, recommendations"
+          className={`${btn} border-line text-ink enabled:hover:bg-panel-2`}
         >
-          <FileDown className="size-4" /> Download Report
-        </a>
+          {reportBusy ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <FileDown className="size-4" />
+          )}
+          {reportBusy ? "Building PDF…" : "Download Report"}
+        </button>
       </PageHeader>
 
       <div className="space-y-6 p-6">
