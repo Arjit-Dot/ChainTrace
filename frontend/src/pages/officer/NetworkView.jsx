@@ -1,12 +1,13 @@
 import { Landmark, MapPin, Share2, Users, Wallet } from 'lucide-react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import PageHeader from '../components/common/PageHeader'
-import { Empty, ErrorState, Loading } from '../components/common/Status'
-import NetworkGraph, { NETWORK_TYPES } from '../components/network/NetworkGraph'
-import { useAlertListener } from '../hooks/useAlerts'
-import { useFetch } from '../hooks/useFetch'
-import { getNetworks } from '../lib/api'
-import { formatUSDT } from '../lib/format'
+import PageHeader from '../../components/common/PageHeader'
+import { Empty, ErrorState, Loading } from '../../components/common/Status'
+import NetworkGraph, { NETWORK_TYPES } from '../../components/network/NetworkGraph'
+import { useAlertListener } from '../../hooks/useAlerts'
+import { useFetch } from '../../hooks/useFetch'
+import { getNetworks } from '../../lib/api'
+import { formatUSDT } from '../../lib/format'
+import { R } from '../../lib/routes'
 
 function NetworkLegend() {
   return (
@@ -69,7 +70,7 @@ function NetworkCard({ net }) {
           {net.complaint_ids.map((id) => (
             <Link
               key={id}
-              to={`/cases/${id}`}
+              to={R.officerCase(id)}
               className="rounded border border-line px-2 py-0.5 text-xs text-accent hover:bg-panel-2"
             >
               {id}
@@ -134,7 +135,7 @@ export default function NetworkView() {
                 <NetworkLegend />
               </div>
               <div className="h-[460px]">
-                <NetworkGraph network={net} onOpenCase={(id) => navigate(`/cases/${id}`)} />
+                <NetworkGraph network={net} onOpenCase={(id) => navigate(R.officerCase(id))} />
               </div>
               <p className="border-t border-line px-4 py-2 text-xs text-muted">
                 Click a complaint to open its case.

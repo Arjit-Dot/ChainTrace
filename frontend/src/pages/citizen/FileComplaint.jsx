@@ -1,9 +1,9 @@
-import { Loader2, Search, Sparkles } from 'lucide-react'
+import { Loader2, Send, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import PageHeader from '../components/common/PageHeader'
-import { trace } from '../lib/api'
-import { humanize } from '../lib/format'
+import { trace } from '../../lib/api'
+import { humanize } from '../../lib/format'
+import { R } from '../../lib/routes'
 
 // The agreed hero case (C-001). The demo starts by clicking "Fill hero example".
 const HERO = {
@@ -48,7 +48,7 @@ function Field({ label, hint, children }) {
   )
 }
 
-export default function NewComplaint() {
+export default function FileComplaint() {
   const navigate = useNavigate()
   const [form, setForm] = useState(blank)
   const [busy, setBusy] = useState(false)
@@ -73,7 +73,7 @@ export default function NewComplaint() {
         state: form.state || null,
         reported_at: Math.floor(Date.now() / 1000),
       })
-      navigate(`/cases/${res.case_id}`)
+      navigate(R.submitted(res.complaint_id))
     } catch (err) {
       setError(err)
       setBusy(false)
@@ -82,22 +82,23 @@ export default function NewComplaint() {
 
   return (
     <>
-      <PageHeader title="New Complaint" subtitle="Start a forward trace from the wallet the victim paid">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Report a crypto fraud</h1>
+          <p className="mt-1 text-sm text-muted">Tell us where you sent the money. You will receive a complaint ID to follow progress.</p>
+        </div>
         <button
           type="button"
           onClick={() => setForm((f) => ({ ...f, ...HERO }))}
           className="inline-flex items-center gap-1.5 rounded-md border border-accent/50 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10"
         >
-          <Sparkles className="size-4" /> Fill hero example
+          <Sparkles className="size-4" /> Fill demo example
         </button>
-      </PageHeader>
+      </div>
 
-      <form onSubmit={submit} className="max-w-3xl space-y-5 p-6">
+      <form onSubmit={submit} className="max-w-3xl space-y-5">
         <div className="grid gap-5 rounded-lg border border-line bg-panel p-5 sm:grid-cols-2">
-          <Field label="Complaint ID">
-            <input required value={form.complaint_id} onChange={set('complaint_id')} className={input} />
-          </Field>
-          <Field label="Chain" hint={!form.chain && detected ? `Auto-detected: ${humanize(detected)}` : null}>
+          <Field label="Network" hint={!form.chain && detected ? `Auto-detected: ${humanize(detected)}` : null}>
             <select value={form.chain} onChange={set('chain')} className={input}>
               <option value="">Auto-detect</option>
               {CHAINS.map((c) => (
@@ -110,8 +111,8 @@ export default function NewComplaint() {
 
           <div className="sm:col-span-2">
             <Field
-              label="Reported wallet"
-              hint={wallet && !detected ? 'Address format not recognised. Check for typos.' : 'The address the victim sent funds to.'}
+              label="Wallet you sent the money to"
+              hint={wallet && !detected ? 'Address format not recognised. Check for typos.' : 'The wallet address from your payment record.'}
             >
               <input
                 required
@@ -127,9 +128,9 @@ export default function NewComplaint() {
           <Field label="Amount lost (USDT)">
             <input type="number" min="0" step="any" value={form.amount} onChange={set('amount')} className={input} />
           </Field>
-          <Field label="Fraud type">
+          <Field label="Type of fraud">
             <select value={form.fraud_type} onChange={set('fraud_type')} className={input}>
-              <option value="">Unknown</option>
+              <option value="">Not sure</option>
               {FRAUD_TYPES.map((t) => (
                 <option key={t} value={t}>
                   {humanize(t)}
@@ -139,7 +140,7 @@ export default function NewComplaint() {
           </Field>
 
           <div className="sm:col-span-2">
-            <Field label="Transaction hash (optional)">
+            <Field label="Transaction ID (optional)">
               <input value={form.tx_hash} onChange={set('tx_hash')} spellCheck={false} className={`${input} font-mono`} />
             </Field>
           </div>
@@ -156,7 +157,7 @@ export default function NewComplaint() {
 
         {error && (
           <p className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
-            Trace failed: {error.message}
+            Could not submit your complaint: {error.message}
           </p>
         )}
 
@@ -166,10 +167,10 @@ export default function NewComplaint() {
             disabled={busy || !wallet}
             className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-bg hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {busy ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
-            {busy ? 'Tracing…' : 'Trace funds'}
+            {busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+            {busy ? 'Submitting…' : 'Submit complaint'}
           </button>
-          <span className="text-xs text-muted">Creates a case and opens its fund-flow graph.</span>
+          <span className="text-xs text-muted">You will get a complaint ID on the next page.</span>
         </div>
       </form>
     </>

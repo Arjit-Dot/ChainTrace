@@ -126,9 +126,12 @@ cd frontend
 npm run dev
 ```
 
-Open <http://localhost:5173>.
+Open <http://localhost:5173>. You land on the **gateway**, which stands in for the hand-off from an official government website, with two sides:
 
-First thing to try: go to **New Complaint**, click **Fill hero example** (wallet `TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo`, amount 12000) and submit. You land on the traced case, ending at Example Exchange A.
+- **Citizens** (`/citizen/...`): file a complaint and track it. No officer navigation.
+- **Officers** (`/officer/...`): the console with the dashboard, cases and networks. It opens in a separate browser tab from the gateway. There is no login in this demo.
+
+First thing to try: **File a complaint**, click **Fill demo example** (wallet `TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo`, amount 12000) and submit; then open the **officer console** in the other tab and find the case on the dashboard. (In this version submitting still traces straight away; the officer-triggered trace arrives in a later stage.)
 
 ### 4.4 Engine modes
 
@@ -447,7 +450,7 @@ pytest -q
 | `backend/tests/engine/` | TRON adapter, tracing rules, attribution, the 8 attribution scenarios end to end, the model features, rules, training, scoring, the scenario batteries, resilience and edge cases, and a contract-and-speed check of every cached wallet |
 | `backend/tests/product/` | Seed cases and traces, the case store and API, urgency rules, live monitoring, alerts and replay, the PDF report, dashboard and network analytics, the mock NCRP and SAHYOG endpoints |
 
-To check the frontend compiles: `cd frontend && npm run build`.
+Frontend: `cd frontend && npm test` runs the page and routing tests, and `npm run build` checks it compiles.
 
 ---
 

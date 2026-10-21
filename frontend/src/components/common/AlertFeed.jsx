@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAlerts } from '../../hooks/useAlerts'
 import { humanize, timeAgo } from '../../lib/format'
+import { R } from '../../lib/routes'
 
 export const ALERT_ICONS = {
   FUNDS_MOVED: ArrowRightLeft,
@@ -29,7 +30,7 @@ export function AlertLine({ alert, onOpen }) {
         <p className={`text-[11px] font-semibold tracking-wide uppercase ${sev.text}`}>{humanize(alert.type.toLowerCase())}</p>
         <p className="text-sm text-ink">{alert.message}</p>
         <p className="text-xs text-muted">
-          <Link to={`/cases/${alert.case_id}`} onClick={onOpen} className="text-accent hover:underline">
+          <Link to={R.officerCase(alert.case_id)} onClick={onOpen} className="text-accent hover:underline">
             {alert.case_id}
           </Link>{' '}
           · {timeAgo(alert.timestamp)}

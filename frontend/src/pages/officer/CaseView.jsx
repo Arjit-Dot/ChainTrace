@@ -1,24 +1,24 @@
 import { FileDown, FileWarning, Info, Loader2, Play } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import FreezeNoticeModal from "../components/case/FreezeNoticeModal";
-import Legend from "../components/case/Legend";
-import NearestVaspCard from "../components/case/NearestVaspCard";
-import NodePanel from "../components/case/NodePanel";
-import PageHeader from "../components/common/PageHeader";
-import RecommendationsPanel from "../components/case/RecommendationsPanel";
-import { ErrorState, Loading } from "../components/common/Status";
-import SummaryStrip from "../components/case/SummaryStrip";
-import TraceGraph from "../components/case/TraceGraph";
-import { useFetch } from "../hooks/useFetch";
-import { useAlertListener } from "../hooks/useAlerts";
+import FreezeNoticeModal from "../../components/case/FreezeNoticeModal";
+import Legend from "../../components/case/Legend";
+import NearestVaspCard from "../../components/case/NearestVaspCard";
+import NodePanel from "../../components/case/NodePanel";
+import PageHeader from "../../components/common/PageHeader";
+import RecommendationsPanel from "../../components/case/RecommendationsPanel";
+import { ErrorState, Loading } from "../../components/common/Status";
+import SummaryStrip from "../../components/case/SummaryStrip";
+import TraceGraph from "../../components/case/TraceGraph";
+import { useFetch } from "../../hooks/useFetch";
+import { useAlertListener } from "../../hooks/useAlerts";
 import {
   getCase,
   getReport,
   simulateAlert,
   simulateMovement,
-} from "../lib/api";
-import { humanize, shortAddr } from "../lib/format";
+} from "../../lib/api";
+import { humanize, shortAddr } from "../../lib/format";
 
 const btn =
   "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50";

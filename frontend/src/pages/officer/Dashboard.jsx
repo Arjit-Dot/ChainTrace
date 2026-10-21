@@ -1,15 +1,16 @@
 import { Bell, FilePlus2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { UrgencyBadge } from '../components/common/Badges'
-import { AlertLine, SEVERITY } from '../components/common/AlertFeed'
-import PageHeader from '../components/common/PageHeader'
-import { Empty, ErrorState, Loading } from '../components/common/Status'
-import BarBreakdown from '../components/dashboard/BarBreakdown'
-import { useAlertListener, useAlerts } from '../hooks/useAlerts'
-import { useFetch } from '../hooks/useFetch'
-import { getCases, getDashboard } from '../lib/api'
-import { formatDuration, formatUSDT, shortAddr } from '../lib/format'
+import { UrgencyBadge } from '../../components/common/Badges'
+import { AlertLine, SEVERITY } from '../../components/common/AlertFeed'
+import PageHeader from '../../components/common/PageHeader'
+import { Empty, ErrorState, Loading } from '../../components/common/Status'
+import BarBreakdown from '../../components/dashboard/BarBreakdown'
+import { useAlertListener, useAlerts } from '../../hooks/useAlerts'
+import { useFetch } from '../../hooks/useFetch'
+import { getCases, getDashboard } from '../../lib/api'
+import { formatDuration, formatUSDT, shortAddr } from '../../lib/format'
+import { R } from '../../lib/routes'
 
 function Tile({ label, value, note }) {
   return (
@@ -74,7 +75,7 @@ function RecentCases({ cases }) {
             {cases.map((c) => (
               <tr key={c.case_id} className="hover:bg-panel-2/60">
                 <td className="px-4 py-2.5">
-                  <Link to={`/cases/${c.case_id}`} className="font-medium text-accent hover:underline">
+                  <Link to={R.officerCase(c.case_id)} className="font-medium text-accent hover:underline">
                     {c.case_id}
                   </Link>
                 </td>
@@ -89,7 +90,7 @@ function RecentCases({ cases }) {
                 <td className="px-4 py-2.5">{c.vasp ?? <span className="text-muted">—</span>}</td>
                 <td className="px-4 py-2.5">
                   {c.network_id ? (
-                    <Link to={`/network?id=${c.network_id}`} className="text-accent hover:underline">
+                    <Link to={R.officerNetwork(c.network_id)} className="text-accent hover:underline">
                       {c.network_id}
                     </Link>
                   ) : (
@@ -150,14 +151,7 @@ export default function Dashboard() {
 
   return (
     <>
-      <PageHeader title="Dashboard" subtitle="Complaints, attribution and funds at a glance">
-        <Link
-          to="/complaint/new"
-          className="inline-flex items-center gap-1.5 rounded-md border border-accent/50 px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent/10"
-        >
-          <FilePlus2 className="size-4" /> New complaint
-        </Link>
-      </PageHeader>
+      <PageHeader title="Dashboard" subtitle="Complaints, attribution and funds at a glance" />
       {first ? (
         <Loading label="Loading dashboard…" />
       ) : error ? (

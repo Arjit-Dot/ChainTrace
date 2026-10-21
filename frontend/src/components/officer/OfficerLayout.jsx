@@ -1,15 +1,15 @@
-import { FilePlus2, LayoutDashboard, Radar, Share2 } from 'lucide-react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { ArrowLeft, LayoutDashboard, Radar, Share2 } from 'lucide-react'
+import { Link, NavLink, Outlet } from 'react-router-dom'
 import { health } from '../../lib/api'
 import { useFetch } from '../../hooks/useFetch'
 import { AlertsProvider } from '../../hooks/useAlerts'
-import AlertBell from './AlertFeed'
-import Toasts from './Toasts'
+import { R } from '../../lib/routes'
+import AlertBell from '../common/AlertFeed'
+import Toasts from '../common/Toasts'
 
 const NAV = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/complaint/new', label: 'New Complaint', icon: FilePlus2 },
-  { to: '/network', label: 'Networks', icon: Share2 },
+  { to: R.officer, label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: R.officerNetworks, label: 'Networks', icon: Share2 },
 ]
 
 function ApiStatus() {
@@ -24,14 +24,15 @@ function ApiStatus() {
   )
 }
 
-export default function Layout() {
+export default function OfficerLayout() {
   return (
     <AlertsProvider>
-      <div className="flex h-full">
+      <div className="flex h-full" data-area="officer">
         <aside className="flex w-56 shrink-0 flex-col border-r border-line bg-panel">
           <div className="flex items-center gap-2 px-5 py-4 text-lg font-bold tracking-tight">
             <Radar className="size-5 text-accent" /> ChainTrace
           </div>
+          <p className="-mt-3 px-5 pb-3 text-[11px] tracking-wide text-muted uppercase">Officer console</p>
           <nav className="flex flex-col gap-1 px-3">
             {NAV.map(({ to, label, icon: Icon, end }) => (
               <NavLink
@@ -48,7 +49,10 @@ export default function Layout() {
               </NavLink>
             ))}
           </nav>
-          <p className="mt-auto px-5 py-4 text-[11px] leading-snug text-muted">
+          <Link to={R.gateway} className="mt-auto mx-3 mb-1 flex items-center gap-2 rounded-md px-3 py-2 text-xs text-muted hover:bg-panel-2 hover:text-ink">
+            <ArrowLeft className="size-3.5" /> Back to the portal
+          </Link>
+          <p className="px-5 pb-4 text-[11px] leading-snug text-muted">
             Demo build. All names and addresses are fictional; NCRP / SAHYOG links are simulated.
           </p>
         </aside>
