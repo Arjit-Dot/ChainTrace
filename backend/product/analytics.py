@@ -35,6 +35,8 @@ def dashboard_stats() -> DashboardStats:
     timed = [c.time_to_attribution_sec for c in cases if c.time_to_attribution_sec is not None]
     return DashboardStats(
         total_cases=len(cases),
+        open_cases=sum(c.open for c in cases),
+        closed_cases=sum(not c.open for c in cases),
         total_amount_lost=round(sum(c.amount_lost for c in cases), 2),
         total_amount_traced=round(sum(t.summary.total_traced for t in traces.values()), 2),
         vasp_identified_pct=round(100 * sum(c.vasp is not None for c in cases) / len(cases), 1) if cases else 0.0,

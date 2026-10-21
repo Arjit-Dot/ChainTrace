@@ -235,11 +235,23 @@ def update_complaint(complaint_id: str, **changes) -> Optional[Complaint]:
 
 
 # ---------- reads ----------
+def _closed_cases(con: sqlite3.Connection) -> set:
+    """Cases whose complaint an officer has closed. A case is open until then."""
+    out = set()
+    for (record,) in con.execute("SELECT record FROM complaints"):
+        c = json.loads(record)
+        if c.get("stage") == "closed" and c.get("case_id"):
+            out.add(c["case_id"])
+    return out
+
+
 def list_cases() -> List[CaseSummary]:
     """Newest first, so a just-submitted complaint sits at the top of the dashboard."""
     with _connect() as con:
         rows = con.execute("SELECT summary FROM cases").fetchall()
+        closed = _closed_cases(con)
     cases = [_aged(CaseSummary.model_validate_json(r[0])) for r in rows]
+    cases = [c.model_copy(update={"open": c.case_id not in closed}) for c in cases]
     return sorted(cases, key=lambda c: (c.reported_at, _seq(c.case_id)), reverse=True)
 
 
@@ -252,7 +264,10 @@ def get_trace(case_id: str) -> Optional[TraceResponse]:
 def get_case(case_id: str) -> Optional[CaseSummary]:
     with _connect() as con:
         row = con.execute("SELECT summary FROM cases WHERE case_id = ?", (case_id,)).fetchone()
-    return _aged(CaseSummary.model_validate_json(row[0])) if row else None
+        closed = _closed_cases(con)
+    if not row:
+        return None
+    return _aged(CaseSummary.model_validate_json(row[0])).model_copy(update={"open": case_id not in closed})
 
 
 def all_traces() -> dict:

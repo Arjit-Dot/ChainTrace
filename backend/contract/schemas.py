@@ -147,6 +147,7 @@ class CaseSummary(BaseModel):
     time_to_attribution_sec: Optional[float] = None
     network_id: Optional[str] = None
     reported_at: int
+    open: bool = True                          # False once an officer has closed the complaint (derived when read)
 
 
 class CountItem(BaseModel):
@@ -157,6 +158,8 @@ class CountItem(BaseModel):
 
 class DashboardStats(BaseModel):
     total_cases: int
+    open_cases: int = 0
+    closed_cases: int = 0
     total_amount_lost: float
     total_amount_traced: float
     vasp_identified_pct: float

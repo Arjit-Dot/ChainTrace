@@ -202,3 +202,20 @@ def test_a_closed_complaint_is_not_moved_back_by_a_late_send(client):
     client.post(f"/api/officer/complaints/{VASP}/close")
     send(client, items[0]["request_id"])
     assert stage(client, VASP) == "closed"
+
+
+# ---------- open or closed on the dashboard ----------
+def open_flags(c):
+    return {x["case_id"]: x["open"] for x in c.get("/api/cases").json()}
+
+
+def test_a_case_is_open_until_its_complaint_is_closed(client):
+    case = trace(client, VASP)
+    assert open_flags(client)[case] is True
+    stats = client.get("/api/dashboard").json()
+    assert stats["open_cases"] == stats["total_cases"] and stats["closed_cases"] == 0
+    client.post(f"/api/officer/complaints/{VASP}/close")
+    assert open_flags(client)[case] is False
+    stats = client.get("/api/dashboard").json()
+    assert stats["closed_cases"] == 1 and stats["open_cases"] + 1 == stats["total_cases"]
+    assert [open_flags(client)[c] for c in open_flags(client) if c != case].count(False) == 0

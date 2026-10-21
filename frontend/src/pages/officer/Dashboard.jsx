@@ -25,7 +25,7 @@ function Tile({ label, value, note }) {
 function Kpis({ d }) {
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-      <Tile label="Cases" value={d.total_cases} />
+      <Tile label="Cases" value={d.total_cases} note={`${d.open_cases ?? d.total_cases} open · ${d.closed_cases ?? 0} closed`} />
       <Tile label="Amount lost" value={formatUSDT(d.total_amount_lost)} />
       <Tile label="Amount traced" value={formatUSDT(d.total_amount_traced)} />
       <Tile label="Exchange identified" value={`${Math.round(d.vasp_identified_pct)}%`} note="of cases" />
@@ -64,7 +64,7 @@ function RecentCases({ cases }) {
         <table className="w-full text-left text-sm whitespace-nowrap">
           <thead className="bg-panel-2 text-xs tracking-wide text-muted uppercase">
             <tr>
-              {['Case', 'Complaint', 'Wallet', 'Lost', 'Fraud type', 'State', 'Urgency', 'VASP', 'Network', 'Status'].map((h) => (
+              {['Case', 'Open / closed', 'Complaint', 'Wallet', 'Lost', 'Fraud type', 'State', 'Urgency', 'VASP', 'Network', 'Status'].map((h) => (
                 <th key={h} className="px-4 py-2.5 font-medium">
                   {h}
                 </th>
@@ -78,6 +78,14 @@ function RecentCases({ cases }) {
                   <Link to={R.officerCase(c.case_id)} className="font-medium text-accent hover:underline">
                     {c.case_id}
                   </Link>
+                </td>
+                <td className="px-4 py-2.5">
+                  <span
+                    data-testid="case-open"
+                    className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${c.open === false ? 'bg-slate-500/15 text-slate-300' : 'bg-emerald-500/15 text-emerald-300'}`}
+                  >
+                    {c.open === false ? 'Closed' : 'Open'}
+                  </span>
                 </td>
                 <td className="px-4 py-2.5 text-muted">{c.complaint_id}</td>
                 <td className="px-4 py-2.5 font-mono text-xs">{shortAddr(c.wallet)}</td>
