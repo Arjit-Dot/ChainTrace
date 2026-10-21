@@ -19,6 +19,7 @@ A real-time crypto fraud attribution tool for cybercrime investigators. Give it 
 9. [Data and its honesty limits](#9-data-and-its-honesty-limits)
 10. [Tests](#10-tests)
 11. [Project status and further reading](#11-project-status-and-further-reading)
+12. [Guide: using the website](#12-guide-using-the-website)
 
 ---
 
@@ -484,3 +485,161 @@ Documents in this repo:
 - [DEMO.md](DEMO.md): the full build plan, the demo script, the team split and the detailed progress log.
 - [CONTRACT.md](CONTRACT.md): the API contract in plain language and the process for changing it.
 - `data/cache/SOURCES.md`, `data/reference/LABELS.md`: where the data came from.
+
+---
+
+## 12. Guide: using the website
+
+A walk through every page, what each thing on it stands for, and the scenarios to try. It explains what you are looking at, not how it is built.
+
+> **All the data you will see is synthetic.** The people, wallets, exchanges, banks, phone numbers, websites, replies and letters are invented for the demo (exchanges are called "Example Exchange A/B/C", demo people carry "(demo)", phone numbers are 90000 00xxx, domains end in `.example`), with two exceptions noted in section 9. Nothing is ever sent to anyone: every "send" is recorded only, and every acknowledgement and reply is simulated.
+
+### 12.1 The three areas
+
+| Area | Who it is for | What it is |
+|---|---|---|
+| **Gateway** (`/`) | Anyone | The page a citizen reaches from an official government website. It only hands people on. |
+| **Citizen side** (`/citizen/...`) | A victim | File a complaint, then follow it with the complaint ID. |
+| **Officer console** (`/officer/...`) | An investigator | Review complaints, trigger the trace, work the case, act, and close. It opens in its own browser tab and has no login in the demo. |
+
+A citizen can never see the officer side, and the tracker never shows how a complaint is being handled.
+
+### 12.2 The gateway
+
+- **The message in the middle** says you have been handed over from an official website. It stands in for the link from a government portal.
+- **The moving graph behind it** is decoration: dots are wallets, lines are payments, the pulses are money moving. It stands for what the product does.
+- **The side panel** lists the portal's services: *Track a complaint*, *File a complaint*, and the *Officer console* (which opens a new tab). It can be collapsed to a thin rail and remembers your choice.
+
+### 12.3 The citizen side
+
+**File a complaint.** The form asks for three kinds of thing:
+
+| Section | What it stands for |
+|---|---|
+| **About you** (name, 10-digit mobile) | Who reported. Officers see it; it never goes into a letter to an institution or into the referral dossier. |
+| **The money** (wallet, network, amount, transaction ID, fraud type, state, description) | What was lost and where it was sent. The network is detected from the address. Only TRON wallets are traced; other networks are accepted and noted. |
+| **How they reached you, and where you paid** (optional: scammer's phone, chat handle and app, website, app name, UPI ID, bank account and IFSC) | Each one is a thread to a real person. A phone number leads to a telecom operator, a website to a registrar, a UPI ID or bank account to a bank. They are optional, but the more you give, the more the officer can follow. |
+
+"Fill demo example" fills the form with a made-up complaint. Filing **does not start a trace**; only an officer does that.
+
+**Submitted.** You get a complaint ID such as `NCRP-2026-123456`. It is random, so it cannot be guessed. Keep it: it is the only way to follow the complaint.
+
+**Track a complaint.** Enter the ID. You see a progress bar, one plain sentence for where it stands, and the time each stage began. Nothing else, ever: not the wallet, the amount, the exchange, or what officers are doing.
+
+| Stage | The sentence a citizen sees |
+|---|---|
+| Received | Your complaint has been registered. |
+| Under review | An officer is reviewing your complaint. |
+| Investigation in progress | Your complaint is being investigated. |
+| Action initiated | Action has been initiated with the relevant institutions. |
+| Closed | Your complaint has been closed. For details, please call the National Cyber Crime Helpline 1930. |
+
+An unknown ID gets one generic "not found" message. To try the tracker without filing, use a seeded ID: `NCRP-2026-0001` (investigating) or `NCRP-2026-0003` (action initiated).
+
+### 12.4 Wallets to copy and paste
+
+Paste these into **File a complaint** if you would rather not use "Fill demo example". Each one is in the demo cache, so it traces without any key. The amount is what to enter as the amount lost.
+
+| Wallet | Amount | What you will see |
+|---|---|---|
+| `TUNoHG2D7iRUtY6ra1ZubJtKe2vHqkM5jo` | 12000 | The main demo case: money reaches **Example Exchange A**, some still sits idle, some crosses a bridge to Ethereum, and some enters a mixer. |
+| `TDongf8XirZvCUFazHwM2FG7cukpnF9h9D` | 5000 | **Exchange (VASP):** many senders feed one deposit address that sweeps to **Example Exchange B**. Named by a pattern, so confidence is below 90%. |
+| `TXCFXFx5tuZ1ky3HgTEHZpoLxXmJ32XLvj` | 8000 | **Direct match:** the money lands straight on a known **Example Exchange C** wallet. Confidence 95%. |
+| `TJYp7BbgZuBiEytM4gAn8jv42BFESS9PEf` | 4000 | **DEX:** the money is swapped on a decentralised pool. There is no account holder to ask. |
+| `TJgNArE5dkoiDgHUjimdizwNaTZZwLh1Lg` | 6000 | **Funds still idle:** 5,900 sit in the last wallet, so it is urgent. Add the bank details below to see the **mule bank account** case. |
+| `TPA2pH1ZJWxMFeyMDEup4JQg51kkcVUMKe` | 4000 | **Stalled:** the money enters a mixer and cannot be followed. |
+| `TMmiNnkHcoyUuNbK7TPwwTfr8ofi82Kohz` | 4000 | **Bridge:** the money crosses to another chain. |
+| `TVLHfdgpiMR2mRpjtAWm8YJ5hCj9iYWS2B` | 2826 | A **real** TRON flow that ends in a wallet labelled Binance. Not claimed to be fraud; the label is unverified. |
+
+Optional "how they reached you" values to type in, for the scenarios below (all fictional):
+
+| For this scenario | Type in |
+|---|---|
+| Mule bank account | On the idle wallet `TJgNArE5dk…`: bank account `000123450001`, IFSC `HDFC0000001` |
+| Linked operation | On the main wallet `TUNoHG2D7i…`: website `hero-invest.example`, UPI ID `hero.invest@okaxis` |
+| A phone and a chat handle | Phone `+91 90000 00101`, handle `@alpha_returns_demo` on Telegram |
+
+Five complaints are also **already waiting in the officer inbox**, so you can skip filing: the four demo cases (`NCRP-2026-104317` exchange, `NCRP-2026-470218` DEX, `NCRP-2026-258846` mule bank account, `NCRP-2026-582904` stalled) and the real flow `NCRP-2026-391502`.
+
+### 12.5 The officer console
+
+The left menu has **Inbox**, **Dashboard** and **Networks**. A number on Inbox counts complaints waiting for review, and a pop-up appears when a new one arrives.
+
+**Inbox.** Every complaint, newest first, filtered by *New*, *In progress*, *Action taken* and *All*. Each row shows the complaint ID, when it came in, the reporter, the wallet, the amount, the fraud type, the state and the **stage**.
+
+**A complaint.** The full complaint: the reporter, the wallet, the amount, and a panel on how the scammer reached the victim and where they paid. The side panel is the **history**: each stage change with its time and an officer-only note. The buttons mirror the stages:
+
+- **Start review** moves it from Received to Under review.
+- **Trigger trace** runs the trace and creates a **case**, then takes you to it. This is the moment the citizen's tracker changes to "being investigated".
+- **Open case** appears once a case exists.
+
+### 12.6 The case page, top to bottom
+
+**Header.** The case ID, the complaint ID, the fraud type and the reported wallet.
+- **Simulate fund movement** replays a recorded transfer so you can see live monitoring react. It is labelled simulated.
+- **Freeze Notice** opens a draft request to the exchange. Legal references are placeholders.
+- **Download Report** gives the PDF evidence report.
+
+**Summary strip.** *Amount lost*; *total traced* (how much of it the trace followed); *idle funds* (still sitting in wallets, highlighted when above zero, because that can still be frozen); *hops* and *wallets* in the trace; *time to attribution*; the **urgency badge** (section 8.2); and a **data source** badge: `LIVE`, `CACHED` or `SIMULATED`. The "as of" time and the **Live / Stale** dot say how recently the chain was checked.
+
+**The fund-flow graph.** The money, left to right, from the victim.
+- **Colours:** victim grey, reported wallet red, intermediary orange, bridge blue, mixer purple, exchange green, DEX teal, bank account yellow, unknown white.
+- **Thick lines** carry more money. A **green path** is the route to the exchange that got the money. **Dashed lines** are bridges and mixers; a **swap** edge is a DEX. An **amber ring** marks a wallet still holding funds.
+- A node can be an **intermediary**: a wallet that forwards most of what it receives within an hour, which is the signature of a mule wallet.
+- **Click a wallet** for its panel: type, network, hop, typology, a risk badge with its reasons, any idle balance, and its transfers in and out. The reported wallet shows "Reported" instead of a risk, because it is not scored.
+
+**Nearest exchange card.** Which exchange got the money, the deposit address there, how many hops away, the amount and the time, the **confidence**, and the **evidence** behind it. Two methods: `deterministic` (the trace landed on a known exchange wallet, 95%) and `heuristic` (a sweep pattern, always under 90%). Confidence means "how sure the label is", not "the chance a freeze works". It also shows the exchange's contact (a mock contact here).
+
+**Recommendations.** The next actions in order, such as "Act on idle funds", "Issue freeze and KYC request to the exchange", "Follow the swap" for a DEX, "Continue the trace on Ethereum" after a bridge, or "Preserve mixer evidence".
+
+**Where the money went.** One card per endpoint the money reached, each handled differently:
+
+| Endpoint | What it means | What the officer does |
+|---|---|---|
+| **Exchange (VASP)** | The money reached an account at an exchange that holds the customer's identity | Ask for KYC and a freeze; the reply may list bank accounts and phones |
+| **DEX swap** | Swapped on a pool: no account holder, nothing to freeze | Follow the swapped tokens, ask the token issuer to hold any USDT left, keep the swap as evidence |
+| **Bank account** | The victim paid a bank account (or a reply named one) | Freeze or lien request to that bank, plus account details |
+| **Mixer** | Cannot be followed through | Preserve the evidence, watch the exits |
+| **Bridge** | The money crossed to another chain | Continue the trace there |
+| **Funds still in a wallet** | Money not yet moved | Ask the token issuer to hold it now |
+| **Dead end** | The trace ended with none of the above | Check the leads, keep watching |
+
+**Suspected mules.** Wallets that passed money on, and bank accounts the victim paid, with what each received and forwarded and where it went. *Suspected* is deliberate: the holder of a mule account is often a victim too.
+
+**Leads and identifiers.** The *identifier ledger* is every fact the case knows about the people behind the fraud: wallets, bank accounts, UPI IDs, phones, handles, domains, apps. Each becomes a **lead**: the institution that holds the identity behind it (exchange, bank, payment app, telecom operator, messaging platform, domain host, app store, token issuer), what it can tell you, and a priority (urgent, high, normal).
+
+**Requests to institutions.** A request is a drafted letter for a lead. Its status moves **Draft, Approved, Sent, Acknowledged, Replied, Closed**, and a letter cannot be sent before it is approved. Letters are drafts with placeholder legal text, and never contain the victim's personal details. In the demo the acknowledgement and reply come from buttons, and every reply is marked FICTIONAL DEMO DATA. A reply adds new identifiers (a registered phone, an email, a device, an IP, a mule bank account), which open new leads, so one answer leads to the next question. **Demo: simulate the whole investigation** does all of this in one click.
+
+**Linked cases and suspected people.** Complaints are **linked** when they share one strong identifier or two weaker ones, which suggests one operation. The panel shows the linked cases, total lost and states, and each shared identifier with its strength. **Suspected people** are named only by institutions' replies, each with a confidence that is capped and always an inference, plus the evidence behind it. A mule account holder is shown at low confidence with a note that they may be a victim.
+
+**Referral dossier.** A PDF for the investigating agency: the money trail, mules, identifiers, requests and replies, linked cases, and a checklist of what is a record, what is an inference and what is missing. It leaves out the victim's personal details. **Record referral** logs which agency it went to with the dossier's SHA-256. Any arrest or legal action is for the agency.
+
+**Report and cease.** The last step. It offers the evidence report, then drafts every freeze, hold and takedown request the case allows. A takedown is flagged until the preservation notice has gone first. The first one sent moves the complaint to **Action initiated**; the panel shows the exact sentence the citizen now sees. **Close the complaint** ends the case without closing any open request.
+
+### 12.7 The dashboard and networks
+
+**Dashboard.** Six tiles: *Cases* (with how many are open and closed), *amount lost*, *amount traced*, *exchange identified* (the share of cases where an exchange was named), *average time to attribution* and *idle funds flagged*. Below are breakdowns by fraud type, receiving exchange and state (switch between number of cases and USDT lost), the **Recent cases** table (each case's **Open or Closed**, urgency, exchange, network and status), and a **Live alerts** feed. A case is *open* until its complaint is closed.
+
+**Networks.** Groups of complaints that share a scammer wallet. Each shows its victims, total lost, states, the receiving exchange and what links them, with a graph of how the complaints connect. A group like this is called an *organised network*.
+
+### 12.8 Scenarios to walk through
+
+1. **Exchange (VASP).** Trace `NCRP-2026-104317`. The graph ends at Example Exchange B; the card names it with a confidence below 90%. *Where the money went* says to send KYC and a freeze to the exchange. Run **Demo: simulate the whole investigation**, then open *Linked cases and suspected people*: a reply names an account holder, and it lists a bank account as a suspected mule.
+2. **DEX.** Trace `NCRP-2026-470218`. The graph stops at a teal DEX node. The card says there is no account holder and no freeze possible; the only action on offer is a takedown of the scam website and chat account. This is the case to show that not every trail ends at a person.
+3. **Mule bank account.** Trace `NCRP-2026-258846`. There are two outcomes: money still sitting in a wallet (urgent: a token hold) and a bank account the victim paid (a freeze to the bank). After the demo run, the bank's reply names a holder and sometimes a further account the money moved on to, until the trail runs out as a cash withdrawal.
+4. **Stalled.** Trace `NCRP-2026-582904`. The money enters a mixer, so there is nothing to freeze. The urgency is "Preserve". The only action is to preserve evidence and watch. Close the complaint to see the citizen's closing sentence.
+5. **Funds still idle, then they move.** Trace `TJgNArE5dkoiDgHUjimdizwNaTZZwLh1Lg`. It is "Act now" with an amber ring. Press **Simulate fund movement**: alerts fire, the graph extends to Example Exchange B, and the badge drops to "Act soon".
+6. **A linked operation.** File the main wallet `TUNoHG2D7i…` with website `hero-invest.example` and UPI `hero.invest@okaxis`, then trace it. *Linked cases and suspected people* shows it linked to the three seeded hero-invest complaints through those shared identifiers. Run the demo investigation and the same person is named by several institutions across several cases, at a higher confidence. Open **Networks** to see the group.
+7. **A bridge.** Trace `TMmiNnkHcoyUuNbK7TPwwTfr8ofi82Kohz`. The graph ends at a blue bridge node and the recommendation is to continue on the other chain.
+
+### 12.9 What the operator does, from complaint to close
+
+1. **Watch the inbox.** A new complaint appears with a pop-up and a count on the menu. The citizen's tracker says *Received*.
+2. **Open it and start the review.** Read the wallet, the amount, and where they paid. The tracker says *Under review*.
+3. **Trigger the trace.** A case is created and you land on it. The tracker says *Investigation in progress*.
+4. **Read the case.** The urgency badge says how fast to move. The graph and the *nearest exchange* card say where the money went. *Where the money went* says what each endpoint needs.
+5. **Work the leads.** Draft a letter for each lead, approve it, and send it. Preserve first where records could be deleted. Replies come back, add new identifiers, and open new leads; repeat.
+6. **Link and name.** Check the linked cases and the suspected people, and treat them as inferences to confirm. Mule account holders may be victims.
+7. **Report and cease.** Download the evidence report, draft the freeze, hold and takedown requests, and approve and send them. The tracker moves to *Action initiated*.
+8. **Refer.** Download the dossier, record the referral to the agency, and leave any arrest to them.
+9. **Close.** Close the complaint. The dashboard shows the case as Closed, and the citizen is pointed to the 1930 helpline.
