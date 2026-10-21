@@ -29,6 +29,7 @@ export const formatClock = (sec) =>
 
 export const formatDuration = (sec) => {
   if (sec == null) return '—'
+  if (sec < 1) return '< 1 s'
   if (sec < 60) return `${Math.round(sec)} s`
   const m = Math.floor(sec / 60)
   if (m < 60) return `${m} min ${Math.round(sec % 60)} s`
