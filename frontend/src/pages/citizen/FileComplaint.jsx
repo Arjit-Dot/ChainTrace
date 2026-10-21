@@ -15,8 +15,14 @@ const DEMO = {
   fraud_type: 'investment',
   state: 'Karnataka',
   description: 'I paid into a fake trading app that promised daily returns.',
+  scammer_phone: '+91 90000 00101',
+  scammer_handle: '@alpha_returns_demo',
+  scammer_handle_platform: 'telegram',
+  scam_website: 'alpha-returns.example',
+  paid_to_upi: 'alpha.returns@ybl',
 }
 
+const PLATFORMS = [['telegram', 'Telegram'], ['whatsapp', 'WhatsApp'], ['instagram', 'Instagram'], ['facebook', 'Facebook'], ['x', 'X'], ['other', 'Other']]
 const CHAINS = ['tron', 'ethereum', 'bsc', 'polygon', 'bitcoin', 'solana']
 const FRAUD_TYPES = ['investment', 'task', 'sextortion', 'ransomware', 'phishing', 'darknet', 'other']
 const STATES = [
@@ -35,6 +41,8 @@ function detectChain(addr) {
 
 const blank = () => ({
   reporter_name: '', reporter_mobile: '', chain: '', wallet: '', amount: '', tx_hash: '', fraud_type: '', state: '', description: '',
+  scammer_phone: '', scammer_handle: '', scammer_handle_platform: '', scam_website: '', scam_app: '', paid_to_upi: '',
+  paid_to_bank_account: '', paid_to_ifsc: '',
 })
 
 const input =
@@ -77,6 +85,14 @@ export default function FileComplaint() {
         fraud_type: form.fraud_type || null,
         state: form.state || null,
         description: nz(form.description),
+        scammer_phone: nz(form.scammer_phone),
+        scammer_handle: nz(form.scammer_handle),
+        scammer_handle_platform: form.scammer_handle.trim() ? form.scammer_handle_platform || 'other' : null,
+        scam_website: nz(form.scam_website),
+        scam_app: nz(form.scam_app),
+        paid_to_upi: nz(form.paid_to_upi),
+        paid_to_bank_account: nz(form.paid_to_bank_account.replace(/\s+/g, '')),
+        paid_to_ifsc: nz(form.paid_to_ifsc),
       })
       navigate(R.submitted(receipt.complaint_id))
     } catch (err) {
@@ -177,6 +193,44 @@ export default function FileComplaint() {
             </Field>
           </div>
         </div>
+
+        <fieldset className="space-y-4 rounded-lg border border-line bg-panel p-5">
+          <legend className="px-2 text-sm font-semibold">How did the scammer reach you, and where did you pay? (optional)</legend>
+          <p className="text-xs text-muted">Anything you remember helps. Fill in only what you have.</p>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field label="Scammer's phone number">
+              <input value={form.scammer_phone} onChange={set('scammer_phone')} inputMode="tel" className={input} />
+            </Field>
+            <Field label="Website the scammer used">
+              <input value={form.scam_website} onChange={set('scam_website')} spellCheck={false} className={input} />
+            </Field>
+            <Field label="Chat or social handle">
+              <input value={form.scammer_handle} onChange={set('scammer_handle')} spellCheck={false} className={input} />
+            </Field>
+            <Field label="Which app was it on?">
+              <select value={form.scammer_handle_platform} onChange={set('scammer_handle_platform')} className={input}>
+                <option value="">Not sure</option>
+                {PLATFORMS.map(([k, label]) => (
+                  <option key={k} value={k}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="App you were asked to install">
+              <input value={form.scam_app} onChange={set('scam_app')} className={input} />
+            </Field>
+            <Field label="UPI ID you paid">
+              <input value={form.paid_to_upi} onChange={set('paid_to_upi')} spellCheck={false} placeholder="name@bank" className={input} />
+            </Field>
+            <Field label="Bank account you paid">
+              <input value={form.paid_to_bank_account} onChange={set('paid_to_bank_account')} inputMode="numeric" className={input} />
+            </Field>
+            <Field label="IFSC code of that account">
+              <input value={form.paid_to_ifsc} onChange={set('paid_to_ifsc')} spellCheck={false} maxLength={11} className={input} />
+            </Field>
+          </div>
+        </fieldset>
 
         {error && (
           <p role="alert" className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">

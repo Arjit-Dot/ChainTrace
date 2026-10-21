@@ -131,7 +131,7 @@ Open <http://localhost:5173>. You land on the **gateway**, which stands in for t
 - **Citizens** (`/citizen/...`): file a complaint and track it. No officer navigation.
 - **Officers** (`/officer/...`): the console with the dashboard, cases and networks. It opens in a separate browser tab from the gateway. There is no login in this demo.
 
-First thing to try: **File a complaint**, click **Fill demo example** and submit; you get a complaint ID. Then open the **officer console** in the other tab: the complaint is in the **Inbox** (a count shows on the Inbox link, and an alert pops up). Open it, click **Start review** and **Trigger trace**: the case is created and you land on it. Three complaints are already waiting in the inbox (a sweep to an exchange, funds still idle, and the real Binance flow). Filing never traces: only an officer does. The citizen can then follow it on **Track a complaint** with the complaint ID: a progress bar, one plain sentence for the current stage and the times each stage began, and nothing else (the page reads only those fields, the server never sends more, and the lookup is rate limited and never cached).
+First thing to try: **File a complaint**, click **Fill demo example** and submit; you get a complaint ID. Then open the **officer console** in the other tab: the complaint is in the **Inbox** (a count shows on the Inbox link, and an alert pops up). Open it, click **Start review** and **Trigger trace**: the case is created and you land on it. Three complaints are already waiting in the inbox (a sweep to an exchange, funds still idle, and the real Binance flow). Filing never traces: only an officer does. The form also asks, optionally, how the scammer reached the victim and where they paid (phone, chat handle, website, app, UPI ID, bank account). Those, with the wallets found by the trace, go into the case's **identifier ledger**, and the case page shows **Leads**: which institution holds the identity behind each identifier (exchange, bank, UPI app, telecom operator, messaging platform, domain host, app store, token issuer) and what to ask. They are suggestions for an officer; nothing is sent. The citizen can then follow it on **Track a complaint** with the complaint ID: a progress bar, one plain sentence for the current stage and the times each stage began, and nothing else (the page reads only those fields, the server never sends more, and the lookup is rate limited and never cached).
 
 ### 4.4 Engine modes
 
@@ -248,6 +248,8 @@ All routes live in `main.py`; interactive docs are at <http://localhost:8000/doc
 | GET | `/api/officer/complaints` | The officer inbox (`?stage=received` for new ones) |
 | GET | `/api/officer/complaints/{id}` | One complaint in full |
 | POST | `/api/officer/complaints/{id}/review`, `/trace` | Start the review; trigger the trace (creates the case) |
+| GET, POST | `/api/officer/cases/{id}/identifiers` | The investigation ledger: wallets, bank accounts, UPI IDs, phones, handles, domains and apps involved in a case; an officer can add one |
+| GET | `/api/officer/cases/{id}/leads` | Suggested next steps: for each identifier, which institution holds the identity behind it and which requests to send (nothing is sent automatically) |
 | POST | `/api/integrations/ncrp/complaints`, `/api/integrations/sahyog/notice` | Mock connectors: NCRP puts a complaint in the officer inbox; SAHYOG marks the notice sent |
 | GET | `/api/health` | Status, contract version and engine mode |
 

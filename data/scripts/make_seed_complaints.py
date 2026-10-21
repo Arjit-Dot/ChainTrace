@@ -25,6 +25,23 @@ def mobile(i: int) -> str:
     return f"98{(7_300_000 + i * 83_117) % 100_000_000:08d}"
 
 
+# Fictional lure channels. A few are SHARED between complaints on purpose, so the investigation can link them later.
+SHARED = {
+    "NCRP-2026-0001": {"scam_website": "hero-invest.example", "paid_to_upi": "hero.invest@okaxis"},
+    "NCRP-2026-0002": {"scam_website": "https://www.hero-invest.example/app", "paid_to_upi": "hero.invest@okaxis"},
+    "NCRP-2026-0003": {"scam_website": "hero-invest.example", "scammer_phone": "+91 90000 00201"},
+    "NCRP-2026-0004": {"scammer_handle": "@private_pics_demo", "scammer_handle_platform": "telegram"},
+    "NCRP-2026-0005": {"scammer_handle": "private_pics_demo", "scammer_handle_platform": "telegram", "scammer_phone": "+91 90000 00202"},
+}
+PENDING_LURES = {
+    "NCRP-2026-104317": {"scammer_phone": "+91 90000 00101", "scammer_handle": "@alpha_returns_demo", "scammer_handle_platform": "telegram",
+                         "scam_website": "alpha-returns.example", "paid_to_upi": "alpha.returns@ybl"},
+    "NCRP-2026-258846": {"scammer_handle": "@taskpay_demo", "scammer_handle_platform": "telegram", "scam_app": "TaskPay Earn",
+                         "paid_to_bank_account": "000123450001", "paid_to_ifsc": "HDFC0000001"},
+    "NCRP-2026-391502": {"scammer_phone": "+91 90000 00303", "scam_website": "secure-claims.example"},
+}
+
+
 def history(created, stage):
     steps = [("received", "Complaint registered")]
     if stage != "received":
@@ -42,7 +59,7 @@ def main():
         h = history(c["reported_at"], stage)
         out.append({"complaint_id": c["complaint_id"], "wallet": c["wallet"], "chain": "tron", "amount": c["amount_lost"],
                     "fraud_type": c["fraud_type"], "state": c["state"], "reporter_name": NAMES[i], "reporter_mobile": mobile(i),
-                    "description": "Seeded demo complaint.", "stage": stage, "case_id": c["case_id"],
+                    "description": "Seeded demo complaint.", "stage": stage, "case_id": c["case_id"], **SHARED.get(c["complaint_id"], {}),
                     "created_at": c["reported_at"], "updated_at": h[-1]["at"], "history": h})
 
     scenarios = {s["key"]: s for s in json.loads(SCENARIOS_JSON.read_text())}
@@ -55,7 +72,7 @@ def main():
     for j, (cid, wallet, amount, fraud, state, name) in enumerate(pending):
         created = NOW - (3 - j) * 5400
         out.append({"complaint_id": cid, "wallet": wallet, "chain": "tron", "amount": amount, "fraud_type": fraud, "state": state,
-                    "reporter_name": name, "reporter_mobile": mobile(20 + j), "description": "Waiting for an officer.",
+                    "reporter_name": name, "reporter_mobile": mobile(20 + j), "description": "Waiting for an officer.", **PENDING_LURES[cid],
                     "stage": "received", "case_id": None, "created_at": created, "updated_at": created,
                     "history": history(created, "received")})
     SEED_COMPLAINTS.write_text(json.dumps(out, indent=2) + "\n")

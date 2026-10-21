@@ -6,6 +6,8 @@ export const NODE_COLORS = {
   bridge: '#3b82f6',
   mixer: '#a855f7',
   exchange: '#22c55e',
+  dex: '#14b8a6',
+  bank_account: '#eab308',
   unknown: '#f8fafc',
 }
 
@@ -16,6 +18,8 @@ export const NODE_LABELS = {
   bridge: 'Bridge',
   mixer: 'Mixer',
   exchange: 'Exchange',
+  dex: 'DEX (swap)',
+  bank_account: 'Bank account',
   unknown: 'Unknown',
 }
 
@@ -34,6 +38,27 @@ export const URGENCY = {
   act_now: { label: 'Act now', classes: 'bg-red-500/15 text-red-300 ring-red-500/40' },
   act_soon: { label: 'Act soon', classes: 'bg-amber-500/15 text-amber-300 ring-amber-500/40' },
   preserve: { label: 'Preserve', classes: 'bg-sky-500/15 text-sky-300 ring-sky-500/40' },
+}
+
+// Investigation: the institutions that hold the identity behind an identifier, and the requests we can send them.
+export const CHOKE_POINTS = {
+  exchange: 'Crypto exchange', bank: 'Bank', payment_app: 'UPI / payment app', p2p_desk: 'P2P or OTC desk', telecom: 'Telecom operator',
+  messaging_platform: 'Messaging or social platform', domain_host: 'Domain and hosting', app_store: 'App store', issuer: 'Token issuer',
+}
+export const REQUESTS = {
+  kyc_request: 'KYC request', account_details_request: 'Account details', freeze_request: 'Freeze request', subscriber_request: 'Subscriber details',
+  platform_data_request: 'Platform data', registrant_request: 'Registrant details', developer_request: 'Developer details',
+  takedown_request: 'Takedown', preservation_notice: 'Preservation notice', issuer_hold: 'Issuer hold',
+}
+export const IDENTIFIER_KINDS = {
+  wallet: 'Wallet', bank_account: 'Bank account', upi_id: 'UPI ID', phone: 'Phone', email: 'Email', device: 'Device', ip_address: 'IP address',
+  social_handle: 'Social handle', domain: 'Domain', app: 'App',
+}
+export const ROLES = {
+  reported: 'Reported wallet', mule_suspect: 'Suspected mule', vasp_deposit: 'Exchange deposit', lure: 'How they were reached', payment: 'Where they paid', other: 'Other',
+}
+export const PRIORITY_CLASSES = {
+  urgent: 'bg-red-500/15 text-red-300 ring-red-500/40', high: 'bg-amber-500/15 text-amber-300 ring-amber-500/40', normal: 'bg-sky-500/15 text-sky-300 ring-sky-500/40',
 }
 
 // A complaint's stage (the citizen sees the same five, in plainer words).

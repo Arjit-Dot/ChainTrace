@@ -12,7 +12,7 @@ import time
 from fastapi import APIRouter, HTTPException
 
 from contract.schemas import ComplaintRequest, IntegrationAck, SahyogNoticeRequest, TraceRequest
-from product import alerts, engine_client, store
+from product import alerts, engine_client, ledger, store
 
 router = APIRouter(prefix="/api/integrations", tags=["integrations (simulated)"])
 
@@ -21,6 +21,7 @@ async def create_case(req: TraceRequest):
     """Trace, store, alert. Shared by the NCRP feed and the New Complaint form (/api/trace)."""
     def run():
         trace = store.add_case(req, engine_client.trace(req))  # store adds B's recommendations
+        ledger.build(trace.case_id)                            # identifiers from the complaint and the trace
         return trace, store.get_case(trace.case_id)
 
     trace, case = await asyncio.to_thread(run)

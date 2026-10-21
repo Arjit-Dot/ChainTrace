@@ -15,7 +15,7 @@ import time
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from contract.schemas import CaseSummary, Complaint, Monitoring, TraceRequest, TraceResponse
+from contract.schemas import CaseSummary, Complaint, Identifier, Monitoring, TraceRequest, TraceResponse
 from paths import DATA, SEED_CASES, SEED_COMPLAINTS, SEED_TRACES
 from product.linking import case_groups
 from product.recommendations import with_recommendations
@@ -57,6 +57,13 @@ def _connect() -> sqlite3.Connection:
         seq     INTEGER NOT NULL,
         summary TEXT NOT NULL,
         trace   TEXT NOT NULL)""")
+    con.execute("""CREATE TABLE IF NOT EXISTS identifiers (
+        identifier_id TEXT PRIMARY KEY,
+        case_id       TEXT NOT NULL,
+        kind          TEXT NOT NULL,
+        value         TEXT NOT NULL,
+        record        TEXT NOT NULL,
+        UNIQUE (case_id, kind, value))""")
     con.execute("""CREATE TABLE IF NOT EXISTS complaints (
         complaint_id TEXT PRIMARY KEY,
         created_at   INTEGER NOT NULL,
@@ -78,6 +85,7 @@ def init(reset: bool = False) -> None:
         if reset:
             con.execute("DELETE FROM cases")
             con.execute("DELETE FROM complaints")
+            con.execute("DELETE FROM identifiers")
         for c in cases:
             summary = CaseSummary(**c)
             linked = networks.count(summary.network_id) - 1 if summary.network_id else 0
@@ -90,6 +98,24 @@ def init(reset: bool = False) -> None:
                         (summary.case_id, _seq(summary.case_id),
                          summary.model_dump_json(), trace.model_dump_json()))
         _seed_complaints(con)
+
+
+# ---------- identifiers (the investigation ledger) ----------
+def add_identifier(case_id: str, kind: str, value: str, make) -> Optional[Identifier]:
+    """Insert an identifier built by make(n) (n = its number within the case). None if the case already has that kind+value."""
+    with _lock, _connect() as con:
+        if con.execute("SELECT 1 FROM identifiers WHERE case_id = ? AND kind = ? AND value = ?", (case_id, kind, value)).fetchone():
+            return None
+        n = con.execute("SELECT COUNT(*) FROM identifiers WHERE case_id = ?", (case_id,)).fetchone()[0] + 1
+        rec = make(n)
+        con.execute("INSERT INTO identifiers VALUES (?, ?, ?, ?, ?)", (rec.identifier_id, case_id, kind, value, rec.model_dump_json()))
+        return rec
+
+
+def list_identifiers(case_id: str) -> List[Identifier]:
+    with _connect() as con:
+        rows = con.execute("SELECT record FROM identifiers WHERE case_id = ? ORDER BY rowid", (case_id,)).fetchall()
+    return [Identifier.model_validate_json(r[0]) for r in rows]
 
 
 def _seed_complaints(con: sqlite3.Connection) -> None:

@@ -2,7 +2,11 @@
 const BASE = import.meta.env.VITE_API_BASE ?? ''
 
 // FastAPI sends a string for most errors and a list of {loc, msg} for a form that failed validation.
-const FIELDS = { reporter_name: 'Your name', reporter_mobile: 'Mobile number', wallet: 'Wallet', amount: 'Amount', description: 'Description' }
+const FIELDS = {
+  reporter_name: 'Your name', reporter_mobile: 'Mobile number', wallet: 'Wallet', amount: 'Amount', description: 'Description',
+  scammer_phone: "Scammer's phone", paid_to_upi: 'UPI ID', paid_to_bank_account: 'Bank account number', paid_to_ifsc: 'IFSC code',
+  scam_website: 'Website', scam_app: 'App', scammer_handle: 'Chat handle', value: 'Value',
+}
 export function describe(detail) {
   if (!Array.isArray(detail)) return detail
   return detail
@@ -51,6 +55,11 @@ export const listComplaints = (stage) => request(`/officer/complaints${stage ? `
 export const getComplaint = (id) => request(`/officer/complaints/${enc(id)}`)
 export const reviewComplaint = (id) => post(`/officer/complaints/${enc(id)}/review`)
 export const traceComplaint = (id) => post(`/officer/complaints/${enc(id)}/trace`)
+
+// Investigation: the identifier ledger and the leads for a case (officers only)
+export const getIdentifiers = (caseId) => request(`/officer/cases/${enc(caseId)}/identifiers`)
+export const addIdentifier = (caseId, body) => post(`/officer/cases/${enc(caseId)}/identifiers`, body)
+export const getLeads = (caseId) => request(`/officer/cases/${enc(caseId)}/leads`)
 
 // Cases
 export const getCases = () => request('/cases')

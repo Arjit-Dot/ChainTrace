@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 CONTRACT_VERSION = "1.2.0"
 
-NodeType = Literal["victim", "scam_wallet", "intermediary", "bridge", "mixer", "exchange", "unknown"]
+NodeType = Literal["victim", "scam_wallet", "intermediary", "bridge", "mixer", "exchange", "dex", "bank_account", "unknown"]
 RiskLevel = Literal["Low", "Medium", "High", "Critical"]
 Urgency = Literal["act_now", "act_soon", "preserve"]   # set by B (recommendations.py); the engine returns None
 MonitorStatus = Literal["live", "stale", "off"]   # stale: last check older than ~2x the poll interval
@@ -207,7 +207,23 @@ class Alert(BaseModel):
 ComplaintStage = Literal["received", "under_review", "investigating", "action_initiated", "closed"]
 
 
-class ComplaintRequest(BaseModel):
+HandlePlatform = Literal["telegram", "whatsapp", "instagram", "facebook", "x", "other"]
+
+
+class LureChannels(BaseModel):
+    """Optional details a victim can give about HOW the scammer reached them and WHERE they paid. Each one is an
+    identifier an officer can follow to the institution that holds the person behind it."""
+    scammer_phone: Optional[str] = Field(default=None, pattern=r"^[+0-9 ()-]{6,20}$")
+    scammer_handle: Optional[str] = Field(default=None, max_length=80)
+    scammer_handle_platform: Optional[HandlePlatform] = None
+    scam_website: Optional[str] = Field(default=None, max_length=300)
+    scam_app: Optional[str] = Field(default=None, max_length=120)
+    paid_to_upi: Optional[str] = Field(default=None, pattern=r"^[\w.\-]{2,64}@[\w.\-]{2,64}$")
+    paid_to_bank_account: Optional[str] = Field(default=None, pattern=r"^\d{6,20}$")
+    paid_to_ifsc: Optional[str] = Field(default=None, pattern=r"^[A-Za-z]{4}0[A-Za-z0-9]{6}$")
+
+
+class ComplaintRequest(LureChannels):
     """What a citizen submits."""
     wallet: str = Field(min_length=1, max_length=120)
     chain: Optional[Chain] = None
@@ -227,7 +243,7 @@ class ComplaintEvent(BaseModel):
     note: str                                  # the officer's view of what happened
 
 
-class Complaint(BaseModel):
+class Complaint(LureChannels):
     """The stored complaint (officer view only)."""
     complaint_id: str
     wallet: str
@@ -294,3 +310,49 @@ class IntegrationAck(BaseModel):
     status: Literal["received", "queued", "acknowledged_by_vasp"]
     received_at: int
     case_id: Optional[str] = None
+
+
+# ---------- Identifiers and leads (investigation) ----------
+# Every case keeps a ledger of identifiers: wallets, bank accounts, UPI IDs, phones, handles, domains, apps. For each one
+# the system suggests the institution that holds the identity behind it and the request to send. A reply adds new
+# identifiers, which open new leads. Everything is "suspected" until an officer confirms it.
+IdentifierKind = Literal["wallet", "bank_account", "upi_id", "phone", "email", "device", "ip_address", "social_handle", "domain", "app"]
+IdentifierSource = Literal["complaint", "trace", "reply", "officer"]
+IdentifierRole = Literal["reported", "mule_suspect", "vasp_deposit", "lure", "payment", "other"]
+ChokePoint = Literal["exchange", "bank", "payment_app", "p2p_desk", "telecom", "messaging_platform", "domain_host", "app_store", "issuer"]
+RequestKind = Literal["kyc_request", "account_details_request", "freeze_request", "subscriber_request", "platform_data_request",
+                      "registrant_request", "developer_request", "takedown_request", "preservation_notice", "issuer_hold"]
+
+
+class IdentifierRequest(BaseModel):
+    """An officer adds an identifier by hand (for example from a phone call)."""
+    kind: IdentifierKind
+    value: str = Field(min_length=1, max_length=300)
+    label: Optional[str] = Field(default=None, max_length=120)
+    role: IdentifierRole = "other"
+
+
+class Identifier(BaseModel):
+    identifier_id: str
+    case_id: str
+    kind: IdentifierKind
+    value: str                                 # normalised, so the same phone or domain is never listed twice
+    label: Optional[str] = None                # for example the platform of a handle, or the bank of an account
+    role: IdentifierRole = "other"
+    source: IdentifierSource
+    source_ref: Optional[str] = None           # for example the complaint ID, or the reply it came from
+    confidence: float = Field(ge=0, le=1)      # how sure we are that this identifier matters to the case
+    added_at: int
+
+
+class Lead(BaseModel):
+    """A suggested next step: ask this institution for the identity behind this identifier."""
+    lead_id: str
+    case_id: str
+    identifier_id: str
+    choke_point: ChokePoint
+    holder: str                                # who holds the data, in plain words
+    what_it_identifies: str
+    requests: List[RequestKind]
+    priority: Literal["urgent", "high", "normal"]
+    rationale: str

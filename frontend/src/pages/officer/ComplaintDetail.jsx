@@ -11,6 +11,16 @@ import { R } from '../../lib/routes'
 
 const btn = 'inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50'
 
+const LURE_ROWS = [
+  ['scammer_phone', "Scammer's phone"],
+  ['scammer_handle', 'Chat handle'],
+  ['scam_website', 'Website'],
+  ['scam_app', 'App'],
+  ['paid_to_upi', 'Paid to UPI ID'],
+  ['paid_to_bank_account', 'Paid to bank account'],
+  ['paid_to_ifsc', 'IFSC code'],
+]
+
 function Row({ label, children }) {
   return (
     <>
@@ -74,6 +84,19 @@ function Body({ complaint, setComplaint }) {
             <p role="alert" className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
               {error.message}
             </p>
+          )}
+          {LURE_ROWS.some(([k]) => c[k]) && (
+            <div className="rounded-lg border border-line bg-panel p-5" aria-label="How they were reached and where they paid">
+              <h2 className="mb-3 text-sm font-semibold">How the scammer reached the victim, and where they paid</h2>
+              <dl className="grid grid-cols-[150px_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
+                {LURE_ROWS.filter(([k]) => c[k]).map(([k, label]) => (
+                  <Row key={k} label={label}>
+                    <span className="font-mono text-xs">{c[k]}</span>
+                    {k === 'scammer_handle' && c.scammer_handle_platform ? <span className="ml-2 text-muted">{humanize(c.scammer_handle_platform)}</span> : null}
+                  </Row>
+                ))}
+              </dl>
+            </div>
           )}
           <div className="rounded-lg border border-line bg-panel p-5">
             <h2 className="mb-3 text-sm font-semibold">Complaint</h2>
