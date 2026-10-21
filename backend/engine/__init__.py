@@ -13,10 +13,10 @@ is delivered once by new_transfers and then seen by the next trace. It is SIMULA
 import json
 import os
 import time
-from typing import Dict, List, Set
+from typing import Dict, List, Optional, Set
 
 from contract.schemas import TraceRequest, TraceResponse, WalletRisk
-from engine.chains.tron import Transfer, TronAdapter, normalize
+from engine.chains.tron import FetchError, Transfer, TronAdapter, is_tron_address, normalize, detect_chain
 from paths import FIXTURES, REPLAY_JSON as REPLAY
 
 _released: Dict[str, List[Transfer]] = {}   # demo replay: transfers released so far, by sender
@@ -27,15 +27,16 @@ class _Adapter(TronAdapter):
     """The TRON adapter plus any released replay transfers."""
 
     def transfers(self, address, **kw):
+        failure = None
         try:
             items, source = super().transfers(address, **kw)
-        except LookupError:
-            items, source = [], "cached"
+        except LookupError as exc:           # not cached (offline) or a failed live fetch: keep the reason
+            items, source, failure = [], "cached", exc
         extra = [t for t in _released.values() for t in t if address in (t.from_addr, t.to_addr)]
         have = {t.tx_hash for t in items}
         items = sorted(items + [t for t in extra if t.tx_hash not in have], key=lambda t: (t.timestamp, t.tx_hash))
         if not items:
-            raise LookupError(f"{address} is not cached and the adapter is offline")
+            raise failure or LookupError(f"{address} is not cached and the adapter is offline")
         return items, source
 
 
@@ -56,16 +57,16 @@ def trace_complaint(req: TraceRequest) -> TraceResponse:
     if os.getenv("TRACING", "real") == "real":
         from engine.model.risk import score_graph
         from engine.trace.attribution import attribute
-        from engine.trace.tracing import build_response, load_labels
+        from engine.trace.tracing import TraceStats, build_response, load_labels
         started = time.time()
         adapter = _adapter()
-        resp = build_response(req, adapter)
+        stats = TraceStats()
+        resp = build_response(req, adapter, stats)
         resp.nearest_vasp, resp.graph = attribute(resp.graph, adapter, load_labels())
         resp.graph, resp.typology = score_graph(resp.graph, adapter, resp.wallet)
         if resp.nearest_vasp:
             resp.summary.time_to_attribution_sec = round(time.time() - started, 2)
-        else:
-            resp.notes = "No exchange found in the traced flow."
+        resp.notes = _notes(req.wallet, adapter, stats, resp)
         return resp
     data = _load("trace_hero.json")
     data["complaint_id"] = req.complaint_id
@@ -76,6 +77,30 @@ def trace_complaint(req: TraceRequest) -> TraceResponse:
         data["fraud_type"] = req.fraud_type
     data["generated_at"] = int(time.time())
     return TraceResponse(**data)
+
+
+def _notes(wallet: str, adapter, stats, resp: TraceResponse) -> Optional[str]:
+    """What an officer should know about how complete this trace is (shown on the case)."""
+    notes: List[str] = []
+    if not is_tron_address(wallet):
+        chain = detect_chain(wallet)
+        notes.append(f"{chain.capitalize()} wallets are not traced yet: only TRON is." if chain
+                     else "Not a valid wallet address: nothing to trace.")
+    elif adapter.unavailable.get(wallet) == "not cached":
+        notes.append("This wallet is not in the demo cache and no TronGrid key is set, so nothing could be traced. "
+                     "Use a cached wallet, or set TRONGRID_API_KEY.")
+    failed = {a: r for a, r in adapter.unavailable.items() if r != "not cached"}
+    if failed:
+        why = ", ".join(sorted(set(failed.values())))
+        notes.append(f"{len(failed)} wallet(s) could not be fetched ({why}); the trace may be incomplete.")
+    if stats.stopped:
+        notes.append(f"Trace stopped at the {stats.stopped} after reading {stats.expanded} wallets; "
+                     "smaller flows beyond that were not followed.")
+    if stats.unchecked_leaves:
+        notes.append(f"Idle balances were not checked for {stats.unchecked_leaves} wallet(s) (time ran out).")
+    if not resp.nearest_vasp and not notes:
+        notes.append("No exchange found in the traced flow.")
+    return " ".join(notes) or None
 
 
 def wallet_risk(address: str) -> WalletRisk:
@@ -103,6 +128,8 @@ def new_transfers(addresses: List[str], since_ts: int) -> List[Transfer]:
     for addr in addresses:
         try:
             items, _ = adapter.transfers(addr, refresh=live)
+        except FetchError:
+            raise                                 # a failed check must not look like "nothing moved": the case goes stale
         except (LookupError, ValueError):
             continue
         for t in items:

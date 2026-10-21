@@ -9,8 +9,9 @@ import csv
 import heapq
 import sys
 import time
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from contract.schemas import Edge, Graph, Node, TraceRequest, TraceResponse, TraceSummary
 from engine.chains.tron import Transfer, TronAdapter
@@ -23,6 +24,16 @@ MAX_DEPTH = 5
 MIN_SHARE = 0.01          # ignore flows under 1% of the case value
 PASS_THROUGH_RATIO = 0.90
 PASS_THROUGH_WINDOW = 3600  # seconds
+MAX_EXPANDED = 40           # wallets whose history is read per trace: bounds API calls on live data (placeholder)
+TIME_BUDGET_SEC = 30.0      # stop expanding after this long (placeholder); cached traces take well under a second
+
+
+@dataclass
+class TraceStats:
+    """What a trace did, so the caller can say so in the case notes."""
+    expanded: int = 0              # wallets whose history was read
+    stopped: Optional[str] = None  # "wallet limit" or "time budget" when the trace was cut short
+    unchecked_leaves: int = 0      # leaf wallets whose idle balance was not checked because time ran out
 
 
 def load_labels(path: Path = LABELS_CSV) -> Dict[str, Tuple[str, str]]:
@@ -52,8 +63,12 @@ def idle_balance(transfers: List[Transfer], addr: str) -> float:
 
 def trace(wallet: str, adapter: TronAdapter, case_value: Optional[float] = None,
           max_depth: int = MAX_DEPTH, min_share: float = MIN_SHARE,
-          labels: Optional[Dict[str, Tuple[str, str]]] = None) -> Graph:
+          labels: Optional[Dict[str, Tuple[str, str]]] = None, max_expanded: int = MAX_EXPANDED,
+          time_budget: float = TIME_BUDGET_SEC, stats: Optional[TraceStats] = None,
+          clock: Callable[[], float] = time.monotonic) -> Graph:
     labels = load_labels() if labels is None else labels
+    stats = TraceStats() if stats is None else stats
+    started = clock()
 
     def history(addr: str) -> List[Transfer]:
         try:
@@ -85,6 +100,7 @@ def trace(wallet: str, adapter: TronAdapter, case_value: Optional[float] = None,
 
     counter = 0
     heap: List[tuple] = [(0.0, 0, counter, wallet)]
+    stats.expanded = 1                       # the reported wallet's history was read above
     while heap:
         _, _, _, addr = heapq.heappop(heap)
         if addr in expanded:
@@ -93,7 +109,15 @@ def trace(wallet: str, adapter: TronAdapter, case_value: Optional[float] = None,
         hop = nodes[addr].hop
         if hop >= max_depth or addr in labels:
             continue
-        hist = history(addr)
+        if addr != wallet:                   # biggest flows go first, so what is cut is the smallest
+            if stats.expanded >= max_expanded:
+                stats.stopped = "wallet limit"
+                break
+            if clock() - started > time_budget:
+                stats.stopped = "time budget"
+                break
+            stats.expanded += 1
+        hist = history(addr) if addr != wallet else root_hist
         since, arrived = arrival[addr]
         outgoing = [t for t in hist if t.from_addr == addr and t.timestamp >= since and t.amount >= floor]
         if addr != wallet and not is_pass_through(hist, addr, since, arrived):
@@ -113,6 +137,9 @@ def trace(wallet: str, adapter: TronAdapter, case_value: Optional[float] = None,
     sources = {e.source for e in edges.values()}
     for addr, node in nodes.items():
         if node.type in ("unknown", "intermediary") and addr not in sources:
+            if clock() - started > time_budget:
+                stats.unchecked_leaves += 1
+                continue
             node.idle_balance = idle_balance(history(addr), addr)
 
     ordered = sorted(nodes.values(), key=lambda n: (n.hop, n.id))
@@ -131,11 +158,12 @@ def summarize(graph: Graph) -> TraceSummary:
     )
 
 
-def build_response(req: TraceRequest, adapter: Optional[TronAdapter] = None) -> TraceResponse:
+def build_response(req: TraceRequest, adapter: Optional[TronAdapter] = None,
+                   stats: Optional[TraceStats] = None) -> TraceResponse:
     """Full contract response: downstream risk is a placeholder until A6, the reported wallet and the case have no risk, urgency is B's."""
     adapter = adapter or TronAdapter()
     started = time.time()
-    graph = trace(req.wallet, adapter, case_value=req.amount)
+    graph = trace(req.wallet, adapter, case_value=req.amount, stats=stats)
     return TraceResponse(
         case_id=f"CASE-{req.complaint_id}", complaint_id=req.complaint_id, wallet=req.wallet, chain="tron",
         fraud_type=req.fraud_type, amount_lost=req.amount, risk=None, risk_score=None,

@@ -116,12 +116,33 @@ def normalize(raw: dict) -> Optional[Transfer]:
 
 
 # ------------------------------------------------------------------ adapter
+class FetchError(LookupError):
+    """A live TronGrid fetch failed (rate limit, timeout, server error). A LookupError, so callers that already
+    treat 'no history available' as a normal case keep working; `reason` says why."""
+
+    def __init__(self, address: str, reason: str):
+        super().__init__(f"could not fetch {address}: {reason}")
+        self.address, self.reason = address, reason
+
+
+def _reason(exc: Exception) -> str:
+    if isinstance(exc, httpx.TimeoutException):
+        return "timed out"
+    if isinstance(exc, httpx.HTTPStatusError):
+        code = exc.response.status_code
+        return "rate limited" if code == 429 else f"server error {code}"
+    if isinstance(exc, httpx.HTTPError):
+        return "network error"
+    return "API error"
+
+
 class TronAdapter:
     def __init__(self, api_key: Optional[str] = None, cache_dir: Path = CACHE_DIR,
                  client: Optional[httpx.Client] = None, offline: bool = False):
         self.api_key = api_key if api_key is not None else os.getenv("TRONGRID_API_KEY", "")
         self.cache_dir = Path(cache_dir)
         self.offline = offline
+        self.unavailable: dict = {}   # address -> why its history could not be read ("not cached", "rate limited", ...)
         headers = {"TRON-PRO-API-KEY": self.api_key} if self.api_key else {}
         self.client = client or httpx.Client(base_url=TRONGRID_URL, headers=headers, timeout=20)
 
@@ -186,8 +207,13 @@ class TronAdapter:
         source: FetchSource = "cached"
         if doc is None:
             if self.offline:
+                self.unavailable[address] = "not cached"
                 raise LookupError(f"{address} is not cached and the adapter is offline")
-            raw, truncated = self._fetch(address, limit)
+            try:
+                raw, truncated = self._fetch(address, limit)
+            except (httpx.HTTPError, RuntimeError) as exc:       # rate limit, timeout, server or API error
+                self.unavailable[address] = _reason(exc)
+                raise FetchError(address, _reason(exc)) from exc
             doc = self.write_cache(address, raw, truncated=truncated)
             source = "live"
         items = [t for t in (normalize(r) for r in doc["data"]) if t]
